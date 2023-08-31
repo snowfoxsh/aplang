@@ -7,9 +7,10 @@ mod parser;
 mod syntax;
 
 fn main() {
-    let input = read_from_file("src/test.ap");
+    let file = fs::read_to_string("src/test.ap")
+        .expect("file not found!");
 
-    print_lexer(&input);
+    print_syntax_kind(file);
 }
 
 fn read_from_file(file_path: &str) -> String {
@@ -17,8 +18,8 @@ fn read_from_file(file_path: &str) -> String {
         .expect("Should have been able to read the file")
 }
 
-fn print_lexer(input: &str) {
-    let mut lex = SyntaxKind::lexer(input);
+fn print_syntax_kind(input: String) {
+    let mut lex = SyntaxKind::lexer(input.as_str());
     while let Some(tok) = lex.next() {
         println!("{:?}", tok)
     }
