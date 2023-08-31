@@ -37,3 +37,21 @@ impl<'a> Parser<'a> {
 pub struct Parse {
     green_node: GreenNode,
 }
+
+pub type SyntaxNode = rowan::SyntaxNode<ApLang>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_root() {
+        let output = Parser::new("").parse();
+
+        assert_eq!(
+            format!("{:#?}", SyntaxNode::new_root(output.green_node)),
+            r#"Root@0..0
+"#,
+        );
+    }
+}

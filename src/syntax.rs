@@ -2,6 +2,7 @@ use num_traits::FromPrimitive;
 use rowan::Language;
 use crate::lexer::SyntaxKind;
 
+pub type SyntaxNode = rowan::SyntaxNode<ApLang>;
 
 
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
