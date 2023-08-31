@@ -1,9 +1,10 @@
 use num_traits::FromPrimitive;
 use rowan::Language;
-use crate::lexer::SyntaxKind;
+use crate::syntax_kind::SyntaxKind;
 
 pub type SyntaxNode = rowan::SyntaxNode<ApLang>;
-
+pub type SyntaxElement = rowan::SyntaxElement<ApLang>;
+pub type SyntaxToken = rowan::SyntaxToken<ApLang>;
 
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct ApLang;

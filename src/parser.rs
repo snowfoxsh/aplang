@@ -1,6 +1,6 @@
 use logos::Logos;
 use rowan::{GreenNode, GreenNodeBuilder, Language};
-use crate::lexer::SyntaxKind;
+use crate::syntax_kind::SyntaxKind;
 use crate::syntax::ApLang;
 
 pub struct Parser<'a> {
@@ -18,11 +18,20 @@ impl<'a> Parser<'a> {
 
     pub fn parse(mut self) -> Parse {
         self.start_node(SyntaxKind::Root.into());
+
+        if self.lexer.next() == Some(Ok(SyntaxKind::Number)) {
+            self.builder.token(
+                ApLang::kind_to_raw(SyntaxKind::Number),
+                self.lexer.slice().into(),
+            );
+        }
+
         self.finish_node();
 
         Parse {
             green_node: self.builder.finish()
         }
+
     }
 
     fn start_node(&mut self, kind: SyntaxKind) {
@@ -35,7 +44,7 @@ impl<'a> Parser<'a> {
 }
 
 pub struct Parse {
-    green_node: GreenNode,
+    pub(crate) green_node: GreenNode,
 }
 
 pub type SyntaxNode = rowan::SyntaxNode<ApLang>;

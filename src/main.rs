@@ -1,16 +1,20 @@
 use std::fs;
 use logos::Logos;
-use crate::lexer::SyntaxKind;
+use crate::syntax_kind::SyntaxKind;
+use crate::parser::{Parser, SyntaxNode};
 
-mod lexer;
+mod syntax_kind;
 mod parser;
 mod syntax;
+mod lexer;
 
 fn main() {
     let file = fs::read_to_string("src/test.ap")
         .expect("file not found!");
 
     print_syntax_kind(file);
+
+    print_ast("423".to_string())
 }
 
 fn print_syntax_kind(input: String) {
@@ -18,4 +22,10 @@ fn print_syntax_kind(input: String) {
     while let Some(tok) = lex.next() {
         println!("{:?}", tok)
     }
+}
+
+fn print_ast(input: String) {
+    let parse = Parser::new(input.as_str()).parse();
+
+    println!("{:#?}", SyntaxNode::new_root(parse.green_node))
 }
