@@ -1,3 +1,4 @@
+use std::fmt::format;
 use logos::Logos;
 use rowan::{GreenNode, GreenNodeBuilder, Language};
 use crate::syntax_kind::SyntaxKind;
@@ -45,6 +46,15 @@ impl<'a> Parser<'a> {
 
 pub struct Parse {
     pub(crate) green_node: GreenNode,
+}
+
+impl Parse {
+    pub fn debug_tree(&self) -> String {
+        let syntax_node = SyntaxNode::new_root(self.green_node.clone());
+        let formated = format!("{:#?}", syntax_node);
+
+        formated[0..formated.len() - 1].to_string()
+    }
 }
 
 pub type SyntaxNode = rowan::SyntaxNode<ApLang>;

@@ -13,8 +13,7 @@ fn main() {
         .expect("file not found!");
 
     print_syntax_kind(file);
-
-    print_ast("423".to_string())
+    print_ast("423".to_string());
 }
 
 fn print_syntax_kind(input: String) {
@@ -27,5 +26,5 @@ fn print_syntax_kind(input: String) {
 fn print_ast(input: String) {
     let parse = Parser::new(input.as_str()).parse();
 
-    println!("{:#?}", SyntaxNode::new_root(parse.green_node))
+    println!("{}", parse.debug_tree());
 }
