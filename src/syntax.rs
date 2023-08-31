@@ -1,4 +1,4 @@
-use num_traits::FromPrimitive;
+use num_traits::{FromPrimitive, ToPrimitive};
 use rowan::Language;
 use crate::syntax_kind::SyntaxKind;
 
@@ -17,6 +17,6 @@ impl Language for ApLang {
     }
 
     fn kind_to_raw(kind: Self::Kind) -> rowan::SyntaxKind {
-        kind.into()
+        rowan::SyntaxKind(kind.to_u16().unwrap())
     }
 }

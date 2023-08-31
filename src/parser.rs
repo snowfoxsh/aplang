@@ -1,39 +1,48 @@
 use std::fmt::format;
+use std::iter::Peekable;
 use logos::Logos;
 use rowan::{GreenNode, GreenNodeBuilder, Language};
+use crate::lexer::Lexer;
 use crate::syntax_kind::SyntaxKind;
 use crate::syntax::ApLang;
 
 pub struct Parser<'a> {
-    lexer: logos::Lexer<'a, SyntaxKind>,
+    lexer: Peekable<Lexer<'a>>,
     builder: GreenNodeBuilder<'static> // consider modding this lifetime
 }
 
 impl<'a> Parser<'a> {
     pub fn new(input: &'a str) -> Self {
         Self {
-            lexer: SyntaxKind::lexer(input),
+            lexer: Lexer::new(input).peekable(),
             builder: GreenNodeBuilder::new(),
         }
     }
 
     // important
     pub fn parse(mut self) -> Parse {
-        self.start_node(SyntaxKind::Root.into());
+        self.start_node(SyntaxKind::Root);
 
-        if self.lexer.next() == Some(Ok(SyntaxKind::Number)) {
-            self.builder.token(
-                ApLang::kind_to_raw(SyntaxKind::Number),
-                self.lexer.slice().into(),
-            );
+        match self.peek() {
+            Some(SyntaxKind::Number) | Some(SyntaxKind::Ident) => self.bump(),
+            _ => {}
         }
 
         self.finish_node();
 
         Parse {
-            green_node: self.builder.finish()
+            green_node: self.builder.finish(),
         }
+    }
 
+    fn peek(&mut self) -> Option<SyntaxKind> {
+        self.lexer.peek().map(|(kind, _)| *kind)
+    }
+
+    fn bump(&mut self) {
+        let (kind, text) = self.lexer.next().unwrap();
+
+        self.builder.token(ApLang::kind_to_raw(kind), text.into())
     }
 
     fn start_node(&mut self, kind: SyntaxKind) {

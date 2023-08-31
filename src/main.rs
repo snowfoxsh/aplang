@@ -1,7 +1,7 @@
 use std::fs;
 use logos::Logos;
 use crate::syntax_kind::SyntaxKind;
-use crate::parser::{Parser, SyntaxNode};
+use crate::parser::Parser;
 
 mod syntax_kind;
 mod parser;
