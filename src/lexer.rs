@@ -1,6 +1,7 @@
 use logos::{Logos};
+use num_derive::{FromPrimitive, ToPrimitive};
 
-#[derive(Logos, Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
+#[derive(Logos, Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash, FromPrimitive, ToPrimitive)]
 #[logos(skip "[ \t]+")]
 pub enum SyntaxKind {
     #[regex("[A-Za-z][A-Za-z0-9_]*")]
