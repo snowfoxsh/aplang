@@ -51,9 +51,9 @@ pub struct Parse {
 impl Parse {
     pub fn debug_tree(&self) -> String {
         let syntax_node = SyntaxNode::new_root(self.green_node.clone());
-        let formated = format!("{:#?}", syntax_node);
+        let formatted = format!("{:#?}", syntax_node);
 
-        formated[0..formated.len() - 1].to_string()
+        formatted[0..formatted.len() - 1].to_string()
     }
 }
 
