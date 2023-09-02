@@ -1,6 +1,4 @@
-use std::fmt::format;
 use std::iter::Peekable;
-use logos::Logos;
 use rowan::{GreenNode, GreenNodeBuilder, Language};
 use crate::lexer::Lexer;
 use crate::syntax_kind::SyntaxKind;
@@ -23,15 +21,30 @@ impl<'a> Parser<'a> {
     pub fn parse(mut self) -> Parse {
         self.start_node(SyntaxKind::Root);
 
-        match self.peek() {
-            Some(SyntaxKind::Number) | Some(SyntaxKind::Ident) => self.bump(),
-            _ => {}
-        }
+        self.expr();
 
         self.finish_node();
 
         Parse {
             green_node: self.builder.finish(),
+        }
+    }
+
+    fn expr(&mut self) {
+        match self.peek() {
+            Some(SyntaxKind::Number) | Some(SyntaxKind::Ident) => self.bump(),
+            _ => {}
+        }
+
+        match self.peek() {
+            Some(SyntaxKind::Plus) |
+            Some(SyntaxKind::Minus) |
+            Some(SyntaxKind::Star) |
+            Some(SyntaxKind::Slash) |
+            Some(SyntaxKind::Mod) |
+            Some(SyntaxKind::Assign)
+            => self.bump(),
+            _ => {}
         }
     }
 
@@ -87,5 +100,15 @@ mod tests {
     #[test]
     fn parse_nothing() {
         check("", expect![[r#"Root@0..0"#]]);
+    }
+
+    #[test]
+    fn parse_number() {
+        check(
+            "123",
+            expect![[r#"
+Root@0..3
+  Number@0..3 "123""#]],
+        );
     }
 }

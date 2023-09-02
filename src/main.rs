@@ -9,11 +9,11 @@ mod syntax;
 mod lexer;
 
 fn main() {
-    let file = fs::read_to_string("src/test.ap")
+    let _file = fs::read_to_string("src/test.ap")
         .expect("file not found!");
 
-    print_syntax_kind(file);
-    print_ast("423".to_string());
+    // print_syntax_kind(file);
+    print_ast("hello <- 3".to_string());
 }
 
 fn print_syntax_kind(input: String) {
