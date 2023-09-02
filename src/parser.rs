@@ -1,5 +1,5 @@
 use std::iter::Peekable;
-use rowan::{GreenNode, GreenNodeBuilder, Language};
+use rowan::{Checkpoint, GreenNode, GreenNodeBuilder, Language};
 use crate::lexer::Lexer;
 use crate::syntax_kind::SyntaxKind;
 use crate::syntax::ApLang;
@@ -60,6 +60,14 @@ impl<'a> Parser<'a> {
 
     fn start_node(&mut self, kind: SyntaxKind) {
         self.builder.start_node(ApLang::kind_to_raw(kind));
+    }
+
+    fn start_node_at(&mut self, checkpoint: Checkpoint, kind: SyntaxKind) {
+        self.builder.start_node_at(checkpoint, ApLang::kind_to_raw(kind));
+    }
+
+    fn checkpoint(&self) -> Checkpoint {
+        self.builder.checkpoint()
     }
 
     fn finish_node(&mut self) {
