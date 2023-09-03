@@ -154,6 +154,7 @@ pub enum SyntaxKind {
 
     // for the parser
     Root,
+    BinOp,
 }
 
 impl From<SyntaxKind> for rowan::SyntaxKind {

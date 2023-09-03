@@ -31,21 +31,7 @@ impl<'a> Parser<'a> {
     }
 
     fn expr(&mut self) {
-        match self.peek() {
-            Some(SyntaxKind::Number) | Some(SyntaxKind::Ident) => self.bump(),
-            _ => {}
-        }
-
-        match self.peek() {
-            Some(SyntaxKind::Plus) |
-            Some(SyntaxKind::Minus) |
-            Some(SyntaxKind::Star) |
-            Some(SyntaxKind::Slash) |
-            Some(SyntaxKind::Mod) |
-            Some(SyntaxKind::Assign)
-            => self.bump(),
-            _ => {}
-        }
+        self.expr_binding_power( 0);
     }
 
     fn peek(&mut self) -> Option<SyntaxKind> {
@@ -85,6 +71,60 @@ impl Parse {
         let formatted = format!("{:#?}", syntax_node);
 
         formatted[0..formatted.len() - 1].to_string()
+    }
+}
+
+
+// ops
+enum Op {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod
+}
+
+impl Op {
+    fn binding_power(&self) -> (u8, u8) {
+        match self {
+            Self::Add | Self::Sub => (1, 2),
+            Self::Mul | Self::Div | Self::Mod => (3, 4),
+        }
+    }
+}
+
+// exprs
+impl<'a> Parser<'a> {
+    fn expr_binding_power(&mut self, min_binding_power: u8) {
+        let checkpoint = self.checkpoint();
+
+        match self.peek() {
+            Some(SyntaxKind::Number | SyntaxKind::Ident) => self.bump(),
+            _ => {}
+        }
+
+        loop {
+            let op = match self.peek() {
+                Some(SyntaxKind::Plus) => Op::Add,
+                Some(SyntaxKind::Minus) => Op::Sub,
+                Some(SyntaxKind::Star) => Op::Mul,
+                Some(SyntaxKind::Slash) => Op::Div,
+                Some(SyntaxKind::Mod) => Op::Mod,
+                _ => return, // error state
+            };
+
+            let (lbp, rbp) = op.binding_power();
+
+            if lbp < min_binding_power {
+                return;
+            }
+
+            self.bump();
+
+            self.start_node_at(checkpoint, SyntaxKind::BinOp);
+            self.expr_binding_power(rbp);
+            self.finish_node();
+        }
     }
 }
 

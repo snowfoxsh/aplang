@@ -13,7 +13,16 @@ fn main() {
         .expect("file not found!");
 
     // print_syntax_kind(file);
-    print_ast("hello <- 3".to_string());
+    print_ast("1+3".to_string());
+    println!("----------------------");
+    print_ast("1+2+3+4".to_string());
+    println!("----------------------");
+    print_ast("32 + 3 * 10".to_string());
+    println!("----------------------");
+    print_ast("3 * 10 + 32".to_string());
+    println!("----------------------");
+    print_ast("a + b".to_string());
+    println!("----------------------");
 }
 
 fn print_syntax_kind(input: String) {
