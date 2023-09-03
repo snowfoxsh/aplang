@@ -2,7 +2,42 @@
 A language designed to aid students who are taking the AP Computer Science Principals exam. 
 
 ## Quick Start
-Come back later...
+I will add alternative methods of installation later
+
+### Building
+To build ApLang you will need the latest stable version of rust as well as git. 
+> If you do not have rust follow the instructions at [rustup.rs](https://rustup.rs). \
+> If you do not have git follow the instructions at [git-scm.com](https://git-scm.com/downloads).
+
+To build locally, first clone the source code:
+```bash
+git clone https://github.com/snowfoxsh/aplang.git
+```
+
+Then compile the code:
+```bash
+cd aplang
+cargo build --release
+```
+
+Run the project:
+```bash
+cargo run --release
+```
+
+#### Testing
+Testing is as simple as:
+```bash
+cargo test --release --all
+```
+
+Testing individual modules can be done with:
+```bash
+cargo test --release parser::tests
+```
+
+### Installation
+This will be to come. Installers for Windows and macOS will be created in the future.
 
 ## Accessibility
 The goal with this project is accessibility first. It is understood that the vast majority of people who will 
