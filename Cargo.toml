@@ -6,6 +6,8 @@ edition = "2021"
 description = "A language designed for AP Computer Science Principles students"
 license = "GPL-3.0-or-later"
 license-file = "LICENSE"
+keywords = ["language", "lang", "cli", "ap", "interpreter"]
+repository = "https://github.com/snowfoxsh/aplang"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
