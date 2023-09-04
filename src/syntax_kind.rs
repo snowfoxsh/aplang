@@ -13,6 +13,7 @@ pub enum SyntaxKind {
     #[token("\r")]
     NewLine,
 
+    // todo: make int and float types
     #[regex("[0-9]+")]
     Number,
 
@@ -136,10 +137,12 @@ pub enum SyntaxKind {
     Return,
 
     // cmp keywords
+    // #[token("!") // not recommended
     #[token("not")]
     #[token("NOT")]
     Not,
 
+    // #[token("&&") // not recommended
     #[token("and")]
     #[token("AND")]
     And,
@@ -154,7 +157,9 @@ pub enum SyntaxKind {
 
     // for the parser
     Root,
-    BinOp,
+    BinaryExpr,
+    UnaryExpr,
+    TernaryExpr,
 }
 
 impl From<SyntaxKind> for rowan::SyntaxKind {

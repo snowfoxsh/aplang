@@ -121,7 +121,7 @@ impl<'a> Parser<'a> {
 
             self.bump();
 
-            self.start_node_at(checkpoint, SyntaxKind::BinOp);
+            self.start_node_at(checkpoint, SyntaxKind::BinaryExpr);
             self.expr_binding_power(rbp);
             self.finish_node();
         }
@@ -159,4 +159,52 @@ Root@0..3
   Number@0..3 "123""#]],
         );
     }
+
+    #[test]
+    fn parser_bin_expr_1() {
+        check("1+2", expect![[r#"
+Root@0..3
+  BinaryExpr@0..3
+    Number@0..1 "1"
+    Plus@1..2 "+"
+    Number@2..3 "2""#]],
+        );
+    }
+
+    #[test]
+    fn left_bind_expr() {
+        check("1+2+3+4",
+              expect![[r#"
+Root@0..7
+  BinaryExpr@0..7
+    BinaryExpr@0..5
+      BinaryExpr@0..3
+        Number@0..1 "1"
+        Plus@1..2 "+"
+        Number@2..3 "2"
+      Plus@3..4 "+"
+      Number@4..5 "3"
+    Plus@5..6 "+"
+    Number@6..7 "4""#]])
+    }
+
+    #[test]
+    fn mixed_binding_power() {
+        check("1+ 2*3-4",
+              expect![[r#"
+Root@0..7
+  BinaryExpr@0..7
+    BinaryExpr@0..5
+      Number@0..1 "1"
+      Plus@1..2 "+"
+      BinaryExpr@2..5
+        Number@2..3 "2"
+        Star@3..4 "*"
+        Number@4..5 "3"
+    Minus@5..6 "-"
+    Number@6..7 "4""#]],
+        )
+    }
+
+    // todo: add more tests
 }
