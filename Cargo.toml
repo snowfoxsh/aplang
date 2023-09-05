@@ -5,7 +5,6 @@ authors = ["Patrick Unick <dev_storm@winux.com>"]
 edition = "2021"
 description = "A language designed for AP Computer Science Principles students"
 license = "GPL-3.0-or-later"
-license-file = "LICENSE"
 keywords = ["language", "lang", "cli", "ap", "interpreter"]
 repository = "https://github.com/snowfoxsh/aplang"
 
@@ -18,4 +17,4 @@ num-derive = "0.4.0"
 num-traits = "0.2.16"
 expect-test = "1.4.1"
 rustyline = "12.0.0"
-clap = { version = "4.4.2", features = ["cargo", "derive"] }
+clap = { version = "4.2.5", features = ["cargo", "derive"] }
