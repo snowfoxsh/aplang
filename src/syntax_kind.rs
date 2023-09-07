@@ -4,6 +4,9 @@ use num_derive::{FromPrimitive, ToPrimitive};
 #[derive(Logos, Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash, FromPrimitive, ToPrimitive)]
 #[logos(skip "[ \t]+")]
 pub enum SyntaxKind {
+    #[regex("#.*|//.*")]
+    Comment,
+
     #[regex("[A-Za-z][A-Za-z0-9_]*")]
     Ident,
 
@@ -151,9 +154,6 @@ pub enum SyntaxKind {
     #[token("OR")]
     Or,
 
-    #[token("//")]
-    #[token("#")]
-    Comment,
 
     // for the parser
     Root,
