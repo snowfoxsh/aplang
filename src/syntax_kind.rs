@@ -157,8 +157,8 @@ pub enum SyntaxKind {
 
     // for the parser
     Root,
-    BinaryExpr,
     UnaryExpr,
+    BinaryExpr,
     TernaryExpr,
 }
 

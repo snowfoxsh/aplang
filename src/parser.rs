@@ -1,5 +1,6 @@
 use std::iter::Peekable;
 use rowan::{Checkpoint, GreenNode, GreenNodeBuilder, Language};
+use rowan::ast::support::token;
 use crate::lexer::Lexer;
 use crate::syntax_kind::SyntaxKind;
 use crate::syntax::ApLang;
@@ -76,7 +77,7 @@ impl Parse {
 
 
 // ops
-enum Op {
+enum InfixOp {
     Add,
     Sub,
     Mul,
@@ -84,11 +85,23 @@ enum Op {
     Mod
 }
 
-impl Op {
+enum PrefixOp {
+    Neg,
+}
+
+impl InfixOp {
     fn binding_power(&self) -> (u8, u8) {
         match self {
             Self::Add | Self::Sub => (1, 2),
             Self::Mul | Self::Div | Self::Mod => (3, 4),
+        }
+    }
+}
+
+impl PrefixOp {
+    fn binding_power(&self) -> ((), u8) {
+        match self {
+            Self::Neg => ((), 5),
         }
     }
 }
@@ -100,16 +113,35 @@ impl<'a> Parser<'a> {
 
         match self.peek() {
             Some(SyntaxKind::Number | SyntaxKind::Ident) => self.bump(),
+            Some(SyntaxKind::Minus) => {
+                let op = PrefixOp::Neg;
+
+                let ((), right_binding_power) = op.binding_power();
+
+                // eat ops token
+                self.bump();
+
+                self.start_node_at(checkpoint, SyntaxKind::UnaryExpr);
+                self.expr_binding_power(right_binding_power);
+                self.finish_node();
+            }
+            Some(SyntaxKind::LeftParen) => {
+                self.bump();
+                self.expr_binding_power(0);
+
+                assert_eq!(self.peek(), Some(SyntaxKind::RightParen));
+                self.bump();
+            }
             _ => {}
         }
 
         loop {
             let op = match self.peek() {
-                Some(SyntaxKind::Plus) => Op::Add,
-                Some(SyntaxKind::Minus) => Op::Sub,
-                Some(SyntaxKind::Star) => Op::Mul,
-                Some(SyntaxKind::Slash) => Op::Div,
-                Some(SyntaxKind::Mod) => Op::Mod,
+                Some(SyntaxKind::Plus) => InfixOp::Add,
+                Some(SyntaxKind::Minus) => InfixOp::Sub,
+                Some(SyntaxKind::Star) => InfixOp::Mul,
+                Some(SyntaxKind::Slash) => InfixOp::Div,
+                Some(SyntaxKind::Mod) => InfixOp::Mod,
                 _ => return, // error state
             };
 
@@ -204,6 +236,45 @@ Root@0..7
     Minus@5..6 "-"
     Number@6..7 "4""#]],
         )
+    }
+
+    #[test]
+    fn paren_affect_precedence() {
+        check("5*(2+1)",
+              expect![[r#"
+Root@0..7
+  BinaryExpr@0..7
+    Number@0..1 "5"
+    Star@1..2 "*"
+    LeftParen@2..3 "("
+    BinaryExpr@3..6
+      Number@3..4 "2"
+      Plus@4..5 "+"
+      Number@5..6 "1"
+    RightParen@6..7 ")""#]]
+        )
+    }
+
+    #[test]
+    fn test_nested_parens() {
+        check(
+            "((((((10))))))",
+            expect![[r#"
+Root@0..14
+  LeftParen@0..1 "("
+  LeftParen@1..2 "("
+  LeftParen@2..3 "("
+  LeftParen@3..4 "("
+  LeftParen@4..5 "("
+  LeftParen@5..6 "("
+  Number@6..8 "10"
+  RightParen@8..9 ")"
+  RightParen@9..10 ")"
+  RightParen@10..11 ")"
+  RightParen@11..12 ")"
+  RightParen@12..13 ")"
+  RightParen@13..14 ")""#]],
+        );
     }
 
     // todo: add more tests

@@ -69,8 +69,8 @@ that know of it the better.
 ## Contributing 
 I welcome all contributors with open arms. I will eventually make a guide for contributing but that will be done on
 project v1.0. I apologize for my garbage commit messages in advance. If you have any questions feel free to add me on discord
-at @dev_storm or contact me via email at [dev_storm@winux.com](mailto:dev_storm@example.com). I will make a discord server as well as matrix chat if 
-this project gains traction.
+at @dev_storm or contact me via email at [dev_storm@winux.com](mailto:dev_storm@example.com). 
+I will make a discord server as well as matrix chat if this project gains traction.
 
 ### Feature Request
 Please submit an issue ticket
