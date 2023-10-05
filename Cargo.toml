@@ -12,9 +12,9 @@ repository = "https://github.com/snowfoxsh/aplang"
 
 [dependencies]
 logos = "0.13.0"
-rowan = "0.15.11"
 num-derive = "0.4.0"
 num-traits = "0.2.16"
 expect-test = "1.4.1"
 rustyline = "12.0.0"
 clap = { version = "4.3.24", features = ["cargo", "derive"] }
+mapro = "0.1.1"

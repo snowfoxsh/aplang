@@ -2,8 +2,11 @@ use logos::{Logos};
 use num_derive::{FromPrimitive, ToPrimitive};
 
 #[derive(Logos, Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash, FromPrimitive, ToPrimitive)]
-#[logos(skip "[ \t]+")]
+// #[logos(skip "[ \t]+")]
 pub enum SyntaxKind {
+    #[regex("[ \t]+")]
+    Whitespace,
+
     #[regex("[A-Za-z][A-Za-z0-9_]*")]
     Ident,
 
@@ -154,23 +157,12 @@ pub enum SyntaxKind {
     #[token("//")]
     #[token("#")]
     Comment,
-
-    // for the parser
-    Root,
-    UnaryExpr,
-    BinaryExpr,
-    TernaryExpr,
 }
 
-impl From<SyntaxKind> for rowan::SyntaxKind {
-    fn from(kind: SyntaxKind) -> Self {
-        Self(kind as u16)
-    }
-}
 
 #[cfg(test)]
 mod tests {
-    use crate::syntax_kind::SyntaxKind::*;
+    use crate::lexer::syntax_kind::SyntaxKind::*;
     use super::*;
     fn check(input: &str, kind: SyntaxKind) {
         let mut lexer = SyntaxKind::lexer(input);
