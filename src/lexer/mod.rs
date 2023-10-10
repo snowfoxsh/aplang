@@ -1,4 +1,4 @@
-mod syntax_kind;
+pub(crate) mod syntax_kind;
 pub mod lexer;
 
 

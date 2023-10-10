@@ -11,7 +11,6 @@ impl LangDebug for DebugSyntaxKind {
         while let Some(token) = sk.next() {
             let slice = sk.slice();
             let span = sk.span();
-            println!("{:?}", span);
 
             match token {
                 Ok(t) => {
@@ -24,6 +23,8 @@ impl LangDebug for DebugSyntaxKind {
                     eprintln!("{:<10} {}", "Unknown", slice)
                 }
             }
+
+            println!("^ {:?}", span);
         }
     }
 }

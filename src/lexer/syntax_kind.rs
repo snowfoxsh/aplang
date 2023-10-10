@@ -10,15 +10,15 @@ pub enum SyntaxKind {
     #[regex("[A-Za-z][A-Za-z0-9_]*")]
     Ident,
 
+    // this took me so long for some reason????
+    #[regex(r"\d*\.?\d*")]
+    Number,
+
     // i hate windows this took so long
     #[token("\r\n")]
     #[token("\n")]
     #[token("\r")]
     NewLine,
-
-    // todo: make int and float types
-    #[regex("[0-9]+")]
-    Number,
 
     // booleans
     #[token("true")]
@@ -166,6 +166,7 @@ mod tests {
     use super::*;
     fn check(input: &str, kind: SyntaxKind) {
         let mut lexer = SyntaxKind::lexer(input);
+        let span = lexer.span();
 
         assert_eq!(lexer.next(), Some(Ok(kind)));
         assert_eq!(lexer.slice(), input);
@@ -299,3 +300,7 @@ mod tests {
     }
     // fill in the rest of the tests
 }
+
+// the better the function is preformed the more exceletn the thing
+// arostotle is trying to explain how to be a good person.
+// he thinks that it is a thing that is how ur raised
