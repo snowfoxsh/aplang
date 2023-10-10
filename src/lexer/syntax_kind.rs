@@ -7,7 +7,11 @@ pub enum SyntaxKind {
     #[regex("[ \t]+")]
     Whitespace,
 
-    #[regex("[A-Za-z][A-Za-z0-9_]*")]
+    #[regex("//.*")]
+    #[regex("#.*")]
+    Comment,
+
+    #[regex("[A-Za-z_][A-Za-z0-9_]*")]
     Ident,
 
     // this took me so long for some reason????
@@ -73,7 +77,13 @@ pub enum SyntaxKind {
     #[token("/")]
     Slash,
 
-    // #[token("%")] // not recommended
+    #[cfg(not(feature = "loose"))]
+    #[token("mod")]
+    #[token("MOD")]
+    Mod,
+
+    #[cfg(feature = "loose")]
+    #[token("%")]
     #[token("mod")]
     #[token("MOD")]
     Mod,
@@ -140,25 +150,39 @@ pub enum SyntaxKind {
     Return,
 
     // cmp keywords
-    // #[token("!") // not recommended
+    #[cfg(not(feature = "loose"))]
     #[token("not")]
     #[token("NOT")]
     Not,
 
-    // #[token("&&") // not recommended
+    #[cfg(feature = "loose")]
+    #[token("!")]
+    #[token("not")]
+    #[token("NOT")]
+    Not,
+
+    #[cfg(not(feature = "loose"))]
     #[token("and")]
     #[token("AND")]
     And,
 
+    #[cfg(feature = "loose")]
+    #[token("&&")]
+    #[token("and")]
+    #[token("AND")]
+    And,
+
+    #[cfg(not(feature = "loose"))]
     #[token("or")]
     #[token("OR")]
     Or,
 
-    #[token("//")]
-    #[token("#")]
-    Comment,
+    #[cfg(feature = "loose")]
+    #[token("||")]
+    #[token("or")]
+    #[token("OR")]
+    Or,
 }
-
 
 #[cfg(test)]
 mod tests {
