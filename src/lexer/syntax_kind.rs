@@ -212,9 +212,16 @@ mod tests {
 
     #[test]
     fn test_number() {
-        check("23", Number);
-        check("4444", Number);
-        check("1", Number);
+        check("23", Number(23.0));
+        check("4444", Number(4444.0));
+        check("1", Number(1.0));
+    }
+
+    fn test_float_number() {
+        check("1.1", Number(1.1));
+        check("111.1", Number(111.1));
+        check(".1", Number(0.1));
+        check("1.", Number(1.0));
     }
 
     #[test]
@@ -287,9 +294,9 @@ mod tests {
 
     #[test]
     fn test_ident() {
-        check("variableName", Ident);
-        check("variable_another", Ident);
-        check("Var123", Ident);
+        check("variableName", Ident("variableName".to_string()));
+        check("variable_another", Ident("variable_another".to_string()));
+        check("Var123", Ident("Var123".to_string()));
     }
 
     #[test]
