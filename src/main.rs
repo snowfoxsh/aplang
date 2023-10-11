@@ -39,7 +39,7 @@ struct Cli {
 fn main() {
     let cli: Cli = Cli::parse();
 
-    let eval = match cli.debug {
+    let eval: fn(String) = match cli.debug {
         DebugMode::None => run::run,
         DebugMode::Parser => DebugParser::debug,
         DebugMode::Syntax => DebugSyntaxKind::debug,
