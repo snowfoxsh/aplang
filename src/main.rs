@@ -1,6 +1,5 @@
 use std::fs;
 use clap::{Parser as ClapParser, ValueEnum};
-use logos::Logos;
 use crate::debug::LangDebug;
 use crate::lexer::debug::{DebugSyntaxKind, Echo};
 use crate::parser::debug::DebugParser;

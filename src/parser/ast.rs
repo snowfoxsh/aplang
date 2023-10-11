@@ -1,4 +1,4 @@
-use logos::{Logos, Span, SpannedIter};
+use logos::{Span, SpannedIter};
 use crate::lexer::syntax_kind::Token;
 
 pub trait AstNode {
@@ -7,6 +7,6 @@ pub trait AstNode {
     fn spanned<'source>(&self) -> SpannedIter<'source, Token>;
 }
 
-pub enum Node {
-
-}
+// pub enum Node {
+//
+// }

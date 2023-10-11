@@ -1,3 +1,3 @@
-pub fn run(input: String) {
+pub fn run(_input: String) {
     todo!()
 }
