@@ -20,4 +20,4 @@ clap = { version = "4.3.24", features = ["cargo", "derive"] }
 mapro = "0.1.1"
 
 [features]
-loose = []
+c_syntax = []

@@ -1,11 +1,10 @@
-use std::fmt::Debug;
 use logos::{Logos, Span, SpannedIter};
-use crate::lexer::syntax_kind::SyntaxKind;
+use crate::lexer::syntax_kind::Token;
 
-pub trait AstNode: Debug {
+pub trait AstNode {
     fn kind(&self) -> Self;
     fn span(&self) -> Span;
-    fn spanned<'source>(&self) -> SpannedIter<'source, SyntaxKind>;
+    fn spanned<'source>(&self) -> SpannedIter<'source, Token>;
 }
 
 pub enum Node {

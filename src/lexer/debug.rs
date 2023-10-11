@@ -1,12 +1,12 @@
 use logos::Logos;
 use crate::debug::LangDebug;
-use crate::lexer::syntax_kind::SyntaxKind;
+use crate::lexer::syntax_kind::Token;
 
 pub struct DebugSyntaxKind;
 
 impl LangDebug for DebugSyntaxKind {
     fn debug(input: String) {
-        let mut sk = SyntaxKind::lexer(input.as_str());
+        let mut sk = Token::lexer(input.as_str());
 
         while let Some(token) = sk.next() {
             let slice = sk.slice();
@@ -16,11 +16,11 @@ impl LangDebug for DebugSyntaxKind {
                 Ok(t) => {
                     let t = format!("{:?}", t);
 
-                    println!("{:<10} {}", t, slice);
+                    println!("{:<25} {}", t, slice);
                 }
 
                 Err(_) => {
-                    eprintln!("{:<10} {}", "Unknown", slice)
+                    eprintln!("{:<25} {}", "Unknown [Error]", slice)
                 }
             }
 
@@ -33,7 +33,7 @@ pub struct Echo;
 
 impl LangDebug for Echo {
     fn debug(input: String) {
-        let mut sk = SyntaxKind::lexer(input.as_str());
+        let mut sk = Token::lexer(input.as_str());
 
         while let Some(_) = sk.next() {
             print!("{}", sk.slice())

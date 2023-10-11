@@ -1,9 +1,8 @@
-use logos::{Logos};
-use num_derive::{FromPrimitive, ToPrimitive};
+use logos::{Lexer, Logos};
 
-#[derive(Logos, Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash, FromPrimitive, ToPrimitive)]
+#[derive(Logos, Debug, PartialEq, PartialOrd, Clone)]
 // #[logos(skip "[ \t]+")]
-pub enum SyntaxKind {
+pub enum Token {
     #[regex("[ \t]+")]
     Whitespace,
 
@@ -11,12 +10,12 @@ pub enum SyntaxKind {
     #[regex("#.*")]
     Comment,
 
-    #[regex("[A-Za-z_][A-Za-z0-9_]*")]
-    Ident,
+    #[regex("[A-Za-z_][A-Za-z0-9_]*", as_string)]
+    Ident(String),
 
     // this took me so long for some reason????
-    #[regex(r"\d*\.?\d*")]
-    Number,
+    #[regex(r"\d*\.?\d*", as_number)]
+    Number(f64),
 
     // i hate windows this took so long
     #[token("\r\n")]
@@ -77,12 +76,12 @@ pub enum SyntaxKind {
     #[token("/")]
     Slash,
 
-    #[cfg(not(feature = "loose"))]
+    #[cfg(not(feature = "c_syntax"))]
     #[token("mod")]
     #[token("MOD")]
     Mod,
 
-    #[cfg(feature = "loose")]
+    #[cfg(feature = "c_syntax")]
     #[token("%")]
     #[token("mod")]
     #[token("MOD")]
@@ -150,46 +149,54 @@ pub enum SyntaxKind {
     Return,
 
     // cmp keywords
-    #[cfg(not(feature = "loose"))]
+    #[cfg(not(feature = "c_syntax"))]
     #[token("not")]
     #[token("NOT")]
     Not,
 
-    #[cfg(feature = "loose")]
+    #[cfg(feature = "c_syntax")]
     #[token("!")]
     #[token("not")]
     #[token("NOT")]
     Not,
 
-    #[cfg(not(feature = "loose"))]
+    #[cfg(not(feature = "c_syntax"))]
     #[token("and")]
     #[token("AND")]
     And,
 
-    #[cfg(feature = "loose")]
+    #[cfg(feature = "c_syntax")]
     #[token("&&")]
     #[token("and")]
     #[token("AND")]
     And,
 
-    #[cfg(not(feature = "loose"))]
+    #[cfg(not(feature = "c_syntax"))]
     #[token("or")]
     #[token("OR")]
     Or,
 
-    #[cfg(feature = "loose")]
+    #[cfg(feature = "c_syntax")]
     #[token("||")]
     #[token("or")]
     #[token("OR")]
     Or,
 }
 
+fn as_string(lex: &Lexer<Token>) -> String {
+    lex.slice().to_string()
+}
+
+fn as_number(lex: &Lexer<Token>) -> Option<f64> {
+    lex.slice().parse().ok()
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::lexer::syntax_kind::SyntaxKind::*;
+    use crate::lexer::syntax_kind::Token::*;
     use super::*;
-    fn check(input: &str, kind: SyntaxKind) {
-        let mut lexer = SyntaxKind::lexer(input);
+    fn check(input: &str, kind: Token) {
+        let mut lexer = Token::lexer(input);
         let span = lexer.span();
 
         assert_eq!(lexer.next(), Some(Ok(kind)));
@@ -325,6 +332,6 @@ mod tests {
     // fill in the rest of the tests
 }
 
-// the better the function is preformed the more exceletn the thing
-// arostotle is trying to explain how to be a good person.
+// the better the function is preformed the more excellent the thing
+// rootless is trying to explain how to be a good person.
 // he thinks that it is a thing that is how ur raised
