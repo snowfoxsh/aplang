@@ -39,7 +39,7 @@ struct Cli {
 fn main() {
     let cli: Cli = Cli::parse();
 
-    let run_code = match cli.debug {
+    let eval = match cli.debug {
         DebugMode::None => run::run,
         DebugMode::Parser => DebugParser::debug,
         DebugMode::Syntax => DebugSyntaxKind::debug,
@@ -50,15 +50,15 @@ fn main() {
         let code = fs::read_to_string(file_path.clone())
             .unwrap_or_else(|_| panic!("could not read file: {}", file_path));
 
-        run_code(code);
+        eval(code);
         return;
     }
 
     if let Some(code) = cli.eval {
-        run_code(code);
+        eval(code);
         return;
     }
 
 
-    run_repl().unwrap()
+    run_repl(eval).unwrap()
 }

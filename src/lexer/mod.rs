@@ -1,2 +1,2 @@
-pub mod syntax_kind;
+pub mod token;
 pub mod debug;

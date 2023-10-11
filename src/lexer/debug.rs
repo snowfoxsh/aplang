@@ -1,6 +1,6 @@
 use logos::Logos;
 use crate::debug::LangDebug;
-use crate::lexer::syntax_kind::Token;
+use crate::lexer::token::Token;
 
 pub struct DebugSyntaxKind;
 

@@ -193,7 +193,7 @@ fn as_number(lex: &Lexer<Token>) -> Option<f64> {
 
 #[cfg(test)]
 mod tests {
-    use crate::lexer::syntax_kind::Token::*;
+    use crate::lexer::token::Token::*;
     use super::*;
     fn check(input: &str, kind: Token) {
         let mut lexer = Token::lexer(input);

@@ -1,5 +1,5 @@
 use logos::{Span, SpannedIter};
-use crate::lexer::syntax_kind::Token;
+use crate::lexer::token::Token;
 
 pub trait AstNode {
     fn kind(&self) -> Self;
