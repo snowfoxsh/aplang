@@ -10,7 +10,11 @@ pub enum Token {
     #[regex("#.*")]
     Comment,
 
-    #[regex("[A-Za-z_][A-Za-z0-9_]*", as_string)]
+    #[regex(r#""[^"]*""#, as_double_lit)]
+    #[regex(r#"'[^']*'"#, as_single_lit)]
+    Literal(String),
+
+    #[regex("[A-Za-z_][A-Za-z0-9_]*", as_ident)]
     Ident(String),
 
     // this took me so long for some reason????
@@ -183,7 +187,21 @@ pub enum Token {
     Or,
 }
 
-fn as_string(lex: &Lexer<Token>) -> String {
+fn as_double_lit(lex: &Lexer<Token>) -> Option<String> {
+    Some(lex.slice()
+        .strip_prefix('"')?
+        .strip_suffix('"')?
+        .to_string())
+}
+
+fn as_single_lit(lex: &Lexer<Token>) -> Option<String> {
+    Some(lex.slice()
+        .strip_prefix('\'')?
+        .strip_suffix('\'')?
+        .to_string())
+}
+
+fn as_ident(lex: &Lexer<Token>) -> String {
     lex.slice().to_string()
 }
 
@@ -191,6 +209,7 @@ fn as_number(lex: &Lexer<Token>) -> Option<f64> {
     lex.slice().parse().ok()
 }
 
+// todo: add more tests
 #[cfg(test)]
 mod tests {
     use crate::lexer::token::Token::*;
