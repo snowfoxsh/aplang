@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 use mapro::map;
 use TokenType::*;
+use crate::expr::Literal;
 
 
-// oshit what about static field init for nestify?
+// o shit what about static field init for nestify?
 
 pub struct Scanner {
     source: String,
@@ -272,6 +273,30 @@ pub enum LiteralValue {
     String(String),
 }
 
+impl TryInto<f64> for LiteralValue {
+    type Error = (String);
+
+    fn try_into(self) -> Result<f64, Self::Error> {
+        let Self::Number(num) = self else {
+            return Err("Trying to convert to number when literal is not of type number".to_string())
+        };
+
+        Ok(num)
+    }
+}
+
+impl TryInto<String> for LiteralValue {
+    type Error = (String);
+
+    fn try_into(self) -> Result<String, Self::Error> {
+        let Self::String(string) = self else {
+            return Err("Trying to convert to string when literal is not of type string".to_string())
+        };
+
+        Ok(string)
+    }
+}
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
@@ -308,7 +333,6 @@ pub enum TokenType {
 
     // Keywords
     Mod,
-    // c syntax: %
     If,
     Else,
     Repeat,
@@ -324,6 +348,10 @@ pub enum TokenType {
     Not,
     And,
     Or,
+
+    True,
+    False,
+    Null,
 
     Eof,
 }
@@ -355,6 +383,9 @@ fn get_keywords_hashmap() -> HashMap<&'static str, TokenType> {
         "not" => Not, "NOT" => Not,
         "and" => And, "AND" => And,
         "or" => Or, "OR" => Or,
+        "true" => True, "TRUE" => True,
+        "false" => False, "FALSE" => False,
+        "null" => Null, "NULL" => Null,
     }
 }
 
@@ -476,6 +507,9 @@ mod tests {
             ("not", Not),
             ("and", And),
             ("or", Or),
+            ("true", True),
+            ("false", False),
+            ("null", Null),
         ];
 
         for (keyword, token_type) in keywords {
