@@ -65,7 +65,7 @@ impl Display for Expr {
                 left,
                 operator,
                 right
-            } => format!("({} {} {}",
+            } => format!("({} {} {})",
                          operator.lexeme,
                          left,
                          right,

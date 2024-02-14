@@ -258,10 +258,10 @@ impl Scanner {
         }
 
         if self.source.chars().nth(self.current).unwrap() != ch {
-            return false;
+            false
         } else {
             self.current += 1;
-            return true;
+            true
         }
     }
 }
@@ -345,6 +345,7 @@ pub enum TokenType {
     In,
     Procedure,
     Return,
+    Print,
     Not,
     And,
     Or,
@@ -380,6 +381,7 @@ fn get_keywords_hashmap() -> HashMap<&'static str, TokenType> {
         "in" => In, "IN" => In,
         "procedure" => Procedure, "PROCEDURE" => Procedure,
         "return" => Return, "RETURN" => Return,
+        "print" => Print, "PRINT" => Print,
         "not" => Not, "NOT" => Not,
         "and" => And, "AND" => And,
         "or" => Or, "OR" => Or,

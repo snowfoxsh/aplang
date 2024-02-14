@@ -27,16 +27,16 @@ pub enum Stmt {
         body: Box<Stmt>, // should this be vec?
         alt: Option<Box<Stmt>>
     },
-    RepeatTimes {
+    RepeatLoop {
         count: Expr,
         body: Box<Stmt> // should this be vec?
 
     },
-    RepeatUntil {
+    RepeatUntilLoop {
         predicate: Expr,
         body: Box<Stmt>
     },
-    ForEach {
+    ForEachLoop {
         item: Ident, // ident
         list: Expr,
         body: Box<Stmt>
