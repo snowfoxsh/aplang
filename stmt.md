@@ -87,3 +87,32 @@ Procedure {
 ```
 
 Can have the `RETURN` keyword in body
+
+
+```ap
+x <- 3
+
+PROCEDURE addOne(value) {
+    valPlusOne <- value + 1
+    RETURN value
+}
+
+IF addOne(4) == x {
+    message <- "it is 4"
+    PRINT(message)
+} else {
+    PRINT("It is not 4")
+}
+
+list <- [1, 2, 3]
+
+FOR EACH value IN list {
+    PRINT(value)
+}
+
+i <- 0
+REPEAT 3 TIMES {
+    i <- i + 1
+}
+
+```

@@ -1,7 +1,7 @@
-use std::fmt::Display;
 use crate::expr::{Expr, Literal};
-use crate::scanner::{LiteralValue, Token, TokenType};
 use crate::scanner::TokenType::*;
+use crate::scanner::{LiteralValue, Token, TokenType};
+use std::fmt::Display;
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -10,14 +10,12 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Self {
-            tokens,
-            current: 0,
-        }
+        Self { tokens, current: 0 }
     }
 
     pub fn expression(&mut self) -> Expr {
-        self.equality() }
+        self.equality()
+    }
 
     fn equality(&mut self) -> Expr {
         let mut expr = self.comparison();
@@ -28,7 +26,7 @@ impl Parser {
             expr = Expr::Binary {
                 left: expr.into(),
                 operator,
-                right: rhs.into()
+                right: rhs.into(),
             };
         }
 
@@ -89,7 +87,7 @@ impl Parser {
             let rhs = self.unary();
             Expr::Unary {
                 operator,
-                right: rhs.into()
+                right: rhs.into(),
             }
         } else {
             self.primary()
@@ -100,14 +98,12 @@ impl Parser {
         if self.match_token(&LeftParen) {
             let expr = self.expression();
             self.consume(&RightParen, "Expected ')'");
-            Expr::Parens {
-                expr: expr.into()
-            }
+            Expr::Parens { expr: expr.into() }
         } else {
             let token = self.peek();
             self.advance();
             Expr::Literal {
-                value: Literal::from(token)
+                value: Literal::from(token),
             }
         }
     }
@@ -149,7 +145,8 @@ impl Parser {
     }
 
     fn peek(&self) -> Token {
-        self.tokens.get(self.current)
+        self.tokens
+            .get(self.current)
             .expect("Internal Parser Error! Parser off track. Bounds are fucked")
             .clone()
     }
@@ -158,7 +155,9 @@ impl Parser {
         if self.current == 0 {
             panic!("there is not previous token");
         }
-        self.tokens.get(self.current - 1).expect("Internal Parser Error! Bounds are fucked. *Prev")
+        self.tokens
+            .get(self.current - 1)
+            .expect("Internal Parser Error! Bounds are fucked. *Prev")
             .clone()
     }
 
@@ -167,15 +166,15 @@ impl Parser {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::scanner::Scanner;
     use super::*;
+    use crate::scanner::Scanner;
 
     #[test]
     fn test_add() {
-        let mut scanner = Scanner::new("NOT false + \nnot true");
+        let input = "NOT false + \nnot true";
+        let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens().unwrap();
 
         let mut parser = Parser::new(tokens);
@@ -183,5 +182,4 @@ mod tests {
 
         println!("{:#?}", expr);
     }
-
 }
