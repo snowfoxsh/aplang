@@ -1,5 +1,5 @@
 use crate::expr::Expr;
-use crate::scanner::Token;
+use crate::lexer::Token;
 
 pub struct Ident(String);
 

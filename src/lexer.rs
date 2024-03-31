@@ -11,7 +11,7 @@ use TokenType::*;
 use crate::source::Source;
 
 
-pub struct Scanner {
+pub struct Lexer {
     file_name: String,
     source: Arc<str>,
 
@@ -24,7 +24,7 @@ pub struct Scanner {
     keywords: HashMap<&'static str, TokenType>,
 }
 
-impl Scanner {
+impl Lexer {
     pub fn new(input: impl Into<Arc<str>>, file_name: String) -> Self {
         Self {
             file_name,
@@ -38,9 +38,9 @@ impl Scanner {
     }
 
     pub fn scan(input: impl Into<Arc<str>>, file_name: String) -> Result<Source, Vec<Report>> {
-        let mut scanner = Self::new(input, file_name);
-        let tokens = scanner.scan_tokens()?;
-        let raw = scanner.source; // move the source pointer out of the scanner
+        let mut lexer = Self::new(input, file_name);
+        let tokens = lexer.scan_tokens()?;
+        let raw = lexer.source; // move the source pointer out of the scanner
 
         Ok(Source::new(tokens, raw))
     }
@@ -248,8 +248,8 @@ impl Scanner {
             }
         }
         let substring = &self.source[self.start..self.current];
-        // let value = substring.parse::<f64>();
-        let value = Err("e");
+        let value = substring.parse::<f64>();
+        
         match value {
             Ok(value) => self.add_token_lit(Number, Some(LiteralValue::Number(value))),
             Err(_) => {
@@ -486,13 +486,13 @@ mod tests {
     use std::error::Error;
     use std::process::Termination;
     use miette::{Diagnostic, IntoDiagnostic, MietteDiagnostic, WrapErr};
-    use super::{LiteralValue, Scanner};
+    use super::{LiteralValue, Lexer};
     use super::TokenType::*;
 
     #[test]
     fn handle_one_char_tokens() {
         let source = "(( )) }{ []";
-        let mut scanner = Scanner::new(source, String::default());
+        let mut scanner = Lexer::new(source, String::default());
         scanner.scan_tokens().unwrap();
 
         assert_eq!(scanner.tokens.len(), 9);
@@ -510,7 +510,7 @@ mod tests {
     #[test]
     fn handle_two_char_tokens() {
         let source = "<- != == >=";
-        let mut scanner = Scanner::new(source, String::default());
+        let mut scanner = Lexer::new(source, String::default());
         scanner.scan_tokens().unwrap();
 
         assert_eq!(scanner.tokens.len(), 5);
@@ -524,7 +524,7 @@ mod tests {
     #[test]
     fn handle_string_lit() {
         let source = r#""ABC""#;
-        let mut scanner = Scanner::new(source, String::default());
+        let mut scanner = Lexer::new(source, String::default());
         scanner.scan_tokens().unwrap();
         assert_eq!(scanner.tokens.len(), 2);
         assert_eq!(scanner.tokens[0].token_type, StringLiteral);
@@ -537,7 +537,7 @@ mod tests {
     #[test]
     fn handle_string_lit_unterminated() {
         let source = r#""ABC"#;
-        let mut scanner = Scanner::new(source, "".to_string());
+        let mut scanner = Lexer::new(source, "".to_string());
         let result = scanner.scan_tokens();
         match result {
             Err(_) => (),
@@ -548,7 +548,7 @@ mod tests {
     #[test]
     fn handle_string_lit_multiline() {
         let source = "\"ABC\ndef\"";
-        let mut scanner = Scanner::new(source);
+        let mut scanner = Lexer::new(source, String::default());
         scanner.scan_tokens().unwrap();
         assert_eq!(scanner.tokens.len(), 2);
         assert_eq!(scanner.tokens[0].token_type, StringLiteral);
@@ -561,7 +561,7 @@ mod tests {
     #[test]
     fn handle_number_literals() {
         let source = "123.123\n321.0\n5";
-        let mut scanner = Scanner::new(source);
+        let mut scanner = Lexer::new(source, String::default());
         scanner.scan_tokens().unwrap();
 
         assert_eq!(scanner.tokens.len(), 6);
@@ -609,14 +609,14 @@ mod tests {
 
         for (keyword, token_type) in keywords {
             // Test lowercase version
-            let mut scanner = Scanner::new(keyword);
+            let mut scanner = Lexer::new(keyword, String::default());
             let result = scanner.scan_tokens().expect("Scanner failed on lowercase");
             assert_eq!(result.len(), 2, "Failed on keyword length: {}", keyword); // Expecting keyword token and EOF token
             assert_eq!(result[0].token_type, token_type, "Failed on lowercase keyword: {}", keyword);
 
             // Test uppercase version
             let upper_keyword = keyword.to_uppercase();
-            let mut scanner_upper = Scanner::new(upper_keyword.to_owned());
+            let mut scanner_upper = Lexer::new(upper_keyword.to_owned(), String::default());
             let result_upper = scanner_upper.scan_tokens().expect("Scanner failed on uppercase");
             assert_eq!(result_upper.len(), 2, "Failed on keyword length: {}", upper_keyword); // Expecting keyword token and EOF token
             assert_eq!(result_upper[0].token_type, token_type, "Failed on uppercase keyword: {}", upper_keyword);
@@ -626,7 +626,7 @@ mod tests {
     #[test]
     fn handle_identifer() {
         let source = "this_is_a_3_var <- 12;";
-        let mut scanner = Scanner::new(source);
+        let mut scanner = Lexer::new(source, String::default());
         scanner.scan_tokens().unwrap();
 
         assert_eq!(scanner.tokens.len(), 5);
@@ -652,7 +652,7 @@ mod tests {
         ];
 
         for (source, should_have_semicolon) in test_cases {
-            let mut scanner = Scanner::new(source);
+            let mut scanner = Lexer::new(source, String::new());
             let result = scanner.scan_tokens().unwrap();
 
             let has_semicolon = result.iter().any(|token| token.token_type == SoftSemi);

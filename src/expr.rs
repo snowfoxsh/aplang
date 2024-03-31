@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use crate::scanner::{LiteralValue, Token, TokenType};
+use crate::lexer::{LiteralValue, Token, TokenType};
 
 
 

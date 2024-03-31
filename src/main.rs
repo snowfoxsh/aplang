@@ -1,14 +1,14 @@
 use std::process::Termination;
 use miette::{Context, IntoDiagnostic, Report, SourceSpan, Result, miette, diagnostic, LabeledSpan};
 use parser::Parser;
-use scanner::Scanner;
+use lexer::Lexer;
 use crate::errors::{display_errors};
 
 mod errors;
 mod expr;
 mod parser;
 mod parser2;
-mod scanner;
+mod lexer;
 mod stmt;
 mod source;
 
@@ -16,7 +16,7 @@ fn main() -> Result<()> {
     let input = "\"(!a = b) ";
 
 
-    let source = Scanner::scan(input, "hello.ap".to_string()).unwrap_err();
+    let source = Lexer::scan(input, "hello.ap".to_string()).unwrap_err();
    
     display_errors(source, true);
     // println!("{}", source.with_source_code(input));

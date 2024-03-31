@@ -1,6 +1,6 @@
 use crate::expr::{Expr, Literal};
-use crate::scanner::TokenType::*;
-use crate::scanner::{LiteralValue, Token, TokenType};
+use crate::lexer::TokenType::*;
+use crate::lexer::{LiteralValue, Token, TokenType};
 use std::fmt::Display;
 
 pub struct Parser {
@@ -169,12 +169,12 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scanner::Scanner;
+    use crate::lexer::Lexer;
 
     #[test]
     fn test_add() {
         let input = "NOT false + \nnot true";
-        let mut scanner = Scanner::new(input);
+        let mut scanner = Lexer::new(input, String::default());
         let tokens = scanner.scan_tokens().unwrap();
 
         let mut parser = Parser::new(tokens);
