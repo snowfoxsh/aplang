@@ -14,7 +14,7 @@ IF (condition) {
 ```
 
 ```rust
-If {
+struct If {
 	condition: Vec<Expr>,
 	body: Vec<Statment>,
 	alternate: Option<Vec<Statement>>,
@@ -30,7 +30,7 @@ REPEAT n TIMES {
 ```
 
 ```rust
-RepeatTimes {
+struct RepeatTimes {
 	count: Expr,
 	body: Vec<Statement>,
 }
@@ -46,7 +46,7 @@ REPEAT UNTIL(condition) {
 ```
 
 ```rust
-RepeatUntil {
+struct RepeatUntil {
 	condition: Expr,
 	body: Vec<Statment>
 }
@@ -61,7 +61,7 @@ FOR EACH item IN list {
 ```
 
 ```rust
-ForEach {
+struct ForEach {
 	item: Ident,
 	list: Expr,
 	body: Vec<Statement>
@@ -79,7 +79,7 @@ PROCEDURE procName(param1, param2) {
 ```
 
 ```rust
-Procedure {
+struct Procedure {
 	name: Ident,
 	params: Vec<Ident>,
 	body: Vec<Statement>

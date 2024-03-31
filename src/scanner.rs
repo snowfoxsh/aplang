@@ -1,14 +1,22 @@
+use miette::{bail, LabeledSpan, miette, Report, Result};
 use std::collections::HashMap;
+use std::fmt::Display;
+use std::sync::Arc;
 use mapro::map;
+use miette::{Diagnostic, SourceSpan};
+use owo_colors::{FgColorDisplay, OwoColorize};
+use owo_colors::colors::Red;
+use owo_colors::styles::BoldDisplay;
 use TokenType::*;
-use crate::expr::Literal;
+use crate::source::Source;
 
-
-// o shit what about static field init for nestify?
 
 pub struct Scanner {
-    source: String,
+    file_name: String,
+    source: Arc<str>,
+
     tokens: Vec<Token>,
+
     start: usize,
     current: usize,
     line: usize,
@@ -17,9 +25,10 @@ pub struct Scanner {
 }
 
 impl Scanner {
-    pub fn new(input: impl ToString) -> Self {
+    pub fn new(input: impl Into<Arc<str>>, file_name: String) -> Self {
         Self {
-            source: input.to_string(),
+            file_name,
+            source: input.into(),
             tokens: Vec::new(),
             start: 0,
             current: 0,
@@ -28,9 +37,18 @@ impl Scanner {
         }
     }
 
-    pub fn scan_tokens(&mut self) -> Result<Vec<Token>, String> {
-        let mut errors = Vec::new();
+    pub fn scan(input: impl Into<Arc<str>>, file_name: String) -> Result<Source, Vec<Report>> {
+        let mut scanner = Self::new(input, file_name);
+        let tokens = scanner.scan_tokens()?;
+        let raw = scanner.source; // move the source pointer out of the scanner
+
+        Ok(Source::new(tokens, raw))
+    }
+
+    pub fn scan_tokens(&mut self) -> Result<Vec<Token>, Vec<Report>> {
+        let mut errors: Vec<Report> = vec![];
         while !self.is_at_end() {
+            // println!("({}..{})", self.start, self.current);
             self.start = self.current;
             match self.scan_token() {
                 Ok(_) => (),
@@ -44,19 +62,15 @@ impl Scanner {
                 token_type: Eof,
                 lexeme: "".to_string(),
                 literal: None,
+                span: SourceSpan::new(self.start.into(), 0usize),
                 line_number: self.line,
+                source: self.source.clone() // pass a source ptr to each token
             }
         );
-
+        
         if !errors.is_empty() {
-            let mut joined = "".to_string();
-            for error in errors {
-                joined.push_str(&error);
-                joined.push('\n');
-            }
-            return Err(joined);
+            return Err(errors)
         }
-
 
         Ok(self.tokens.clone())
     }
@@ -65,7 +79,7 @@ impl Scanner {
         self.current >= self.source.len()
     }
 
-    fn scan_token(&mut self) -> Result<(), String> {
+    fn scan_token(&mut self) -> Result<()> {
         let c = self.advance();
 
         match c {
@@ -85,21 +99,35 @@ impl Scanner {
                 if self.char_match('=') {
                     self.add_token(BangEqual)
                 } else {
-                    return Err(
-                        format!("Expected bang '!=' on line {}. \n\
-                        Help: write 'Not' instead of '!' to toggle a boolean", self.line)
-                    );
+                    let labels = vec![
+                        LabeledSpan::at(self.current_span(), "operator `!` (bang) not allowed in syntax")
+                    ];
+                    let error = miette!(
+                        labels = labels,
+                        code = "lexer::unknown_symbol::bang",
+                        help = "for logical not write `NOT` instead of `!`",
+                        "{} unknown symbol `!`", self.location_string()
+                    ).with_source_code(self.source.clone());
+                    
+                    return Err(error)
                 }
             }
             '=' => {
                 if self.char_match('=') {
                     self.add_token(EqualEqual)
                 } else {
-                    return Err(
-                        format!("Expected '==' on line {}. \n\
-                        Help: to assign to a variable use '<-' instead of '='
-                        ", self.line)
-                    );
+                    let labels = vec![
+                        LabeledSpan::at(self.current_span(), "operator `=` (equals) not allowed in syntax")
+                    ];
+                    let error = miette!(
+                        labels = labels,
+                        code = "lexer::unknown_symbol::equals",
+                        help = "for logical equals write `==` instead of `=`\n\
+                        to assign to a variable write `<-` instead of `=`",
+                        "{} unknown symbol `=`", self.location_string()
+                    ).with_source_code(self.source.clone());
+
+                    return Err(error)
                 }
             }
             '<' => {
@@ -138,6 +166,7 @@ impl Scanner {
             ' ' | '\r' | '\t' => { /* nop */ }
             '\n' => {
                 if let Some(prev) = self.tokens.last() {
+                    // use go's method of implicit semicolons
                     // see: https://go.dev/ref/spec#Semicolons
                     match prev.token_type {
                         Identifier | // ident
@@ -155,13 +184,25 @@ impl Scanner {
             '"' => self.string()?,
             ch if ch.is_ascii_digit() => self.number()?,
             ch if ch.is_alphanumeric() => self.identifier(),
-            ch => return Err(format!("Unrecognized char '{ch}' on line {}", self.line))
+            ch => {
+                let labels = vec![
+                    LabeledSpan::at(self.current_span(), format!("symbol `{ch}` is not allowed in syntax"))
+                ];
+                
+                let error = miette!(
+                    labels = labels,
+                    code = "lexer::unknown_symbol",
+                    "{} unknown symbol `{ch}`", self.location_string()
+                ).with_source_code(self.source.clone());
+                
+                return Err(error)
+            }
         }
 
         Ok(())
     }
 
-    fn string(&mut self) -> Result<(), String> {
+    fn string(&mut self) -> Result<()> {
         while self.peek() != '"' && !self.is_at_end() {
             if self.peek() == '\n' {
                 self.line += 1;
@@ -169,8 +210,20 @@ impl Scanner {
             self.advance();
         }
 
+        // reaching the end without closing the string should throw an error
         if self.is_at_end() {
-            return Err("Unterminated string".to_string());
+            let labels = vec![
+                LabeledSpan::at_offset(self.start, "unmatched quote")
+            ];
+            
+            let error = miette!(
+                labels = labels,
+                code = "lexer::unterminated_string",
+                help = "a string literal must end with a matching quote",
+                "{} unterminated string", self.location_string()
+            ).with_source_code(self.source.clone());
+            
+            return Err(error)
         }
 
         self.advance();
@@ -182,7 +235,7 @@ impl Scanner {
         Ok(())
     }
 
-    fn number(&mut self) -> Result<(), String> {
+    fn number(&mut self) -> Result<()> {
         while self.peek().is_ascii_digit() {
             self.advance();
         }
@@ -195,10 +248,25 @@ impl Scanner {
             }
         }
         let substring = &self.source[self.start..self.current];
-        let value = substring.parse::<f64>();
+        // let value = substring.parse::<f64>();
+        let value = Err("e");
         match value {
             Ok(value) => self.add_token_lit(Number, Some(LiteralValue::Number(value))),
-            Err(_) => return Err(format!("Could not parse number: {}", substring)),
+            Err(_) => {
+                let labels = vec![
+                    LabeledSpan::at(self.current_span(), "could not parse")
+                ];
+                
+                let error = miette!(
+                    labels = labels,
+                    code = "lexer::unknown_token",
+                    help = "this token might not be a valid number",
+                    "{} failed to parse `{}` into number", self.location_string(), substring
+                ).with_source_code(self.source.clone());
+                
+                return Err(error)
+            },
+            
         }
 
         Ok(())
@@ -242,13 +310,20 @@ impl Scanner {
     }
 
     fn add_token_lit(&mut self, token_type: TokenType, literal: Option<LiteralValue>) {
-        let text = self.source[self.start..self.current].to_string();
+        let text = self.source.get(self.start..self.current)
+            .expect("Internal Compiler Error, This is a BUG")
+            .to_string();
+        
+
+        let span_len = self.current - self.start;
 
         self.tokens.push(Token {
             token_type,
             lexeme: text,
             literal,
             line_number: self.line,
+            span: SourceSpan::new(self.start.into(), span_len),
+            source: self.source.clone() // pass a pointer to source
         });
     }
 
@@ -263,6 +338,19 @@ impl Scanner {
             self.current += 1;
             true
         }
+    }
+    
+    
+    fn current_span(&self) -> SourceSpan {
+        SourceSpan::from(self.start..self.current)
+    }
+
+    /// generate the location string for errors
+    fn location_string(&self) -> impl Display {
+        let string = format!("{}:{}:{}", self.file_name, self.line, self.start);
+        let string = string.bold();
+        let string = string.red();
+        format!("{string}")
     }
 }
 
@@ -362,7 +450,9 @@ pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
     pub literal: Option<LiteralValue>,
+    pub span: SourceSpan,
     pub line_number: usize,
+    pub source: Arc<str>
 }
 
 fn get_keywords_hashmap() -> HashMap<&'static str, TokenType> {
@@ -393,13 +483,16 @@ fn get_keywords_hashmap() -> HashMap<&'static str, TokenType> {
 
 #[cfg(test)]
 mod tests {
+    use std::error::Error;
+    use std::process::Termination;
+    use miette::{Diagnostic, IntoDiagnostic, MietteDiagnostic, WrapErr};
     use super::{LiteralValue, Scanner};
     use super::TokenType::*;
 
     #[test]
     fn handle_one_char_tokens() {
         let source = "(( )) }{ []";
-        let mut scanner = Scanner::new(source);
+        let mut scanner = Scanner::new(source, String::default());
         scanner.scan_tokens().unwrap();
 
         assert_eq!(scanner.tokens.len(), 9);
@@ -417,7 +510,7 @@ mod tests {
     #[test]
     fn handle_two_char_tokens() {
         let source = "<- != == >=";
-        let mut scanner = Scanner::new(source);
+        let mut scanner = Scanner::new(source, String::default());
         scanner.scan_tokens().unwrap();
 
         assert_eq!(scanner.tokens.len(), 5);
@@ -431,7 +524,7 @@ mod tests {
     #[test]
     fn handle_string_lit() {
         let source = r#""ABC""#;
-        let mut scanner = Scanner::new(source);
+        let mut scanner = Scanner::new(source, String::default());
         scanner.scan_tokens().unwrap();
         assert_eq!(scanner.tokens.len(), 2);
         assert_eq!(scanner.tokens[0].token_type, StringLiteral);
@@ -444,7 +537,7 @@ mod tests {
     #[test]
     fn handle_string_lit_unterminated() {
         let source = r#""ABC"#;
-        let mut scanner = Scanner::new(source);
+        let mut scanner = Scanner::new(source, "".to_string());
         let result = scanner.scan_tokens();
         match result {
             Err(_) => (),
@@ -523,7 +616,7 @@ mod tests {
 
             // Test uppercase version
             let upper_keyword = keyword.to_uppercase();
-            let mut scanner_upper = Scanner::new(&upper_keyword);
+            let mut scanner_upper = Scanner::new(upper_keyword.to_owned());
             let result_upper = scanner_upper.scan_tokens().expect("Scanner failed on uppercase");
             assert_eq!(result_upper.len(), 2, "Failed on keyword length: {}", upper_keyword); // Expecting keyword token and EOF token
             assert_eq!(result_upper[0].token_type, token_type, "Failed on uppercase keyword: {}", upper_keyword);
@@ -565,5 +658,22 @@ mod tests {
             let has_semicolon = result.iter().any(|token| token.token_type == SoftSemi);
             assert_eq!(has_semicolon, should_have_semicolon, "Failed on source: {}", source);
         }
+    }
+
+    #[test]
+    fn test_spans() {
+        let input = "IF (a == 3) {\
+            a <- a + 1\
+            }";
+        
+        // let num: i32 = input.parse().into_diagnostic().wrap_err("something here")
+
+        // let source = Scanner::scan(input).unwrap();
+        
+        
+
+        // let error = MietteDiagnostic::new("There was an error").with_code("hell");
+
+        // println!("{source:#?}");
     }
 }
