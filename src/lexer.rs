@@ -1,14 +1,12 @@
-use miette::{bail, LabeledSpan, miette, Report, Result};
+use miette::{LabeledSpan, miette, Report, Result};
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::sync::Arc;
-use mapro::map;
 use miette::{Diagnostic, SourceSpan};
-use owo_colors::{FgColorDisplay, OwoColorize};
-use owo_colors::colors::Red;
-use owo_colors::styles::BoldDisplay;
-use TokenType::*;
-use crate::source::Source;
+use owo_colors::OwoColorize;
+use crate::token::TokenType::*;
+use crate::token;
+use crate::token::{Token, TokenType};
 
 
 pub struct Lexer {
@@ -33,16 +31,17 @@ impl Lexer {
             start: 0,
             current: 0,
             line: 1,
-            keywords: get_keywords_hashmap(),
+            keywords: token::get_keywords_hashmap(),
         }
     }
 
-    pub fn scan(input: impl Into<Arc<str>>, file_name: String) -> Result<Source, Vec<Report>> {
+    pub fn scan(input: impl Into<Arc<str>>, file_name: String) -> Result<(Vec<Token>, Arc<str>), Vec<Report>> {
         let mut lexer = Self::new(input, file_name);
         let tokens = lexer.scan_tokens()?;
         let raw = lexer.source; // move the source pointer out of the scanner
 
-        Ok(Source::new(tokens, raw))
+        Ok((tokens, raw))
+        // Ok(Source::new(tokens, raw))
     }
 
     pub fn scan_tokens(&mut self) -> Result<Vec<Token>, Vec<Report>> {
@@ -213,7 +212,8 @@ impl Lexer {
         // reaching the end without closing the string should throw an error
         if self.is_at_end() {
             let labels = vec![
-                LabeledSpan::at_offset(self.start, "unmatched quote")
+                LabeledSpan::at_offset(self.start, "unmatched quote"),
+                LabeledSpan::at(self.current_span(), "unmatched quote")
             ];
             
             let error = miette!(
@@ -385,109 +385,10 @@ impl TryInto<String> for LiteralValue {
     }
 }
 
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum TokenType {
-    // Smart
-    SoftSemi,
-
-    // Single-char tokens
-    LeftParen,
-    RightParen,
-    LeftBracket,
-    RightBracket,
-    LeftBrace,
-    RightBrace,
-    Comma,
-    Dot,
-    Minus,
-    Plus,
-    Slash,
-    Star,
-
-    // Mixed
-    Arrow,
-    EqualEqual,
-    BangEqual,
-    Greater,
-    GreaterEqual,
-    Less,
-    LessEqual,
-
-    // Literals
-    Identifier,
-    Number,
-    StringLiteral,
-
-    // Keywords
-    Mod,
-    If,
-    Else,
-    Repeat,
-    Times,
-    Until,
-    For,
-    Each,
-    Continue,
-    Break,
-    In,
-    Procedure,
-    Return,
-    Print,
-    Not,
-    And,
-    Or,
-
-    True,
-    False,
-    Null,
-
-    Eof,
-}
-
-#[derive(Debug, Clone)]
-pub struct Token {
-    pub token_type: TokenType,
-    pub lexeme: String,
-    pub literal: Option<LiteralValue>,
-    pub span: SourceSpan,
-    pub line_number: usize,
-    pub source: Arc<str>
-}
-
-fn get_keywords_hashmap() -> HashMap<&'static str, TokenType> {
-    use TokenType::*;
-    map! {
-        "mod" => Mod, "MOD" => Mod,
-        "if" => If, "IF" => If,
-        "else" => Else, "ELSE" => Else,
-        "repeat" => Repeat, "REPEAT" => Repeat,
-        "times" => Times, "TIMES" => Times,
-        "until" => Until, "UNTIL" => Until,
-        "for" => For, "FOR" => For,
-        "each" => Each, "EACH" => Each,
-        "continue" => Continue, "CONTINUE" => Continue,
-        "break" => Break, "BREAK" => Break,
-        "in" => In, "IN" => In,
-        "procedure" => Procedure, "PROCEDURE" => Procedure,
-        "return" => Return, "RETURN" => Return,
-        "print" => Print, "PRINT" => Print,
-        "not" => Not, "NOT" => Not,
-        "and" => And, "AND" => And,
-        "or" => Or, "OR" => Or,
-        "true" => True, "TRUE" => True,
-        "false" => False, "FALSE" => False,
-        "null" => Null, "NULL" => Null,
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use std::error::Error;
-    use std::process::Termination;
-    use miette::{Diagnostic, IntoDiagnostic, MietteDiagnostic, WrapErr};
-    use super::{LiteralValue, Lexer};
-    use super::TokenType::*;
+    use super::{Lexer, LiteralValue};
+    use crate::token::TokenType::*;
 
     #[test]
     fn handle_one_char_tokens() {

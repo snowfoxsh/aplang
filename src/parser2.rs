@@ -197,3 +197,22 @@
 //         self.peek().token_type == Eof
 //     }
 // }
+
+use std::sync::Arc;
+use crate::token::Token;
+
+pub struct Parser2 {
+    tokens: Vec<Token>,
+    source: Arc<str>,
+    current: usize,
+}
+
+impl Parser2 {
+    
+}
+
+
+/// Helper methods
+impl Parser2 {
+    
+}

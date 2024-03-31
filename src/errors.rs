@@ -7,7 +7,7 @@ pub fn display_errors(errors: Vec<Report>, pretty: bool) {
         }
     } else {
         for error in errors {
-            println!("{}\n", error)
+            println!("{}", error)
         }
     }
 }

@@ -1,6 +1,5 @@
 use std::fmt::Display;
-use crate::lexer::{LiteralValue, Token, TokenType};
-
+use crate::token::{Token, TokenType};
 
 
 #[derive(Debug, Clone)]

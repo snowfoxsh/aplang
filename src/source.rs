@@ -21,7 +21,7 @@
 use std::rc::Rc;
 use std::sync::Arc;
 use miette::{MietteError, MietteSpanContents, SourceCode, SourceSpan, SpanContents};
-use crate::lexer::Token;
+use crate::token::Token;
 
 // todo: make pretty display
 #[derive(Debug)]

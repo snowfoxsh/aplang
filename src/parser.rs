@@ -1,7 +1,7 @@
 use crate::expr::{Expr, Literal};
-use crate::lexer::TokenType::*;
-use crate::lexer::{LiteralValue, Token, TokenType};
+use crate::token::TokenType::*;
 use std::fmt::Display;
+use crate::token::{Token, TokenType};
 
 pub struct Parser {
     tokens: Vec<Token>,
