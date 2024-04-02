@@ -21,18 +21,20 @@ mod ast;
 
 fn main() -> Result<()> {
     // let input = "NOT (3 + hello == 3)".to_string();
-    let expr = "!(3 + 4 * (hello - 4) = 7 OR (5 - 2) > 0) AND (TRUE == FALSE) OR (\"sampleString\" != \"otherString\" AND 9 >= 3 * 2)";
+    // let expr = "myProc(1, 2, 3) OR NOT (3 + 4 * (hello - 4) == 7 OR (5 - 2) > 0) AND (TRUE == FALSE) OR (\"sampleString\" != \"otherString\" AND 9 >= 3 * 2)";
+    // let expr = "myProc(1, 2, 3) OR NOT (3 + 4 * (hello - 4) == 7 OR (5 - 2) > 0) AND (TRUE == FALSE) OR (\"sampleString\" != \"otherString\" AND 9 >= 3 * 2)";
+    let expr = "[1, 2, 3, 4, 5, 6, 7, 8, func(a, b, c, d, e, 1 + 2)]";
 
 
-    let source = Lexer::scan(expr.to_string(), "hello.ap".to_string()).err().unwrap();
+    let source = Lexer::scan(expr.to_string(), "hello.ap".to_string()).unwrap();
 
     println!("\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    display_errors(source, true);
-    // let mut parser = Parser2::new(source.0, source.1);
+    // display_errors(source, true);
+    let mut parser = Parser2::new(source.0, source.1);
     
-    // let expr = parser.expression().unwrap();
+    let expr = parser.expression().unwrap();
     
-    // println!("{}", expr.print_tree());
+    println!("{}", expr.print_tree());
 
     // display_errors(source, true);
     // println!("{}", source.with_source_code(input));

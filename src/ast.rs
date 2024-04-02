@@ -10,6 +10,39 @@ use crate::token::Token;
 struct Ast {
     source: Arc<str>,
 }
+
+type Ident = String;
+
+#[derive(Debug, Clone)]
+pub enum Stmt {
+    Expr {
+        expr: Expr
+    },
+    ProcDeclaration {
+        name: Ident,
+        params: Vec<Ident>,
+        body: Box<Stmt>
+    },
+    If {
+        condition: Box<Expr>,
+        then_branch: Box<Stmt>,
+        else_if_branches: Vec<(Expr, Stmt)>,
+        else_branch: Option<Box<Stmt>>
+    },
+    RepeatTimes {
+        count: Box<Expr>,
+        body: Box<Stmt>,
+    },
+    RepeatUntil {
+        condition: Box<Expr>,
+        body: Box<Stmt>
+    },
+    ForEach {
+        item: Ident,
+        list: Expr
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Expr {
     Literal {
@@ -39,7 +72,7 @@ pub enum Expr {
     },
     ProcCall {
         ident: String,
-        arguments: Arguments,
+        arguments: Vec<Expr>,
         
         token: Token,
         parens: (Token, Token)
@@ -68,12 +101,6 @@ pub enum Literal {
     Null
 }
 
-#[derive(Debug, Clone)]
-pub struct Arguments {
-    arguments: Vec<Expr>,
-
-    tokens: Vec<Token>,
-}
 
 #[derive(Debug, Clone)]
 pub enum BinaryOp {
@@ -117,7 +144,7 @@ pub mod pretty {
                     Box::new(vec![Box::new((**right).clone()) as Box<dyn TreePrinter>].into_iter())
                 },
                 Expr::ProcCall { arguments, .. } => {
-                    let cloned_args = arguments.arguments.iter().map(|arg| Box::new(arg.clone()) as Box<dyn TreePrinter>).collect::<Vec<_>>();
+                    let cloned_args = arguments.iter().map(|arg| Box::new(arg.clone()) as Box<dyn TreePrinter>).collect::<Vec<_>>();
                     Box::new(cloned_args.into_iter())
                 },
                 Expr::Access { list, accessor, .. } => {

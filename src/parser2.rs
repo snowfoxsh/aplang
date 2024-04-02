@@ -384,6 +384,7 @@ impl Parser2 {
     
     // todo: add access "[" expr "]"
     fn primary(&mut self) -> miette::Result<Expr> {
+        // TRUE
         if self.match_token(&True) {
             let token = self.previous().clone();
             return Ok(Expr::Literal {
@@ -391,7 +392,7 @@ impl Parser2 {
                 token,
             })
         }
-
+        // FALSE
         if self.match_token(&False) {
             let token = self.previous().clone();
             return Ok(Expr::Literal {
@@ -399,7 +400,7 @@ impl Parser2 {
                 token,
             })
         }
-
+        // NULL
         if self.match_token(&Null) {
             let token = self.previous().clone();
             return Ok(Expr::Literal {
@@ -407,10 +408,9 @@ impl Parser2 {
                 token,
             })
         }
-
+        // string
         if self.match_token(&StringLiteral) {
             let token = self.previous().clone();
-
 
             // todo improve this message
             let literal = token.literal.clone().miette_expect(|| {
@@ -431,6 +431,7 @@ impl Parser2 {
             })
         }
 
+        // number
         if self.match_token(&Number) {
             let token = self.previous().clone();
 
@@ -440,7 +441,7 @@ impl Parser2 {
                 miette!("internal parser error. could not find literal")
             });
 
-            // if it is not string
+            // if it is not number
             let LiteralValue::Number(literal) = literal else {
                 let report = miette!(
                     "internal parser error literal is not a number"
@@ -453,16 +454,52 @@ impl Parser2 {
                 token
             })
         }
-
         // done parsing literals
-
+        
+        // IDENT
         if self.match_token(&Identifier) {
             let token = self.previous().clone();
             let ident = token.lexeme.clone();
             
             // function call
+            // IDENT "(" ( expr ),* ")"
             if self.match_token(&LeftParen) {
-                todo!()
+                let lp_token = self.previous().clone();
+                
+                let mut arguments = vec![];
+                if !self.check(&RightParen) {
+                    loop {
+                        if arguments.len() >= 255 {
+                            let next_token = self.peek();
+                            // todo: improve this message
+                            let report = miette!(
+                                "todo: max args for function call exceeded"
+                            );
+                            return Err(report)
+                        }
+                        
+                        let expr = self.expression()?;
+                        arguments.push(expr);
+                        
+                        // we have reached the end of arguments
+                        if !self.match_token(&Comma) {
+                            break;
+                        }
+                    }
+                }
+                
+                let rp_token = self.peek().clone();
+                self.consume(&RightParen,  {
+                    // todo
+                    miette!("expected ) after argument list, found {rp_token}")
+                })?;
+                
+                return Ok(Expr::ProcCall {
+                    ident,
+                    arguments,
+                    token,
+                    parens: (lp_token, rp_token),
+                })
             }
             
             // ident token
@@ -478,11 +515,11 @@ impl Parser2 {
             let expr = self.expression()?.into();
 
             let lp_temp = lp_token.clone();
-            let rp_token = self.consume(&RightParen, Box::new(move |token| {
+            let rp_token = self.consume(&RightParen, {
                 let lp = &lp_temp;
                 // todo: improve this message
                 miette!("could not find this error")
-            }))?;
+            })?;
 
             return Ok(Expr::Grouping {
                 expr,
@@ -490,33 +527,39 @@ impl Parser2 {
             })
         }
         
-        // lists here
+        // "[" ( expr ),* "]"
         if self.match_token(&LeftBracket) {
-            // todo list code
-            todo!()
+            let lb_token = self.previous().clone();
+            
+            let mut items = vec![]; 
+            if !self.check(&RightBracket) {
+                loop {
+                    let expr = self.expression()?;
+                    items.push(expr);
+
+                    // we have reached the end of arguments
+                    if !self.match_token(&Comma) {
+                        break;
+                    }
+                }
+            }
+
+            let rb_token = self.peek().clone();
+            self.consume(&RightBracket,  {
+                // todo
+                miette!("expected ] after item list, found {rb_token}")
+            })?;
+            
+            return Ok(Expr::List {
+                items,
+                brackets: (lb_token, rb_token),
+            });
         }
 
         // todo improve this message
         let report = miette!("expected found {}", self.peek());
         Err(report)
     }
-
-    fn proc_call(&mut self) -> miette::Result<Expr> {
-        todo!()
-    }
-
-    fn access(&mut self) -> miette::Result<Expr> {
-        todo!()
-    }
-
-    fn list(&mut self) -> miette::Result<Expr> {
-        todo!()
-    }
-
-    fn arguments(&mut self) -> miette::Result<Expr> {
-        todo!()
-    }
-
 }
 
 
@@ -540,17 +583,29 @@ impl Parser2 {
         }
     }
 
-    fn consume(&mut self, token_type: &TokenType, error_handler: Box<dyn Fn(&Token) -> Report>) -> miette::Result<&Token> {
+    fn consume(&mut self, token_type: &TokenType, report: Report) -> miette::Result<&Token> {
         let token = self.peek();
-
+    
         if token.token_type() == token_type {
             self.advance();
             let token = self.previous();
             Ok(token)
         } else {
-            Err(error_handler(token))
+            Err(report)
         }
     }
+
+    // fn consume(&mut self, token_type: &TokenType, error_handler: Box<dyn Fn(&Token) -> Report>) -> miette::Result<&Token> {
+    //     let token = self.peek();
+    // 
+    //     if token.token_type() == token_type {
+    //         self.advance();
+    //         let token = self.previous();
+    //         Ok(token)
+    //     } else {
+    //         Err(error_handler(token))
+    //     }
+    // }
 
     fn check(&self, typ: &TokenType) -> bool {
         if self.is_at_end() {
