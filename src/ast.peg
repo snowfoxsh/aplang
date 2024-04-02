@@ -1,3 +1,26 @@
+program -> declaration* EOF ;
+
+declaration -> statement | proc_decl ;
+
+statement -> expression_stmt
+           | if_stmt
+           | repeat_times_stmt
+           | repeat_until_stmt
+           | for_each_stmt
+           | return_stmt
+           | block
+           ;
+
+block -> "{" declaration "}" ;
+return_stmt -> "RETURN" expression?;
+
+if_stmt -> "IF" "(" expression ")" block ;
+repeat_times_stmt -> "REPEAT" expr "TIMES" block ;
+repeat_until_stmt -> "REPEAT" "UNTIL" expr block ;
+for_each_stmt -> "FOR" "EACH" IDENT "IN" expr block ;
+
+
+expression_stmt -> expression;
 expression -> logical_or ;
 logical_or -> logical_and ( "OR" logical_and )* ;
 logical_and -> equality ( "AND" equality )* ;
@@ -26,4 +49,3 @@ list -> "[" arguments? "]" ;
 
 
 LITERAL -> "TRUE" | "FALSE" | "NULL" | NUMBER | STRING
-

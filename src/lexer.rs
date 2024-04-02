@@ -59,7 +59,7 @@ impl Lexer {
         self.tokens.push(
             Token {
                 token_type: Eof,
-                lexeme: "".to_string(),
+                lexeme: "<EOF>".to_string(),
                 literal: None,
                 span: SourceSpan::new(self.start.into(), 0usize),
                 line_number: self.line,

@@ -3,6 +3,7 @@ use miette::{Context, IntoDiagnostic, Report, SourceSpan, Result, miette, diagno
 use owo_colors::OwoColorize;
 use parser::Parser;
 use lexer::Lexer;
+use crate::ast::pretty::TreePrinter;
 use crate::errors::{display_errors};
 use crate::parser2::Parser2;
 use crate::token::print_tokens;
@@ -19,7 +20,7 @@ mod ast;
 
 
 fn main() -> Result<()> {
-    let input = "3 + 8 == 3".to_string();
+    let input = "3 + hello == 3".to_string();
 
 
     let source = Lexer::scan(input, "hello.ap".to_string()).unwrap();
@@ -28,7 +29,7 @@ fn main() -> Result<()> {
     
     let expr = parser.expression().unwrap();
     
-    println!("{:#?}", expr);
+    println!("{}", expr.print_tree());
 
     // display_errors(source, true);
     // println!("{}", source.with_source_code(input));

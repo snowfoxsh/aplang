@@ -175,23 +175,7 @@
 //         self.tokens[self.current - 1].clone()
 //     }
 
-//     fn synchronize(&mut self) {
-//         self.advance();
 
-//         while !self.is_at_end() {
-//             if self.previous().token_type == SoftSemi {
-//                 return;
-//             }
-
-//             // todo: dont know if this is complete but its "good enough"
-//             match self.peek().token_type {
-//                 Procedure | Repeat | For | If | Return | Continue | Break | Print=> return,
-//                 _ => (),
-//             }
-
-//             self.advance();
-//         }
-//     }
 
 //     fn is_at_end(&mut self) -> bool {
 //         self.peek().token_type == Eof
@@ -249,7 +233,7 @@ impl Parser2 {
     
     pub(crate) fn expression(&mut self) -> miette::Result<Expr> {
         self.or()
-        // todo fisnish assignment
+        // todo finish assignment
         // self.assignment()
     }
     
@@ -297,8 +281,6 @@ impl Parser2 {
 
         Ok(expr)
     }
-
-
 
     fn equalitu(&mut self) -> miette::Result<Expr> {
         let mut expr = self.comparison()?;
@@ -515,7 +497,7 @@ impl Parser2 {
         }
 
         // todo improve this message
-        let report = miette!("expected expression");
+        let report = miette!("expected found {}", self.peek());
         Err(report)
     }
 
@@ -540,6 +522,24 @@ impl Parser2 {
 
 /// Helper methods
 impl Parser2 {
+    fn synchronize(&mut self) {
+        self.advance();
+
+        while !self.is_at_end() {
+            if self.previous().token_type == SoftSemi {
+                return;
+            }
+
+            // todo: dont know if this is complete but its "good enough"
+            match self.peek().token_type {
+                Procedure | Repeat | For | If | Return | Continue | Break | Print=> return,
+                _ => (),
+            }
+
+            self.advance();
+        }
+    }
+
     fn consume(&mut self, token_type: &TokenType, error_handler: Box<dyn Fn(&Token) -> Report>) -> miette::Result<&Token> {
         let token = self.peek();
 
