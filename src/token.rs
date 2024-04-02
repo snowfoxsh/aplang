@@ -1,5 +1,7 @@
 use std::collections::HashMap;
-use miette::SourceSpan;
+use std::fmt;
+use std::fmt::{Display, write};
+use miette::{LabeledSpan, Report, SourceSpan};
 use std::sync::Arc;
 use crate::lexer::LiteralValue;
 
@@ -69,7 +71,20 @@ pub struct Token {
     pub literal: Option<LiteralValue>,
     pub span: SourceSpan,
     pub line_number: usize,
-    pub source: Arc<str>
+    pub source: Arc<str>,
+}
+
+// Implement Display for Token
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} ", self.lexeme)
+    }
+}
+
+pub fn print_tokens(tokens: Vec<Token>) {
+    for token in tokens {
+        print!("{token}")
+    }
 }
 
 pub fn get_keywords_hashmap() -> HashMap<&'static str, TokenType> {
@@ -97,4 +112,34 @@ pub fn get_keywords_hashmap() -> HashMap<&'static str, TokenType> {
         "false" => False, "FALSE" => False,
         "null" => Null, "NULL" => Null,
     }
+}
+
+impl Token {
+    pub fn token_type(&self) -> &TokenType {
+        &self.token_type
+    }
+    pub fn label(&self, label: impl Into<String>) -> LabeledSpan {
+        LabeledSpan::at(self.span, label)
+    }
+    
+    pub fn span_to_label(&self, other: SourceSpan, label: impl Into<String>) -> LabeledSpan {
+        LabeledSpan::at(self.span_to(other), label)
+    }
+    
+    pub fn span(&self) -> SourceSpan {
+        self.span
+    }
+    
+    pub fn span_to(&self, other: SourceSpan) -> SourceSpan {
+        join_spans(self.span(), other)
+    }
+    
+    pub fn span_to_token(&self, other: &Token) -> SourceSpan {
+        self.span_to(other.span())
+    }
+}
+
+pub fn join_spans(left: SourceSpan, right: SourceSpan) -> SourceSpan {
+    let length = right.offset() - left.offset() + right.len();
+    SourceSpan::from(left.offset()..length)
 }

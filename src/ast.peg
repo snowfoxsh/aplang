@@ -1,0 +1,21 @@
+
+
+
+
+logical_or -> logical_and ( "OR" logical_and )* ;
+logical_and -> equality ( "AND" equality )* ;
+
+equality -> comparison ( ( "==" | "!=" ) comparison )* ;
+comparison -> addition ( ( ">" | ">=" | "<=" | "<" ) addition )* ;
+addition -> multiplication ( ( "-" | "+" ) multiplication )* ;
+multiplication -> unary ( ( "/" | "*" ) unary )* ;
+unary -> ( "!" | "-" ) unary | func_call ;
+
+func_call -> primary ( "(" arguments? ")" | "[" expression "]" )* ;
+arguments -> expression ( "," expression )* ;
+
+list -> "[" arguments? "]" ;
+
+primary -> "TRUE" | "FALSE" | "NULL"
+    | NUMBER | STRING | IDENT | "(" expression ")"
+    | list

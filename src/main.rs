@@ -4,6 +4,7 @@ use owo_colors::OwoColorize;
 use parser::Parser;
 use lexer::Lexer;
 use crate::errors::{display_errors};
+use crate::token::print_tokens;
 
 mod errors;
 mod expr;
@@ -13,43 +14,21 @@ mod lexer;
 mod stmt;
 mod source;
 mod token;
+mod ast;
 
 
 fn main() -> Result<()> {
-    let input = "(!a = b) {\n\
-    string\n\
-    line1\n\
-    line2\n\
-    line3\n\
-    line4\n\
-    line5\n\
-    line6\n\
-    line7\n\
-    line8 \n\
-    line9\n\
-    line10\n\
-    line11\n\
-    line12\n\
-    line13\n\
-    line14\n\
-    line15\n\
-    line16\n\
-    line17\n\
-    line18\n\
-    line19\n\
-    line20\n\
-    line21\n\
-    line22\n\
-    line23\n\
-    line24\n\
-    line25\n\
-    \
-    ";
+    let input = "IF (NOT a = b) { \n\
+    x <- 3\n\
+    x <- 3\n\
+    x <- 3\n\
+    }".to_string();
 
 
-    let source = Lexer::scan(input, "hello.ap".to_string()).unwrap_err();
+    let source = Lexer::scan(input, "hello.ap".to_string()).unwrap();
+    
 
-    display_errors(source, true);
+    // display_errors(source, true);
     // println!("{}", source.with_source_code(input));
     // let span = source.tokens[5 + 3].span;
     

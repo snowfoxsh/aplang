@@ -198,8 +198,33 @@
 //     }
 // }
 
+
+
+use std::fmt::Display;
 use std::sync::Arc;
-use crate::token::Token;
+use miette::{Diagnostic, miette, NamedSource, Report, Severity, SourceSpan};
+use thiserror::Error;
+use crate::expr::{Expr, Literal};
+use crate::token::{Token, TokenType};
+use crate::token::TokenType::{Eof, LeftParen, RightParen};
+
+// something like
+// self.consume(Semicolon, "Expected ';' after expression.")?;
+// should have a diagnostic pointing to the before expression
+// let previous
+
+// add functionality miette mutilate that will insert x spaces before the error
+
+// #[derive(Error, Diagnostic, Debug)]
+// struct ExpectedError {
+//     #[source_code]
+//     src: NamedSource<Arc<str>>,
+//
+//
+//     found: SourceSpan,
+// }
+
+use crate::token::TokenType::*;
 
 pub struct Parser2 {
     tokens: Vec<Token>,
@@ -207,12 +232,103 @@ pub struct Parser2 {
     current: usize,
 }
 
+/// parse expression
 impl Parser2 {
-    
+    fn primary(&mut self) -> miette::Result<Expr> {
+        todo!()
+    }
 }
 
 
 /// Helper methods
 impl Parser2 {
-    
+    fn consume(&mut self, token_type: &TokenType, error_handler: fn() -> Report) -> miette::Result<&Token> { 
+        let token = self.peek();
+
+        if token.token_type() == token_type {
+            self.advance();
+            let token = self.previous();
+            Ok(token)
+        } else {
+            Err(error_handler())
+        }
+    }
+
+    fn check(&self, typ: &TokenType) -> bool {
+        if self.is_at_end() {
+            return false
+        }
+
+        self.peek().token_type() == typ
+    }
+
+    fn match_token(&mut self, token_type: &TokenType) -> bool {
+        if self.check(token_type) {
+            self.advance();
+            return true;
+        }
+        false
+    }
+
+    fn match_tokens(&mut self, types: &[TokenType]) -> bool {
+        for ty in types {
+            if self.match_token(ty) {
+                return true;
+            }
+        }
+        false
+    }
+    fn advance(&mut self) -> &Token {
+        if !self.is_at_end() {
+            self.current += 1;
+        }
+
+        self.previous()
+    }
+
+    fn peek(&self) -> &Token {
+        self.tokens
+            .get(self.current)
+            // todo: switch to miette_expect
+            .expect("internal error: attempted to peek token when there is no token to peek")
+    }
+
+    fn previous(&self) -> &Token {
+        if self.current == 0 {
+            // todo switch to miette! panic
+            panic!("internal error: there is no previous token");
+        }
+
+        // todo: idea bug severity
+        // Severity::Bug
+
+        self.tokens
+            .get(self.current - 1)
+            // todo: improve this message include link to github issues (miette_expect)
+            .expect("internal error: this should never happen. \
+            if it does there is a bug in previous method")
+            // .expect_miette(false, || {
+            //     todo
+            // });
+    }
+
+    fn is_at_end(&self) -> bool {
+        self.peek().token_type == Eof
+    }
 }
+
+trait ExpectMiette {
+    fn miette_expect(&self, pretty: bool, report_handler: fn() -> Report) -> ! {
+        let report = report_handler();
+
+        if pretty {
+            panic!("{:?}", report);
+        } else {
+            panic!("{}", report);
+        }
+    }
+}
+
+impl<T, E> ExpectMiette for Result<T, E>{}
+
+impl<T> ExpectMiette for Option<T> { }

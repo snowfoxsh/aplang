@@ -8,9 +8,11 @@ IF (condition) {
 
 IF (condition) {
 	// body
-} ELSE {
+} ELSE IF (condition) {
 	// body
-}
+} ELSE {
+    // body
+} 
 ```
 
 ```rust
@@ -99,9 +101,9 @@ PROCEDURE addOne(value) {
 
 IF addOne(4) == x {
     message <- "it is 4"
-    PRINT(message)
+    DISPLAY(message)
 } else {
-    PRINT("It is not 4")
+    DISPLAY("It is not 4")
 }
 
 list <- [1, 2, 3]
@@ -115,4 +117,8 @@ REPEAT 3 TIMES {
     i <- i + 1
 }
 
+```
+
+```
+program -> 
 ```
