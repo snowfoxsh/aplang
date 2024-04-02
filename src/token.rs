@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::{Display, write};
-use miette::{LabeledSpan, Report, SourceSpan};
+use miette::{LabeledSpan, miette, Report, SourceSpan};
 use std::sync::Arc;
+use crate::ast::{BinaryOp, LogicalOp, UnaryOp};
 use crate::lexer::LiteralValue;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -142,4 +143,42 @@ impl Token {
 pub fn join_spans(left: SourceSpan, right: SourceSpan) -> SourceSpan {
     let length = right.offset() - left.offset() + right.len();
     SourceSpan::from(left.offset()..length)
+}
+
+
+impl Token {
+    pub fn to_binary_op(&self) -> miette::Result<BinaryOp> {
+        match self.token_type {
+            TokenType::EqualEqual => Ok(BinaryOp::EqualEqual),
+            TokenType::BangEqual => Ok(BinaryOp::NotEqual),
+            TokenType::Less => Ok(BinaryOp::Less),
+            TokenType::LessEqual => Ok(BinaryOp::LessEqual),
+            TokenType::Greater => Ok(BinaryOp::Greater),
+            TokenType::GreaterEqual => Ok(BinaryOp::GreaterEqual),
+            TokenType::Plus => Ok(BinaryOp::Plus),
+            TokenType::Minus => Ok(BinaryOp::Minus),
+            TokenType::Star => Ok(BinaryOp::Star),
+            TokenType::Slash => Ok(BinaryOp::Slash),
+            // todo: improve this message
+            _ => Err(miette!("Conversion to Binary Op Error, Token is not binary Op")), 
+        }
+    }
+
+    pub fn to_unary_op(&self) -> miette::Result<UnaryOp> {
+        match self.token_type {
+            TokenType::Minus => Ok(UnaryOp::Minus),
+            TokenType::Not => Ok(UnaryOp::Not),
+            // todo: improve this message
+            _ => Err(miette!("Conversion to Binary Unary Error, Token is not Unary op")),
+        }
+    }
+    
+    pub fn to_logical_op(&self) -> miette::Result<LogicalOp> {
+        match self.token_type {
+            TokenType::Or => Ok(LogicalOp::Or),
+            TokenType::And => Ok(LogicalOp::And),
+            // todo: improve this message
+            _ => Err(miette!("Conversion to Binary Logical Error, Token is not Logical op")),
+        }
+    }
 }

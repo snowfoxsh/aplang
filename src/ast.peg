@@ -1,7 +1,4 @@
-
-
-
-
+expression -> logical_or ;
 logical_or -> logical_and ( "OR" logical_and )* ;
 logical_and -> equality ( "AND" equality )* ;
 
@@ -9,13 +6,24 @@ equality -> comparison ( ( "==" | "!=" ) comparison )* ;
 comparison -> addition ( ( ">" | ">=" | "<=" | "<" ) addition )* ;
 addition -> multiplication ( ( "-" | "+" ) multiplication )* ;
 multiplication -> unary ( ( "/" | "*" ) unary )* ;
-unary -> ( "!" | "-" ) unary | func_call ;
+unary -> ( "!" | "-" ) unary | primary ;
 
-func_call -> primary ( "(" arguments? ")" | "[" expression "]" )* ;
+
+primary -> "(" expression ")"
+    | func_call
+    | access
+    | list
+    | LITERAL
+    | IDENT
+
+func_call -> IDENT "(" arguments? ")" ;
+
 arguments -> expression ( "," expression )* ;
+
+access -> primary ( "[" expr "]" )*
 
 list -> "[" arguments? "]" ;
 
-primary -> "TRUE" | "FALSE" | "NULL"
-    | NUMBER | STRING | IDENT | "(" expression ")"
-    | list
+
+LITERAL -> "TRUE" | "FALSE" | "NULL" | NUMBER | STRING
+

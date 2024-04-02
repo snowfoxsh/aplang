@@ -4,6 +4,7 @@ use owo_colors::OwoColorize;
 use parser::Parser;
 use lexer::Lexer;
 use crate::errors::{display_errors};
+use crate::parser2::Parser2;
 use crate::token::print_tokens;
 
 mod errors;
@@ -18,15 +19,16 @@ mod ast;
 
 
 fn main() -> Result<()> {
-    let input = "IF (NOT a = b) { \n\
-    x <- 3\n\
-    x <- 3\n\
-    x <- 3\n\
-    }".to_string();
+    let input = "3 + 8 == 3".to_string();
 
 
     let source = Lexer::scan(input, "hello.ap".to_string()).unwrap();
     
+    let mut parser = Parser2::new(source.0, source.1);
+    
+    let expr = parser.expression().unwrap();
+    
+    println!("{:#?}", expr);
 
     // display_errors(source, true);
     // println!("{}", source.with_source_code(input));

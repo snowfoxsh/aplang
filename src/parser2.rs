@@ -204,7 +204,8 @@ use std::fmt::Display;
 use std::sync::Arc;
 use miette::{Diagnostic, miette, NamedSource, Report, Severity, SourceSpan};
 use thiserror::Error;
-use crate::expr::{Expr, Literal};
+use crate::ast::{Expr, Literal, LogicalOp};
+use crate::lexer::LiteralValue;
 use crate::token::{Token, TokenType};
 use crate::token::TokenType::{Eof, LeftParen, RightParen};
 
@@ -232,17 +233,314 @@ pub struct Parser2 {
     current: usize,
 }
 
+
+impl Parser2 {
+    pub(crate) fn new(tokens: Vec<Token>, source: Arc<str>) -> Self {
+        Self {
+            tokens,
+            source,
+            current: 0
+        }
+    }
+}
+
 /// parse expression
 impl Parser2 {
-    fn primary(&mut self) -> miette::Result<Expr> {
+    
+    pub(crate) fn expression(&mut self) -> miette::Result<Expr> {
+        self.or()
+        // todo fisnish assignment
+        // self.assignment()
+    }
+    
+    fn assignment(&mut self) -> miette::Result<Expr> {
         todo!()
     }
+
+    fn or(&mut self) -> miette::Result<Expr> {
+        let mut expr = self.and()?;
+
+        while self.match_token(&Or) {
+            // get or token for spanning
+            let token = self.previous().clone();
+
+            let right = self.and()?;
+            expr = Expr::Logical {
+                left: Box::new(expr),
+                operator: LogicalOp::Or,
+                right: Box::new(right),
+
+                token
+            }
+        }
+
+        Ok(expr)
+    }
+
+    // logical_and -> equality ( "AND" equality )*
+    fn and(&mut self) -> miette::Result<Expr> {
+        let mut expr = self.equalitu()?;
+
+        while self.match_token(&And) {
+            // get the token for spanning
+            let token = self.previous().clone();
+
+            let right = self.and()?;
+            expr = Expr::Logical {
+                left: expr.into(),
+                operator: LogicalOp::Or,
+                right: right.into(),
+
+                token
+            }
+        }
+
+        Ok(expr)
+    }
+
+
+
+    fn equalitu(&mut self) -> miette::Result<Expr> {
+        let mut expr = self.comparison()?;
+
+        while self.match_tokens(&[BangEqual, EqualEqual]) {
+            // get equality token
+            let token = self.previous().clone();
+            let right = self.comparison()?.into();
+            let operator = token.to_binary_op()?;
+            let left = expr.into();
+            expr = Expr::Binary {
+                left,
+                operator,
+                right,
+                token
+            }
+        }
+
+        Ok(expr)
+    }
+
+    fn comparison(&mut self) -> miette::Result<Expr> {
+        let mut expr = self.addition()?;
+
+        while self.match_tokens(&[Greater, GreaterEqual, Less, LessEqual]) {
+            // get comparision token
+            let token = self.previous().clone();
+            let right = self.addition()?.into();
+            let operator = token.to_binary_op()?;
+            let left = expr.into();
+            expr = Expr::Binary {
+                left,
+                operator,
+                right,
+                token
+            }
+        }
+
+        Ok(expr)
+    }
+
+    fn addition(&mut self) -> miette::Result<Expr> {
+        let mut expr = self.multiplication()?;
+
+        while self.match_tokens(&[Plus, Minus]) {
+            // get addition token
+            let token = self.previous().clone();
+            let right = self.multiplication()?.into();
+            let operator = token.to_binary_op()?;
+            let left = expr.into();
+            expr = Expr::Binary {
+                left,
+                operator,
+                right,
+                token
+            }
+        }
+
+        Ok(expr)
+    }
+
+    fn multiplication(&mut self) -> miette::Result<Expr> {
+        let mut expr = self.unary()?;
+
+        while self.match_tokens(&[Star, Slash]) {
+            // get multiplication token
+            let token = self.previous().clone();
+            let right = self.unary()?.into();
+            let operator = token.to_binary_op()?;
+            let left = expr.into();
+
+            expr = Expr::Binary {
+                left,
+                operator,
+                right,
+                token
+            }
+        }
+
+        Ok(expr)
+    }
+
+    fn unary(&mut self) -> miette::Result<Expr> {
+        if self.match_tokens(&[Not, Minus]) {
+            let token = self.previous().clone();
+            let right = self.unary()?.into();
+            let operator = token.to_unary_op()?;
+
+            let expr = Expr::Unary {
+                operator,
+                right,
+                token,
+            };
+
+            Ok(expr)
+        } else {
+            self.primary()
+        }
+    }
+
+    
+    // todo: add access "[" expr "]"
+    fn primary(&mut self) -> miette::Result<Expr> {
+        if self.match_token(&True) {
+            let token = self.previous().clone();
+            return Ok(Expr::Literal {
+                value: Literal::True,
+                token,
+            })
+        }
+
+        if self.match_token(&False) {
+            let token = self.previous().clone();
+            return Ok(Expr::Literal {
+                value: Literal::True,
+                token,
+            })
+        }
+
+        if self.match_token(&Null) {
+            let token = self.previous().clone();
+            return Ok(Expr::Literal {
+                value: Literal::True,
+                token,
+            })
+        }
+
+        if self.match_token(&StringLiteral) {
+            let token = self.previous().clone();
+
+
+            // todo improve this message
+            let literal = token.literal.clone().miette_expect(|| {
+                miette!("internal parser error. could not find literal")
+            });
+
+            // if it is not string
+            let LiteralValue::String(literal) = literal else {
+                let report = miette!(
+                    "internal parser error literal is not a string"
+                );
+                panic!("{:?}", report)
+            };
+
+            return Ok(Expr::Literal {
+                value: Literal::String(literal),
+                token
+            })
+        }
+
+        if self.match_token(&Number) {
+            let token = self.previous().clone();
+
+
+            // todo improve this message
+            let literal = token.literal.clone().miette_expect(|| {
+                miette!("internal parser error. could not find literal")
+            });
+
+            // if it is not string
+            let LiteralValue::Number(literal) = literal else {
+                let report = miette!(
+                    "internal parser error literal is not a number"
+                );
+                panic!("{:?}", report)
+            };
+
+            return Ok(Expr::Literal {
+                value: Literal::Number(literal),
+                token
+            })
+        }
+
+        // done parsing literals
+
+        if self.match_token(&Identifier) {
+            let token = self.previous().clone();
+            let ident = token.lexeme.clone();
+            
+            // function call
+            if self.match_token(&LeftParen) {
+                todo!()
+            }
+            
+            // ident token
+            return Ok(Expr::Variable {
+                ident,
+                token,
+            })
+        }
+
+        // "(" expr ")"
+        if self.match_token(&LeftParen) {
+            let lp_token = self.previous().clone();
+            let expr = self.expression()?.into();
+
+            let lp_temp = lp_token.clone();
+            let rp_token = self.consume(&RightParen, Box::new(move |token| {
+                let lp = &lp_temp;
+                // todo: improve this message
+                miette!("could not find this error")
+            }))?;
+
+            return Ok(Expr::Grouping {
+                expr,
+                parens: (lp_token.clone(), rp_token.clone())
+            })
+        }
+        
+        // lists here
+        if self.match_token(&LeftBracket) {
+            // todo list code
+            todo!()
+        }
+
+        // todo improve this message
+        let report = miette!("expected expression");
+        Err(report)
+    }
+
+    fn proc_call(&mut self) -> miette::Result<Expr> {
+        todo!()
+    }
+
+    fn access(&mut self) -> miette::Result<Expr> {
+        todo!()
+    }
+
+    fn list(&mut self) -> miette::Result<Expr> {
+        todo!()
+    }
+
+    fn arguments(&mut self) -> miette::Result<Expr> {
+        todo!()
+    }
+
 }
 
 
 /// Helper methods
 impl Parser2 {
-    fn consume(&mut self, token_type: &TokenType, error_handler: fn() -> Report) -> miette::Result<&Token> { 
+    fn consume(&mut self, token_type: &TokenType, error_handler: Box<dyn Fn(&Token) -> Report>) -> miette::Result<&Token> {
         let token = self.peek();
 
         if token.token_type() == token_type {
@@ -250,7 +548,7 @@ impl Parser2 {
             let token = self.previous();
             Ok(token)
         } else {
-            Err(error_handler())
+            Err(error_handler(token))
         }
     }
 
@@ -317,18 +615,31 @@ impl Parser2 {
     }
 }
 
-trait ExpectMiette {
-    fn miette_expect(&self, pretty: bool, report_handler: fn() -> Report) -> ! {
-        let report = report_handler();
+trait ExpectMiette<T> {
 
-        if pretty {
-            panic!("{:?}", report);
-        } else {
-            panic!("{}", report);
+    fn miette_expect(self,  report_handler: fn() -> Report) -> T;
+}
+
+impl<T, E> ExpectMiette<T> for Result<T, E> {
+    fn miette_expect(self, report_handler: fn() -> Report) -> T {
+        match self {
+            Ok(t) => t,
+            Err(_) => {
+                let report = report_handler();
+                panic!()
+            }
         }
     }
 }
 
-impl<T, E> ExpectMiette for Result<T, E>{}
-
-impl<T> ExpectMiette for Option<T> { }
+impl<T> ExpectMiette<T> for Option<T> {
+    fn miette_expect(self, report_handler: fn() -> Report) -> T {
+        match self {
+            Some(t) => t,
+            None => {
+                let report = report_handler();
+                panic!()
+            }
+        }
+    }
+}
