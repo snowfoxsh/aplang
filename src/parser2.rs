@@ -377,10 +377,33 @@ impl Parser2 {
 
             Ok(expr)
         } else {
-            self.primary()
+            self.access()
         }
     }
 
+    fn access(&mut self) -> miette::Result<Expr> {
+        let mut expr = self.primary()?;
+
+        loop {
+            if self.match_token(&LeftBracket) {
+                let lb_token = self.previous().clone();
+                
+                let index = self.expression()?;
+                let rb_token = self.peek().clone();
+                self.consume(&RightBracket, miette!("Expected ']' after index"))?;
+                
+                expr = Expr::Access {
+                    list: Box::new(expr),
+                    key: Box::new(index),
+                    brackets: (lb_token, rb_token)
+                };
+            } else {
+                break;
+            }
+        }
+
+        Ok(expr)
+    }
     
     // todo: add access "[" expr "]"
     fn primary(&mut self) -> miette::Result<Expr> {

@@ -79,7 +79,7 @@ pub enum Expr {
     },
     Access {
         list: Box<Expr>,
-        accessor: Box<Expr>,
+        key: Box<Expr>,
         brackets: (Token, Token),
     },
     List {
@@ -147,7 +147,7 @@ pub mod pretty {
                     let cloned_args = arguments.iter().map(|arg| Box::new(arg.clone()) as Box<dyn TreePrinter>).collect::<Vec<_>>();
                     Box::new(cloned_args.into_iter())
                 },
-                Expr::Access { list, accessor, .. } => {
+                Expr::Access { list, key: accessor, .. } => {
                     Box::new(vec![Box::new((**list).clone()) as Box<dyn TreePrinter>, Box::new((**accessor).clone()) as Box<dyn TreePrinter>].into_iter())
                 },
                 Expr::List { items, .. } => {
