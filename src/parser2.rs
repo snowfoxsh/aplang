@@ -29,6 +29,7 @@ pub struct Parser2 {
     tokens: Vec<Token>,
     source: Arc<str>,
     current: usize,
+    warnings: Vec<Report>
 }
 
 
@@ -37,7 +38,8 @@ impl Parser2 {
         Self {
             tokens,
             source,
-            current: 0
+            current: 0,
+            warnings: vec![],
         }
     }
 
@@ -87,6 +89,8 @@ impl Parser2 {
         let name_token = self.consume(&Identifier, |token| {
             miette!("expected an identifier")
         })?.clone();
+        
+        // self.ident_warning(&name_token);
         
         let name = name_token.lexeme.clone();
         
@@ -603,6 +607,9 @@ impl Parser2 {
         // IDENT
         if self.match_token(&Identifier) {
             let token = self.previous().clone();
+            // add possible ident warnings
+            // self.ident_warning(&token);
+            
             let ident = token.lexeme.clone();
             
             // function call
@@ -829,6 +836,35 @@ impl Parser2 {
 
     fn is_at_end(&self) -> bool {
         self.peek().token_type == Eof
+    }
+}
+
+pub(super) mod warning {
+    use miette::{miette, Report, Severity};
+    use crate::parser2::Parser2;
+    use crate::token::{get_keywords_hashmap, Token};
+    use crate::token::TokenType::Identifier;
+
+    impl Parser2 {
+        pub(super) fn warning(&mut self, report: Report) {
+            self.warnings.push(report.with_source_code(self.source.clone()))
+        }
+
+        // todo: add warnings to parameters
+        // pub(super) fn ident_warning(&mut self, ident: &Token) {
+        //     if ident.token_type == Identifier {
+        //         panic!("Internal error trying to warn about ident but input is not ident")
+        //     }
+        //     
+        //     if get_keywords_hashmap().contains_key(ident.lexeme.to_lowercase().as_str()) {
+        //         let lexeme = &ident.lexeme;
+        //         let report = miette!(
+        //             severity = Severity::Warning,
+        //             "it is not recommended that your identifier echos {}", lexeme
+        //         );
+        //         self.warning(report);
+        //     }
+        // }
     }
 }
 
