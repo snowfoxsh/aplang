@@ -5,7 +5,7 @@ pub struct Ident(String);
 
 pub enum Stmt {
     Expression {
-        expression: Expr
+        expr: Expr
     },
     Print {
         expression: Expr,

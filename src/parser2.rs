@@ -1,194 +1,8 @@
-// use std::fmt::Display;
-// use crate::expr::{Expr, Literal};
-// use crate::scanner::{LiteralValue, Token, TokenType};
-// use crate::scanner::TokenType::*;
-// use crate::stmt::Stmt;
-
-// type Result<T> = core::result::Result<T, String>;
-
-// pub struct Parser2 {
-//     tokens: Vec<Token>,
-//     current: usize,
-//     next_id: usize,
-// }
-
-// impl Parser2 {
-//     pub fn new(tokens: Vec<Token>) -> Self {
-//         Self {
-//             tokens,
-//             current: 0,
-//             next_id: 0,
-//         }
-//     }
-
-//     fn get_id(&mut self) -> usize {
-//         let id = self.next_id;
-//         self.next_id += 1;
-
-//         id
-//     }
-
-//     pub fn parse(&mut self) -> Result<Vec<Stmt>> {
-//         let mut stmts = vec![];
-//         let mut errors = vec![];
-
-//         while !self.is_at_end() {
-//             let stmt = self.declaration();
-
-//             match stmt {
-//                 Ok(s) => stmts.push(s),
-//                 Err(msg) => {
-//                     errors.push(msg);
-
-//                     // if we find an error then we need to sync to the next stmt
-//                     self.synchronize();
-//                 }
-//             }
-//         }
-
-//         if errors.len() == 0 {
-//             Ok(stmts)
-//         } else {
-//             Err(errors.join("\n"))
-//         }
-//     }
-
-//     // START PEG
-
-//     fn declaration(&mut self) -> Result<Stmt> {
-//         if self.match_token(&Procedure) {
-//             self.procedure()
-//         } else {
-//             self.statement()
-//         }
-//     }
-
-//     fn procedure(&mut self) -> Result<Stmt> {
-//         todo!()
-//     }
-
-//     fn statement(&mut self) -> Result<Stmt> {
-//         // { .. }
-//         if self.match_token(&LeftBrace) {
-//             self.block_statement()
-//         }
-//         // IF condition | IF condition .. ELSE
-//         else if self.match_token(&If) {
-//             self.if_statement()
-//         }
-//         // REPEAT UNTIL | REPEAT ident TIMES
-//         else if self.match_token(&Repeat) {
-//             self.loop_statement()
-//         }
-//         // FOR x IN array
-//         else if self.match_token(&For) {
-//             self.for_statement()
-//         }
-//         // RETURN x
-//         else if self.match_token(&Return) {
-//             self.return_statement()
-//         }
-//         // CONTINUE
-//         else if self.match_token(&Continue) {
-//             self.continue_statement()
-//         }
-//         // BREAK
-//         else if self.match_token(&Break) {
-//             self.break_statement()
-//         }
-//         // PRINT x
-//         if self.match_token(&Print) {
-//             self.print_statement()
-//         }
-//         // ..
-//         else {
-//             self.expression_statement()
-//         }
-//     }
-
-//     fn primary(&mut self) -> Result<Expr> {
-//         let token = self.peek();
-
-//         Ok(match token.token_type {
-//             LeftParen => {
-//                 self.advance();
-//                 let expr = self.expression()?;
-//                 self.consume(RightParen, "Expected ')'")?;
-//                 Expr::Parens {
-//                     expr: expr.into()
-//                 }
-//             },
-//             _ => Err("Expected Expression".to_string()),
-//         })
-//     }
-
-//     // UTIlS BELOW
-//     fn consume(&mut self, token_type: TokenType, msg: &str) -> Result<Token> {
-//         let token = self.peek();
-//         if token.token_type == token_type {
-//             self.advance();
-//             let token = self.previous();
-//             Ok(token)
-//         } else {
-//             Err(format!("Line {}: {}", token.line_number, msg))
-//         }
-//     }
-
-//     fn check(&mut self, typ: TokenType) -> bool {
-//         self.peek().token_type == typ
-//     }
-
-//     fn match_token(&mut self, typ: &TokenType) -> bool {
-//         if self.is_at_end() {
-//             false
-//         } else if self.peek().token_type == *typ {
-//             self.advance();
-//             true
-//         } else {
-//             false
-//         }
-//     }
-
-//     fn match_tokens(&mut self, typs: &[TokenType]) -> bool {
-//         for typ in typs {
-//             if self.match_token(typ) {
-//                 return true;
-//             }
-//         }
-
-//         false
-//     }
-
-//     fn advance(&mut self) -> Token {
-//         if !self.is_at_end() {
-//             self.current += 1;
-//         }
-
-//         self.previous()
-//     }
-
-//     fn peek(&mut self) -> Token {
-//         self.tokens[self.current].clone()
-//     }
-
-//     fn previous(&mut self) -> Token {
-//         self.tokens[self.current - 1].clone()
-//     }
-
-
-
-//     fn is_at_end(&mut self) -> bool {
-//         self.peek().token_type == Eof
-//     }
-// }
-
-
-
 use std::fmt::Display;
 use std::sync::Arc;
-use miette::{Diagnostic, miette, NamedSource, Report, Severity, SourceSpan};
+use miette::{Diagnostic, LabeledSpan, miette, NamedSource, Report, Severity, SourceSpan};
 use thiserror::Error;
-use crate::ast::{Expr, Literal, LogicalOp};
+use crate::ast::{Ast, Expr, Literal, LogicalOp, Stmt};
 use crate::lexer::LiteralValue;
 use crate::token::{Token, TokenType};
 use crate::token::TokenType::{Eof, LeftParen, RightParen};
@@ -226,21 +40,218 @@ impl Parser2 {
             current: 0
         }
     }
+
+    pub(crate) fn parse(&mut self) -> Result<Ast, Vec<Report>> {
+        let mut statements = vec![];
+        let mut reports = vec![];
+
+        while !self.is_at_end() {
+            if self.match_token(&SoftSemi) {
+                continue;
+            }
+            
+            match self.declaration() {
+                Ok(stmt) => statements.push(stmt),
+                Err(report) => {
+                    let report = report;
+                    self.synchronize();
+                    reports.push(report)
+                },
+            }
+        }
+
+        if !reports.is_empty() {
+            return Err(reports)
+        }
+
+        Ok(Ast {
+            source: self.source.clone(),
+            program: statements
+        })
+    }
 }
 
 /// parse expression
 impl Parser2 {
-    
-    pub(crate) fn expression(&mut self) -> miette::Result<Expr> {
-        self.or()
-        // todo finish assignment
-        // self.assignment()
-    }
-    
-    fn assignment(&mut self) -> miette::Result<Expr> {
-        todo!()
+
+    fn declaration(&mut self) -> miette::Result<Stmt> {
+        if self.match_token(&Procedure) {
+            let proc_token = self.previous().clone();
+
+            return self.procedure(proc_token);
+        }
+        self.statement()
     }
 
+    fn procedure(&mut self, proc_token: Token) -> miette::Result<Stmt> {
+        let name_token = self.consume(&Identifier, |token| {
+            miette!("expected an identifier")
+        })?.clone();
+        
+        let name = name_token.lexeme.clone();
+        
+        let lp_token = self.consume(&LeftParen, |token |{
+            miette!(
+                labels = vec![LabeledSpan::at(token.span, "kill yourself2")],
+                "expected lp token, found {token}"
+            )
+        })?.clone();
+        
+        let (params, params_tokens) = if !self.check(&RightParen) {
+            // parse shit
+            // todo
+
+            (vec![], vec![])
+        } else {
+            (vec![], vec![])
+        };
+        
+        let rp_token = self.consume(&RightParen, |token| {
+            miette!("expected a rparen, found {token}")
+        })?.clone();
+        
+        let body = self.statement()?.into();
+        
+        Ok(Stmt::ProcDeclaration {
+            name,
+            params,
+            body,
+            proc_token,
+            name_token,
+            params_tokens,
+        })
+    }
+
+
+    fn statement(&mut self) -> miette::Result<Stmt> {
+        if self.match_token(&If) {
+            let if_token = self.previous().clone();
+            return self.if_statement(if_token);
+        }
+
+        if self.match_token(&LeftBrace) {
+            let lb_token = self.previous().clone();
+            
+            return self.block(lb_token);
+        }
+
+        self.expression_statement()
+    }
+    
+    
+    fn block(&mut self, lb_token: Token) -> miette::Result<Stmt> {
+        let mut statements = vec![];
+
+        while !self.check(&LeftBrace) && !self.is_at_end() {
+            // evil code that took 6 hours to figure out
+            if self.match_token(&SoftSemi) {
+                continue;
+            }
+
+            // evil code that took 6 hours to figure out
+            if self.check(&RightBrace) {
+                break;
+            }
+            
+            statements.push(self.declaration()?);
+        }
+
+        let rb_token = self.consume(&RightBrace, |token| {
+            miette!("expected right brace")
+        })?.clone();
+
+
+        Ok(Stmt::Block {
+            lb_token,
+            statements,
+            rb_token
+        })
+    }
+
+    fn if_statement(&mut self, if_token: Token) -> miette::Result<Stmt> {
+        // todo: improve this report
+        let lp_token = self.consume(&LeftParen, |token|
+            miette!("expected lp_token")
+        )?.clone();
+
+        let condition = self.expression()?;
+
+        let rp_token = self.consume(&RightParen, |token| {
+            miette!("Expected `)` found {}", token)
+        })?.clone();
+
+        let then_branch = self.statement()?.into();
+        // let (else_branch, else_token) = if self.match_token(&Else) {
+        //     let else_token = self.previous().clone();
+        //     let else_branch = self.statement()?.into();
+        //
+        //     (Some(else_branch), Some(else_token))
+        // } else { (None, None) };
+
+        Ok(Stmt::If {
+            condition,
+            then_branch,
+            else_branch: None,
+            if_token,
+            else_token: None,
+        })
+    }
+    
+    fn expression_statement(&mut self) -> miette::Result<Stmt> {
+        let expr = self.expression()?;
+        if self.is_at_end() {
+            return Ok(Stmt::Expr {expr})
+        }
+        
+        if self.check(&RightBrace) {
+            return Ok(Stmt::Expr {expr})
+        }
+        
+        let report = miette!("Expected ");
+        self.consume(&SoftSemi, |token| {
+            miette!("Expected EOL or semi found {}", token)
+        })?;
+        Ok(Stmt::Expr {expr})
+    }
+
+    pub(crate) fn expression(&mut self) -> miette::Result<Expr> {
+        self.assignment()
+    }
+
+    fn assignment(&mut self) -> miette::Result<Expr> {
+        let expr = self.or()?;
+
+        if self.match_token(&Arrow) {
+            let arrow_token = self.previous().clone();
+            let value = self.assignment()?; // Recursively parse the assignment value to handle chained assignments
+
+            match expr {
+                // Handling assignment to a simple variable
+                Expr::Variable { ident, token } => Ok(Expr::Assign {
+                    target: ident,
+                    value: Box::new(value),
+                    ident_token: token,
+                    arrow_token,
+                }),
+
+                // Handling set assignment for complex expressions like array[index] = value
+                Expr::Access { list, key, brackets } => Ok(Expr::Set {
+                    target: Box::new(Expr::Access { list, key, brackets }),
+                    value: Box::new(value),
+                    arrow_token,
+                }),
+
+                // Error for invalid assignment target
+                // todo: add better error here
+                _ => Err(miette!("Invalid assignment target.")),
+            }
+        } else {
+            Ok(expr)
+        }
+    }
+
+
+    // and ( "OR" and )*
     fn or(&mut self) -> miette::Result<Expr> {
         let mut expr = self.and()?;
 
@@ -387,11 +398,12 @@ impl Parser2 {
         loop {
             if self.match_token(&LeftBracket) {
                 let lb_token = self.previous().clone();
-                
+
                 let index = self.expression()?;
-                let rb_token = self.peek().clone();
-                self.consume(&RightBracket, miette!("Expected ']' after index"))?;
-                
+                let rb_token = self.consume(&RightBracket, |token| {
+                    miette!("Expected ']' after index")
+                })?.clone();
+
                 expr = Expr::Access {
                     list: Box::new(expr),
                     key: Box::new(index),
@@ -478,7 +490,7 @@ impl Parser2 {
             })
         }
         // done parsing literals
-        
+
         // IDENT
         if self.match_token(&Identifier) {
             let token = self.previous().clone();
@@ -488,7 +500,7 @@ impl Parser2 {
             // IDENT "(" ( expr ),* ")"
             if self.match_token(&LeftParen) {
                 let lp_token = self.previous().clone();
-                
+
                 let mut arguments = vec![];
                 if !self.check(&RightParen) {
                     loop {
@@ -500,23 +512,22 @@ impl Parser2 {
                             );
                             return Err(report)
                         }
-                        
+
                         let expr = self.expression()?;
                         arguments.push(expr);
-                        
+
                         // we have reached the end of arguments
                         if !self.match_token(&Comma) {
                             break;
                         }
                     }
                 }
-                
-                let rp_token = self.peek().clone();
-                self.consume(&RightParen,  {
+
+                let rp_token = self.consume(&RightParen,  |token| {
                     // todo
-                    miette!("expected ) after argument list, found {rp_token}")
-                })?;
-                
+                    miette!("expected ) after argument list, found {token}")
+                })?.clone();
+
                 return Ok(Expr::ProcCall {
                     ident,
                     arguments,
@@ -537,11 +548,9 @@ impl Parser2 {
             let lp_token = self.previous().clone();
             let expr = self.expression()?.into();
 
-            let lp_temp = lp_token.clone();
-            let rp_token = self.consume(&RightParen, {
-                let lp = &lp_temp;
+            let rp_token = self.consume(&RightParen, |token| {
                 // todo: improve this message
-                miette!("could not find this error")
+                miette!("expected `(` found {}", token)
             })?;
 
             return Ok(Expr::Grouping {
@@ -553,8 +562,8 @@ impl Parser2 {
         // "[" ( expr ),* "]"
         if self.match_token(&LeftBracket) {
             let lb_token = self.previous().clone();
-            
-            let mut items = vec![]; 
+
+            let mut items = vec![];
             if !self.check(&RightBracket) {
                 loop {
                     let expr = self.expression()?;
@@ -567,20 +576,23 @@ impl Parser2 {
                 }
             }
 
-            let rb_token = self.peek().clone();
-            self.consume(&RightBracket,  {
+            let rb_token = self.consume(&RightBracket,  |token| {
                 // todo
-                miette!("expected ] after item list, found {rb_token}")
+                miette!("expected ] after item list, found {token}")
             })?;
-            
+
             return Ok(Expr::List {
                 items,
-                brackets: (lb_token, rb_token),
+                brackets: (lb_token, rb_token.clone()),
             });
         }
 
         // todo improve this message
-        let report = miette!("expected found {}", self.peek());
+        let report = miette!(
+            labels = vec![LabeledSpan::at(self.peek().span, "kill yourself")],
+            "expected primary found1 {}", self.peek()
+        ).with_source_code(self.source.clone());
+        // mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
         Err(report)
     }
 }
@@ -606,21 +618,27 @@ impl Parser2 {
         }
     }
 
-    fn consume(&mut self, token_type: &TokenType, report: Report) -> miette::Result<&Token> {
-        let token = self.peek();
-    
-        if token.token_type() == token_type {
+    fn consume(&mut self, token_type: &TokenType, report: impl FnOnce(&Token) -> Report) -> miette::Result<&Token> {
+
+        let token_type_matches = {
+            let token = self.peek(); // Immutable borrow is limited to this block
+            token.token_type() == token_type
+        };
+
+        if token_type_matches {
             self.advance();
             let token = self.previous();
             Ok(token)
         } else {
-            Err(report)
+            let token = &self.previous().clone();
+            self.synchronize();
+            Err(report(token).with_source_code(self.source.clone()))
         }
     }
 
     // fn consume(&mut self, token_type: &TokenType, error_handler: Box<dyn Fn(&Token) -> Report>) -> miette::Result<&Token> {
     //     let token = self.peek();
-    // 
+    //
     //     if token.token_type() == token_type {
     //         self.advance();
     //         let token = self.previous();

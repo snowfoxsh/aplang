@@ -1,0 +1,17 @@
+x <- 2
+IF (a == b) {
+    x <- a + b
+}
+
+IF (a == b) {
+    x
+}
+x <- 2
+
+PROCEDURE myProc() {
+    x <- 2
+}
+
+PROCEDURE myProc2() {
+    x <- 2
+}

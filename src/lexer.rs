@@ -165,6 +165,7 @@ impl Lexer {
             ' ' | '\r' | '\t' => { /* nop */ }
             '\n' => {
                 if let Some(prev) = self.tokens.last() {
+                    self.line += 1;
                     // use go's method of implicit semicolons
                     // see: https://go.dev/ref/spec#Semicolons
                     match prev.token_type {
@@ -303,6 +304,31 @@ impl Lexer {
         self.current += 1;
 
         c
+    }
+    
+    fn check_next(&self, ch: char) -> bool {
+        if self.is_at_end() {
+            return false
+        }
+        
+        let mut i = 1;
+        loop {
+            let next_char = self.source.chars().nth(self.current + i);
+            
+            match next_char {
+                // if we are at the end then return false
+                None => {
+                    break false;
+                }
+                Some(next_char) => {
+                    if next_char.is_whitespace() {
+                        i += 1;
+                    } else {
+                        return next_char == ch
+                    }
+                }
+            }
+        }
     }
 
     fn add_token(&mut self, token_type: TokenType) {

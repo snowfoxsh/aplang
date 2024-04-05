@@ -84,6 +84,10 @@ impl fmt::Display for Token {
 
 pub fn print_tokens(tokens: Vec<Token>) {
     for token in tokens {
+        
+        if matches!(token.token_type, TokenType::SoftSemi) {
+            print!(" ;")
+        }
         print!("{token}")
     }
 }
