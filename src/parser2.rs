@@ -124,11 +124,29 @@ impl Parser2 {
 
 
     fn statement(&mut self) -> miette::Result<Stmt> {
+        // IF (condition) 
         if self.match_token(&If) {
             let if_token = self.previous().clone();
             return self.if_statement(if_token);
         }
+        
+        // REPEAT UNTIL (condition) 
+        if self.match_token(&Repeat) {
+            let repeat_token = self.previous().clone();
+            // this is a repeat until block
+            if self.check(&Until) {
+                return self.repeat_until(repeat_token);
+            }
+            
+            return self.repeat_times(repeat_token);
+        }
+        
+        if self.match_token(&For) {
+            let for_token = self.previous().clone();
+            return self.for_each(for_token);
+        }
 
+        // { expr }
         if self.match_token(&LeftBrace) {
             let lb_token = self.previous().clone();
             
@@ -194,6 +212,97 @@ impl Parser2 {
             else_branch: None,
             if_token,
             else_token: None,
+        })
+    }
+    
+    fn repeat_times(&mut self, repeat_token: Token) -> miette::Result<Stmt> {
+        // confirm that the repeat token was consumed
+        self.confirm(&Repeat)?;
+        
+        // expected expression 
+        let count = self.expression()?;
+        
+        let times_token = self.consume(&Times, |token| {
+            // todo improve this message
+            miette!("expected times token")
+        })?.clone();
+        
+        let body = self.statement()?.into();
+        
+        Ok(Stmt::RepeatTimes {
+            count,
+            body,
+            repeat_token,
+            times_token,
+        })
+    }
+    
+    fn repeat_until(&mut self, repeat_token: Token) -> miette::Result<Stmt> {
+        // confirm that the repeat token has been consumed
+        self.confirm(&Repeat)?;
+        
+        let until_token= self.consume(&Until, |token| {
+            // todo: improve this error
+            miette!(
+                "expected until token after repeat token"
+            )
+        })?.clone();
+        
+        let lp_token = self.consume(&LeftParen, |token| {
+            // todo: improve this error
+            miette!(
+                "expected lp token"
+            )
+        })?.clone();
+        
+        let condition = self.expression()?;
+        
+        let rp_token = self.consume(&RightParen, |token| {
+            // todo: improve this error
+            miette!(
+                "expected rp token"
+            )
+        })?.clone();
+        
+        let body = self.statement()?.into();
+        
+        Ok(Stmt::RepeatUntil {
+            condition, 
+            body,
+            repeat_token,
+            until_token,
+        })
+    }
+    
+    fn for_each(&mut self, for_token: Token) -> miette::Result<Stmt> {
+        self.confirm(&For)?;
+        
+        let each_token = self.consume(&Each, |token| { 
+            // todo improve this message
+            miette!("expected each token")
+        })?.clone();
+        
+        let item_token = self.consume(&Identifier, |token| {
+            // todo improve this message
+            miette!("expected an ident")
+        })?.clone();
+        let item = item_token.lexeme.clone();
+        
+        let in_token= self.consume(&In, |token| {
+            miette!("expected in token")
+        })?.clone();
+        
+        let list = self.expression()?;
+        
+        let body = self.statement()?.into();
+        
+        Ok(Stmt::ForEach {
+            item,
+            list,
+            body,
+            item_token,
+            for_token,
+            in_token
         })
     }
     
@@ -619,7 +728,6 @@ impl Parser2 {
     }
 
     fn consume(&mut self, token_type: &TokenType, report: impl FnOnce(&Token) -> Report) -> miette::Result<&Token> {
-
         let token_type_matches = {
             let token = self.peek(); // Immutable borrow is limited to this block
             token.token_type() == token_type
@@ -635,7 +743,7 @@ impl Parser2 {
             Err(report(token).with_source_code(self.source.clone()))
         }
     }
-
+    
     // fn consume(&mut self, token_type: &TokenType, error_handler: Box<dyn Fn(&Token) -> Report>) -> miette::Result<&Token> {
     //     let token = self.peek();
     //
@@ -655,6 +763,19 @@ impl Parser2 {
 
         self.peek().token_type() == typ
     }
+    
+    fn confirm(&self, typ: &TokenType) -> miette::Result<()> {
+        let previous = self.previous();
+        
+        if &previous.token_type != typ {
+            // todo: improve this msg
+            return Err(miette!(
+                "attempted to look back and find {:?} buf found {}", typ, previous
+            ));
+        }
+        
+        Ok(())
+    } 
 
     fn match_token(&mut self, token_type: &TokenType) -> bool {
         if self.check(token_type) {

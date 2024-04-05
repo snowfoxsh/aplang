@@ -41,15 +41,16 @@ pub enum Stmt {
         body: Box<Stmt>,
         
         repeat_token: Token,
-        times_token: Token,
+        until_token: Token,
     },
     ForEach {
         item: Ident,
         list: Expr,
+        body: Box<Stmt>,
 
         item_token: Token,
         for_token: Token,
-        times_token: Token,
+        in_token: Token,
     },
     ProcDeclaration {
         name: Ident,
@@ -171,7 +172,7 @@ pub enum LogicalOp {
 
 pub mod pretty {
     use std::fmt::{Display, write};
-    use crate::ast::{Ast, BinaryOp, Expr, Literal, LogicalOp, Stmt, UnaryOp};
+    use crate::ast::{Ast, BinaryOp, Expr, Ident, Literal, LogicalOp, Stmt, UnaryOp};
     impl TreePrinter for Ast {
         fn node_children(&self) -> Box<dyn Iterator<Item = Box<dyn TreePrinter>> + '_> {
             let statements_printer: Vec<_> = self.program.iter().map(|stmt| Box::new(stmt.clone()) as Box<dyn TreePrinter>).collect();
@@ -212,7 +213,7 @@ pub mod pretty {
                         Box::new((**body).clone()) as Box<dyn TreePrinter>,
                     ].into_iter())
                 },
-                Stmt::ForEach { item: _, list, item_token: _, for_token: _, times_token: _ } => {
+                Stmt::ForEach { item: _, list, item_token: _, for_token: _, .. } => {
                     Box::new(vec![
                         Box::new(list.clone()) as Box<dyn TreePrinter>
                     ].into_iter())
@@ -269,11 +270,11 @@ pub mod pretty {
                     Box::new(std::iter::empty())
                 },
                 // Handle Assign and Set variants
-                Expr::Assign { value, .. } => {
+                Expr::Assign { target, value, ident_token, arrow_token, } => {
                     Box::new(vec![Box::new((**value).clone()) as Box<dyn TreePrinter>].into_iter())
                 },
                 Expr::Set { value, target, .. } => {
-                    Box::new(vec![Box::new((**value).clone()) as Box<dyn TreePrinter>, Box::new((**target).clone()) as Box<dyn TreePrinter>].into_iter())
+                    Box::new(vec![Box::new((**target).clone()) as Box<dyn TreePrinter>, Box::new((**value).clone()) as Box<dyn TreePrinter>].into_iter())
                 }
             }
         }
@@ -326,11 +327,11 @@ pub mod pretty {
                 Expr::Unary { operator, .. } => write!(f, "Unary ({})", operator),
                 Expr::Grouping { .. } => write!(f, "Group"),
                 Expr::ProcCall { ident, .. } => write!(f, "Call ({})", ident),
-                Expr::Access { .. } => write!(f, "Access"),
+                Expr::Access { list, key, .. } => write!(f, "Access {}[{}]", list, key),
                 Expr::List { .. } => write!(f, "List"),
                 Expr::Variable { ident, .. } => write!(f, "Variable ({})", ident),
-                Expr::Assign { target, .. } => write!(f, "Assign ({})", target),
-                Expr::Set { target, .. } => write!(f, "Set ({})", target),
+                Expr::Assign { target, value, .. } => write!(f, "Assign ({} <- {})", target, value),
+                Expr::Set { target, value, .. } => write!(f, "Set ({}[{})", target, value),
             }
         }
     }
@@ -368,7 +369,7 @@ pub mod pretty {
     impl fmt::Display for Stmt {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             match self {
-                Stmt::Expr { expr } => write!(f, "Expr({})", expr),
+                Stmt::Expr { expr } => write!(f, "Expr"),
                 Stmt::If {
                     condition,
                     then_branch: _,
@@ -384,16 +385,12 @@ pub mod pretty {
                 } => write!(f, "RepeatTimes(Count: {})", count),
                 Stmt::RepeatUntil {
                     condition,
-                    body: _,
-                    repeat_token: _,
-                    times_token: _,
+                    ..
                 } => write!(f, "RepeatUntil(Condition: {})", condition),
                 Stmt::ForEach {
                     item,
                     list,
-                    item_token: _,
-                    for_token: _,
-                    times_token: _,
+                    ..
                 } => write!(f, "ForEach(Item: {}, List: {})", item, list),
                 Stmt::ProcDeclaration {
                     name,
