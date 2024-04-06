@@ -1,21 +1,18 @@
 x <- 2
-IF (a == b) {
-    x <- a + b
+
+IF (x = 2) {
+    DISPLAY("HELLO WORLD")
 }
 
-IF (a == b) {
-    x
+REPEAT x TIMES {
+    n <- n + 1
+    DISPLAY(n)
 }
-y <- x <- 2
 
 PROCEDURE myProc() {
-    x <- 2
+    DISPLAY(a)
 }
 
-PROCEDURE myProc2() {
-    x <- 2
-}
-
-REPEAT UNTIL(i == 2)  {
-    x <- 3
+FOR EACH item IN [1, 2, 3] {
+    DISPLAY(item)
 }
