@@ -262,19 +262,26 @@ impl<'l> Lexer<'l> {
 
         // reaching the end without closing the string should throw an error
         if self.is_at_end() {
-            let labels = vec![
-                LabeledSpan::at_offset(self.start, "unmatched quote"),
-                LabeledSpan::at(self.current_span(), "unmatched quote")
-            ];
+            let mut colors = ColorGenerator::new();
+
+            let a = colors.next();
+            let b = colors.next();
+            let c = colors.next();
+
+            let report = Report::build(ReportKind::Error, self.file_name, self.offset())
+                .with_code(LexerCodes::UnterminatedString)
+                .with_message("unterminated string")
+                .with_label(
+                    Label::new((self.file_name, self.current_span()))
+                        .with_message("this string is not terminated")
+                        .with_color(a)
+                )
+                .with_help(
+                    "a string literal must end with a matching quote"
+                )
+                .finish();
             
-            let error = miette!(
-                labels = labels,
-                code = "lexer::unterminated_string",
-                help = "a string literal must end with a matching quote",
-                "{} unterminated string", self.location_string()
-            ).with_source_code(self.source.clone());
-            
-            return Err(error)
+            return Err(report)
         }
 
         self.advance();

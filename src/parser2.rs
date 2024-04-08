@@ -3,8 +3,8 @@
 use std::fmt::Display;
 use std::ops::Range;
 use std::sync::Arc;
-use miette::{Diagnostic, LabeledSpan, miette, NamedSource, Report, Severity, SourceSpan};
-use thiserror::Error;
+use std::thread::current;
+use ariadne::{Color, ColorGenerator, Fmt, Label, Report, ReportBuilder, ReportKind, Span};
 use crate::ast::{Ast, Expr, Literal, LogicalOp, Stmt};
 use crate::lexer::LiteralValue;
 use crate::{LReport, LResult, LResults};
@@ -33,13 +33,15 @@ pub struct Parser2<'p> {
     tokens: Vec<Token>,
     source: Arc<str>,
     current: usize,
-    warnings: Vec<Report>
+    warnings: Vec<LReport<'p>>,
+    file_name: &'p str,
 }
 
 
-impl Parser2 {
-    pub(crate) fn new(tokens: Vec<Token>, source: Arc<str>) -> Self {
+impl<'p> Parser2<'p> {
+    pub(crate) fn new(tokens: Vec<Token>, source: Arc<str>, file_name: &'p str) -> Self {
         Self {
+            file_name,
             tokens,
             source,
             current: 0,
@@ -80,7 +82,7 @@ impl Parser2 {
 /// parse expression
 impl<'p> Parser2<'p> {
 
-    fn declaration(&mut self) -> miette::Result<Stmt> {
+    fn declaration(&mut self) -> LResult<'p, Stmt> {
         if self.match_token(&Procedure) {
             let proc_token = self.previous().clone();
 
@@ -91,10 +93,16 @@ impl<'p> Parser2<'p> {
 
 
 
-    fn procedure(&mut self, proc_token: Token) -> miette::Result<Stmt> {
-        let name_token = self.consume(&Identifier, |token| {
-            miette!("expected an identifier")
-        })?.clone();
+    fn procedure(&mut self, proc_token: Token) -> LResult<'p, Stmt> {
+        let offset = self.offset();
+        let file_name = self.file_name;
+
+
+
+
+        let name_token = self.consume(&Identifier, |token, builder| {
+            builder.with_message("hello").finish()
+        })?;
         
         // self.ident_warning(&name_token);
         
@@ -102,11 +110,12 @@ impl<'p> Parser2<'p> {
 
         let offset = self.offset();
         
-        let lp_token = self.consume(&LeftParen, |token |{
-            miette!(
-                labels = vec![LabeledSpan::at(token.span, "kill yourself2")],
-                "expected lp token, found {token}"
-            )
+        let lp_token = self.consume(&LeftParen, |token, builder |{
+            // miette!(
+            //     labels = vec![LabeledSpan::at(token.span, "kill yourself2")],
+            //     "expected lp token, found {token}"
+            // )
+            builder.with_message(format!("expected lp token, found {token}")).finish()
         })?.clone();
         
         let (params, params_tokens) = if !self.check(&RightParen) {
@@ -118,8 +127,9 @@ impl<'p> Parser2<'p> {
             (vec![], vec![])
         };
         
-        let rp_token = self.consume(&RightParen, |token| {
-            miette!("expected a rparen, found {token}")
+        let rp_token = self.consume(&RightParen, |token, builder| {
+            // miette!("expected a rparen, found {token}")
+            builder.with_message(format!("expected a rparen, found {token}")).finish()
         })?.clone();
         
         let body = self.statement()?.into();
@@ -169,7 +179,7 @@ impl<'p> Parser2<'p> {
     }
     
     
-    fn block(&mut self, lb_token: Token) -> miette::Result<Stmt> {
+    fn block(&mut self, lb_token: Token) -> LResult<'p, Stmt> {
         let mut statements = vec![];
 
         while !self.check(&LeftBrace) && !self.is_at_end() {
@@ -186,8 +196,9 @@ impl<'p> Parser2<'p> {
             statements.push(self.declaration()?);
         }
 
-        let rb_token = self.consume(&RightBrace, |token| {
-            miette!("expected right brace")
+        let rb_token = self.consume(&RightBrace, |token, builder| {
+            // miette!("expected right brace")
+            builder.with_message("expected right brace").finish()
         })?.clone();
 
 
@@ -198,16 +209,20 @@ impl<'p> Parser2<'p> {
         })
     }
 
-    fn if_statement(&mut self, if_token: Token) -> miette::Result<Stmt> {
+    fn if_statement(&mut self, if_token: Token) -> LResult<'p, Stmt> {
         // todo: improve this report
-        let lp_token = self.consume(&LeftParen, |token|
-            miette!("expected lp_token")
+        let lp_token = self.consume(&LeftParen, |token, builder|
+            // miette!("expected lp_token")
+            builder.with_message("expected lp_token".to_string())
+                .finish()
         )?.clone();
 
         let condition = self.expression()?;
 
-        let rp_token = self.consume(&RightParen, |token| {
-            miette!("Expected `)` found {}", token)
+        let rp_token = self.consume(&RightParen, |token, builder| {
+            // miette!("Expected `)` found {}", token)
+            builder.with_message(format!("Expected `)` found {}", token))
+                .finish()
         })?.clone();
 
         let then_branch = self.statement()?.into();
@@ -227,7 +242,7 @@ impl<'p> Parser2<'p> {
         })
     }
     
-    fn repeat_times(&mut self, repeat_token: Token) -> miette::Result<Stmt> {
+    fn repeat_times(&mut self, repeat_token: Token) -> LResult<'p, Stmt> {
         // confirm that the repeat token was consumed
         self.confirm(&Repeat)?;
         
@@ -236,7 +251,10 @@ impl<'p> Parser2<'p> {
         
         let times_token = self.consume(&Times, |token| {
             // todo improve this message
-            miette!("expected times token")
+            // miette!("expected times token")
+            Report::build(ReportKind::Error, self.file_name, self.offset())
+                .with_message("expected `TIMES`, found {token}")
+                .finish()
         })?.clone();
         
         let body = self.statement()?.into();
@@ -249,31 +267,40 @@ impl<'p> Parser2<'p> {
         })
     }
     
-    fn repeat_until(&mut self, repeat_token: Token) -> miette::Result<Stmt> {
+    fn repeat_until(&mut self, repeat_token: Token) -> LResult<'p, Stmt> {
         // confirm that the repeat token has been consumed
         self.confirm(&Repeat)?;
         
         let until_token= self.consume(&Until, |token| {
             // todo: improve this error
-            miette!(
-                "expected until token after repeat token"
-            )
+            // miette!(
+            //     "expected until token after repeat token"
+            // )
+            Report::build(ReportKind::Error, self.file_name, self.offset())
+                .with_message("expected until token after repeat token")
+                .finish()
         })?.clone();
         
         let lp_token = self.consume(&LeftParen, |token| {
             // todo: improve this error
-            miette!(
-                "expected lp token"
-            )
+            // miette!(
+            //     "expected lp token"
+            // )
+            Report::build(ReportKind::Error, self.file_name, self.offset())
+                .with_message("expected lp token")
+                .finish()
         })?.clone();
         
         let condition = self.expression()?;
         
         let rp_token = self.consume(&RightParen, |token| {
             // todo: improve this error
-            miette!(
-                "expected rp token"
-            )
+            // miette!(
+            //     "expected rp token"
+            // )
+            Report::build(ReportKind::Error, self.file_name, self.offset())
+                .with_message("expected rp token")
+                .finish()
         })?.clone();
         
         let body = self.statement()?.into();
@@ -286,22 +313,31 @@ impl<'p> Parser2<'p> {
         })
     }
     
-    fn for_each(&mut self, for_token: Token) -> miette::Result<Stmt> {
+    fn for_each(&mut self, for_token: Token) -> LResult<'p, Stmt> {
         self.confirm(&For)?;
         
         let each_token = self.consume(&Each, |token| { 
             // todo improve this message
-            miette!("expected each token")
+            // miette!("expected each token")
+            Report::build(ReportKind::Error, self.file_name, self.offset())
+                .with_message("expected each token")
+                .finish()
         })?.clone();
         
         let item_token = self.consume(&Identifier, |token| {
             // todo improve this message
-            miette!("expected an ident")
+            // miette!("expected an ident")
+            Report::build(ReportKind::Error, self.file_name, self.offset())
+                .with_message("expected an ident")
+                .finish()
         })?.clone();
         let item = item_token.lexeme.clone();
         
         let in_token= self.consume(&In, |token| {
-            miette!("expected in token")
+            // miette!("expected in token")
+            Report::build(ReportKind::Error, self.file_name, self.offset())
+                .with_message("expected in token")
+                .finish()
         })?.clone();
         
         let list = self.expression()?;
@@ -318,7 +354,7 @@ impl<'p> Parser2<'p> {
         })
     }
     
-    fn expression_statement(&mut self) -> miette::Result<Stmt> {
+    fn expression_statement(&mut self) -> LResult<'p, Stmt> {
         let expr = self.expression()?;
         if self.is_at_end() {
             return Ok(Stmt::Expr {expr})
@@ -328,18 +364,22 @@ impl<'p> Parser2<'p> {
             return Ok(Stmt::Expr {expr})
         }
         
-        let report = miette!("Expected ");
+        // let report = miette!("Expected ");
+        let report = Report::build(ReportKind::Error, self.file_name, self.offset())
+            .with_message("Expected EOL or semi found")
+            .finish();
         self.consume(&SoftSemi, |token| {
-            miette!("Expected EOL or semi found {}", token)
+            // miette!("Expected EOL or semi found {}", token)
+            report
         })?;
         Ok(Stmt::Expr {expr})
     }
 
-    pub(crate) fn expression(&mut self) -> miette::Result<Expr> {
+    pub(crate) fn expression(&mut self) -> LResult<'p, Expr> {
         self.assignment()
     }
 
-    fn assignment(&mut self) -> miette::Result<Expr> {
+    fn assignment(&mut self) -> LResult<'p, Expr> {
         let expr = self.or()?;
 
         if self.match_token(&Arrow) {
@@ -364,7 +404,13 @@ impl<'p> Parser2<'p> {
 
                 // Error for invalid assignment target
                 // todo: add better error here
-                _ => Err(miette!("Invalid assignment target.")),
+                // _ => Err(miette!("Invalid assignment target.")),
+                _ => {
+                    let report = Report::build(ReportKind::Error, self.file_name, self.offset())
+                        .with_message("Invalid assignment target.")
+                        .finish();
+                    Err(report)
+                }
             }
         } else {
             Ok(expr)
@@ -373,7 +419,7 @@ impl<'p> Parser2<'p> {
 
 
     // and ( "OR" and )*
-    fn or(&mut self) -> miette::Result<Expr> {
+    fn or(&mut self) -> LResult<'p, Expr> {
         let mut expr = self.and()?;
 
         while self.match_token(&Or) {
@@ -394,7 +440,7 @@ impl<'p> Parser2<'p> {
     }
 
     // logical_and -> equality ( "AND" equality )*
-    fn and(&mut self) -> miette::Result<Expr> {
+    fn and(&mut self) -> LResult<'p, Expr> {
         let mut expr = self.equalitu()?;
 
         while self.match_token(&And) {
@@ -414,7 +460,7 @@ impl<'p> Parser2<'p> {
         Ok(expr)
     }
 
-    fn equalitu(&mut self) -> miette::Result<Expr> {
+    fn equalitu(&mut self) -> LResult<'p, Expr> {
         let mut expr = self.comparison()?;
 
         while self.match_tokens(&[BangEqual, EqualEqual]) {
@@ -434,7 +480,7 @@ impl<'p> Parser2<'p> {
         Ok(expr)
     }
 
-    fn comparison(&mut self) -> miette::Result<Expr> {
+    fn comparison(&mut self) -> LResult<'p, Expr> {
         let mut expr = self.addition()?;
 
         while self.match_tokens(&[Greater, GreaterEqual, Less, LessEqual]) {
@@ -454,7 +500,7 @@ impl<'p> Parser2<'p> {
         Ok(expr)
     }
 
-    fn addition(&mut self) -> miette::Result<Expr> {
+    fn addition(&mut self) -> LResult<'p, Expr> {
         let mut expr = self.multiplication()?;
 
         while self.match_tokens(&[Plus, Minus]) {
@@ -474,7 +520,7 @@ impl<'p> Parser2<'p> {
         Ok(expr)
     }
 
-    fn multiplication(&mut self) -> miette::Result<Expr> {
+    fn multiplication(&mut self) -> LResult<'p, Expr> {
         let mut expr = self.unary()?;
 
         while self.match_tokens(&[Star, Slash]) {
@@ -495,7 +541,7 @@ impl<'p> Parser2<'p> {
         Ok(expr)
     }
 
-    fn unary(&mut self) -> miette::Result<Expr> {
+    fn unary(&mut self) -> LResult<'p, Expr> {
         if self.match_tokens(&[Not, Minus]) {
             let token = self.previous().clone();
             let right = self.unary()?.into();
@@ -513,7 +559,7 @@ impl<'p> Parser2<'p> {
         }
     }
 
-    fn access(&mut self) -> miette::Result<Expr> {
+    fn access(&mut self) -> LResult<'p, Expr> {
         let mut expr = self.primary()?;
 
         loop {
@@ -522,7 +568,10 @@ impl<'p> Parser2<'p> {
 
                 let index = self.expression()?;
                 let rb_token = self.consume(&RightBracket, |token| {
-                    miette!("Expected ']' after index")
+                    // miette!("Expected ']' after index")
+                    Report::build(ReportKind::Error, self.file_name, self.offset())
+                        .with_message("Expected ']' after index")
+                        .finish()
                 })?.clone();
 
                 expr = Expr::Access {
@@ -539,7 +588,7 @@ impl<'p> Parser2<'p> {
     }
     
     // todo: add access "[" expr "]"
-    fn primary(&mut self) -> miette::Result<Expr> {
+    fn primary(&mut self) -> LResult<'p, Expr> {
         // TRUE
         if self.match_token(&True) {
             let token = self.previous().clone();
@@ -570,7 +619,10 @@ impl<'p> Parser2<'p> {
 
             // todo improve this message
             let literal = token.literal.clone().miette_expect(|| {
-                miette!("internal parser error. could not find literal")
+                // miette!("internal parser error. could not find literal")
+                Report::build(ReportKind::Error, self.file_name, self.offset())
+                    .with_message("internal parser error. could not find literal")
+                    .finish()
             });
 
             // if it is not string
@@ -594,14 +646,20 @@ impl<'p> Parser2<'p> {
 
             // todo improve this message
             let literal = token.literal.clone().miette_expect(|| {
-                miette!("internal parser error. could not find literal")
+                // miette!("internal parser error. could not find literal"
+                Report::build(ReportKind::Error, self.file_name, self.offset())
+                    .with_message("internal parser error. could not find literal")
+                    .finish()
             });
 
             // if it is not number
             let LiteralValue::Number(literal) = literal else {
-                let report = miette!(
-                    "internal parser error literal is not a number"
-                );
+                // let report = miette!(
+                //     "internal parser error literal is not a number"
+                // );
+                let report = Report::build(ReportKind::Error, self.file_name, self.offset())
+                    .with_message("internal parser error literal is not a number")
+                    .finish();
                 panic!("{:?}", report)
             };
 
@@ -631,9 +689,12 @@ impl<'p> Parser2<'p> {
                         if arguments.len() >= 255 {
                             let next_token = self.peek();
                             // todo: improve this message
-                            let report = miette!(
-                                "todo: max args for function call exceeded"
-                            );
+                            // let report = miette!(
+                            //     "todo: max args for function call exceeded"
+                            // );
+                            let report = Report::build(ReportKind::Error, self.file_name, self.offset())
+                                .with_message("todo: max args for function call exceeded")
+                                .finish();
                             return Err(report)
                         }
 
@@ -649,7 +710,10 @@ impl<'p> Parser2<'p> {
 
                 let rp_token = self.consume(&RightParen,  |token| {
                     // todo
-                    miette!("expected ) after argument list, found {token}")
+                    // miette!("expected ) after argument list, found {token}")
+                    Report::build(ReportKind::Error, self.file_name, self.offset())
+                        .with_message(format!("expected ) after argument list, found {token}"))
+                        .finish()
                 })?.clone();
 
                 return Ok(Expr::ProcCall {
@@ -674,7 +738,10 @@ impl<'p> Parser2<'p> {
 
             let rp_token = self.consume(&RightParen, |token| {
                 // todo: improve this message
-                miette!("expected `(` found {}", token)
+                // miette!("expected `(` found {}", token)
+                Report::build(ReportKind::Error, self.file_name, self.offset())
+                    .with_message(format!("expected `(` found {}", token))
+                    .finish()
             })?;
 
             return Ok(Expr::Grouping {
@@ -702,7 +769,10 @@ impl<'p> Parser2<'p> {
 
             let rb_token = self.consume(&RightBracket,  |token| {
                 // todo
-                miette!("expected ] after item list, found {token}")
+                // miette!("expected ] after item list, found {token}")
+                Report::build(ReportKind::Error, self.file_name, self.offset())
+                    .with_message(format!("expected ] after item list, found {token}"))
+                    .finish()
             })?;
 
             return Ok(Expr::List {
@@ -712,10 +782,13 @@ impl<'p> Parser2<'p> {
         }
 
         // todo improve this message
-        let report = miette!(
-            labels = vec![LabeledSpan::at(self.peek().span, "kill yourself")],
-            "expected primary found1 {}", self.peek()
-        ).with_source_code(self.source.clone());
+        // let report = miette!(
+        //     labels = vec![LabeledSpan::at(self.peek().span, "kill yourself")],
+        //     "expected primary found1 {}", self.peek()
+        // ).with_source_code(self.source.clone());
+        let report = Report::build(ReportKind::Error, self.file_name, self.offset())
+            .with_message(format!("expected primary found1 {}", self.peek()))
+            .finish();
         // mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
         Err(report)
     }
