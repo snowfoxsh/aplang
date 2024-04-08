@@ -316,7 +316,6 @@ pub mod pretty {
     }
 
     use std::fmt;
-    use owo_colors::OwoColorize;
 
     impl fmt::Display for Expr {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

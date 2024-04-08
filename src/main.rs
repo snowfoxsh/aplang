@@ -1,9 +1,10 @@
+#![feature(type_alias_impl_trait)]
+
 use std::fs;
-use std::mem::size_of;
+use std::ops::Range;
 use std::path::Path;
+use ariadne::{Report, Span};
 
-
-use miette::{Result};
 
 
 use lexer::Lexer;
@@ -19,6 +20,11 @@ mod parser2;
 mod lexer;
 mod token;
 mod ast;
+
+
+pub (crate) type LReport<'a> = Report<'a,(&'a str, Range<usize>)>;
+pub(crate) type LResult<'a, T> = Result<T, LReport<'a>>;
+pub(crate) type LResults<'a, T> = Result<T, Vec<LReport<'a>>>;
 
 
 fn main() -> Result<()> {

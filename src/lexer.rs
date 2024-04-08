@@ -1,16 +1,33 @@
-use miette::{LabeledSpan, miette, Report, Result};
 use std::collections::HashMap;
-use std::fmt::Display;
+use std::fmt::{Display, Formatter};
+use std::marker::PhantomData;
+use std::ops::Range;
 use std::sync::Arc;
-use miette::{Diagnostic, SourceSpan};
-use owo_colors::OwoColorize;
+use ariadne::{Color, ColorGenerator, Fmt, Label, Report, ReportKind, Span};
 use crate::token::TokenType::*;
-use crate::token;
+use crate::{LReport, LResult, LResults, token};
 use crate::token::{Token, TokenType};
 
+pub enum LexerCodes {
+    UnknownSymbol,
+    UnterminatedString,
+    NumberParseError,
+}
 
-pub struct Lexer {
-    file_name: String,
+impl Display for LexerCodes {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+       let code = match self {
+           LexerCodes::UnknownSymbol => "unknown_symbol",
+           LexerCodes::UnterminatedString => "unterminated_string",
+           LexerCodes::NumberParseError => "number_parse_error"
+       };
+
+        write!(f, "{code}")
+    }
+}
+
+pub struct Lexer<'l> {
+    file_name: &'l str,
     source: Arc<str>,
 
     tokens: Vec<Token>,
@@ -20,11 +37,13 @@ pub struct Lexer {
     line: usize,
 
     keywords: HashMap<&'static str, TokenType>,
+    _report_marker : PhantomData<&'l ()>
 }
 
-impl Lexer {
-    pub fn new(input: impl Into<Arc<str>>, file_name: String) -> Self {
-        Self {
+
+impl<'l> Lexer<'l> {
+    pub fn new(input: impl Into<Arc<str>>, file_name: &'l str) -> Lexer<'l> {
+        Lexer {
             file_name,
             source: input.into(),
             tokens: Vec::new(),
@@ -32,26 +51,29 @@ impl Lexer {
             current: 0,
             line: 1,
             keywords: token::get_keywords_hashmap(),
+            _report_marker: Default::default(),
         }
     }
 
-    pub fn scan(input: impl Into<Arc<str>>, file_name: String) -> Result<(Vec<Token>, Arc<str>), Vec<Report>> {
-        let mut lexer = Self::new(input, file_name);
-        let tokens = lexer.scan_tokens()?;
-        let raw = lexer.source; // move the source pointer out of the scanner
+    pub fn scan(input: impl Into<Arc<str>>, file_name: &'l str) -> LResults<'l, Vec<Token>> {
+        let tokens = {
+            let mut lexer = Self::new(input, file_name);
+            lexer.scan_tokens()?
+        };
 
-        Ok((tokens, raw))
-        // Ok(Source::new(tokens, raw))
+        Ok(tokens)
     }
 
-    pub fn scan_tokens(&mut self) -> Result<Vec<Token>, Vec<Report>> {
-        let mut errors: Vec<Report> = vec![];
+    pub fn scan_tokens(&mut self) -> LResults<'l, Vec<Token>> {
+        let mut errors: Vec<_> = Vec::new();
+
         while !self.is_at_end() {
-            // println!("({}..{})", self.start, self.current);
             self.start = self.current;
             match self.scan_token() {
                 Ok(_) => (),
-                Err(msg) => errors.push(msg)
+                Err(msg) => {
+                    errors.push(msg);
+                }
             }
         }
 
@@ -61,7 +83,8 @@ impl Lexer {
                 token_type: Eof,
                 lexeme: "<EOF>".to_string(),
                 literal: None,
-                span: SourceSpan::new(self.start.into(), 0usize),
+                // span: SourceSpan::new(self.start.into(), 0usize),
+                span: self.start..self.start,
                 line_number: self.line,
                 source: self.source.clone() // pass a source ptr to each token
             }
@@ -78,7 +101,7 @@ impl Lexer {
         self.current >= self.source.len()
     }
 
-    fn scan_token(&mut self) -> Result<()> {
+    fn scan_token(&mut self) -> LResult<'l, ()> {
         let c = self.advance();
 
         match c {
@@ -98,35 +121,56 @@ impl Lexer {
                 if self.char_match('=') {
                     self.add_token(BangEqual)
                 } else {
-                    let labels = vec![
-                        LabeledSpan::at(self.current_span(), "operator `!` (bang) not allowed in syntax")
-                    ];
-                    let error = miette!(
-                        labels = labels,
-                        code = "lexer::unknown_symbol::bang",
-                        help = "for logical not write `NOT` instead of `!`",
-                        "{} unknown symbol `!`", self.location_string()
-                    ).with_source_code(self.source.clone());
-                    
-                    return Err(error)
+                    let mut colors = ColorGenerator::new();
+
+                    let a = colors.next();
+                    let b = colors.next();
+                    let c = colors.next();
+
+                    let report  = Report::build(ReportKind::Error, self.file_name, self.offset())
+                        .with_code(LexerCodes::UnknownSymbol)
+                        .with_message(format!("unrecognised symbol `{}`", "!".fg(a)))
+                        .with_label(
+                            Label::new((self.file_name, self.current_span()))
+                                .with_message("this symbol is not allowed")
+                                .with_color(a)
+                        )
+                        .with_help(
+                            format!(
+                                "for {} write `{}` instead of `{}`\nfor {} write {} instead of `{}`",
+                                "logical not".fg(b), "NOT".fg(b), "!".fg(a), "logical not equals".fg(c), "!=".fg(c), "!".fg(a)))
+                        .with_note(format!("aplang doesnt use `{}` in its syntax", "!".fg(a)))
+                        .finish();
+                    return Err(report)
                 }
             }
             '=' => {
                 if self.char_match('=') {
                     self.add_token(EqualEqual)
                 } else {
-                    let labels = vec![
-                        LabeledSpan::at(self.current_span(), "operator `=` (equals) not allowed in syntax")
-                    ];
-                    let error = miette!(
-                        labels = labels,
-                        code = "lexer::unknown_symbol::equals",
-                        help = "for logical equals write `==` instead of `=`\n\
-                        to assign to a variable write `<-` instead of `=`",
-                        "{} unknown symbol `=`", self.location_string()
-                    ).with_source_code(self.source.clone());
+                    let mut colors = ColorGenerator::new();
 
-                    return Err(error)
+                    let a = colors.next();
+                    let b = colors.next();
+                    let c = colors.next();
+
+                    let report: LReport = Report::build(ReportKind::Error, self.file_name, self.offset().clone())
+                        .with_code(LexerCodes::UnknownSymbol)
+                        .with_message(format!("unrecognised symbol `{}`", "=".fg(a)))
+                        .with_label(
+                            Label::new((self.file_name, self.current_span().clone()))
+                                .with_message("this symbol is not allowed")
+                                .with_color(a)
+                        )
+                        .with_help(
+                            format!(
+                                "for logical equals write `{}` instead of `{}`\nto assign to a variable write `{}` instead of `{}`",
+                                "==".fg(b), "=".fg(a), "<-".fg(c), "=".fg(a)
+                            )
+                        )
+                        .finish();
+
+                    return Err(report)
                 }
             }
             '<' => {
@@ -185,24 +229,30 @@ impl Lexer {
             ch if ch.is_ascii_digit() => self.number()?,
             ch if ch.is_alphanumeric() => self.identifier(),
             ch => {
-                let labels = vec![
-                    LabeledSpan::at(self.current_span(), format!("symbol `{ch}` is not allowed in syntax"))
-                ];
+                let mut colors = ColorGenerator::new();
+                let a = colors.next();
                 
-                let error = miette!(
-                    labels = labels,
-                    code = "lexer::unknown_symbol",
-                    "{} unknown symbol `{ch}`", self.location_string()
-                ).with_source_code(self.source.clone());
+                let report = Report::build(ReportKind::Error, self.file_name, self.offset())
+                    .with_code(LexerCodes::UnterminatedString)
+                    .with_message(format!("unrecognised character {}", ch.fg(a)))
+                    .with_label(
+                        Label::new((self.file_name, self.current_span()))
+                            .with_message("this char is not allowed")
+                            .with_color(a)
+                    )
+                    .with_help(format!("you cannot use {}", ch.fg(a)))
+                    .finish();
                 
-                return Err(error)
+                let report = Report::build(ReportKind::Error, self.file_name, self.offset()).finish();
+                
+                return Err(report)
             }
         }
 
         Ok(())
     }
 
-    fn string(&mut self) -> Result<()> {
+    fn string(&mut self) -> LResult<'l, ()> {
         while self.peek() != '"' && !self.is_at_end() {
             if self.peek() == '\n' {
                 self.line += 1;
@@ -236,7 +286,7 @@ impl Lexer {
         Ok(())
     }
 
-    fn number(&mut self) -> Result<()> {
+    fn number(&mut self) -> LResult<'l, ()> {
         while self.peek().is_ascii_digit() {
             self.advance();
         }
@@ -254,18 +304,25 @@ impl Lexer {
         match value {
             Ok(value) => self.add_token_lit(Number, Some(LiteralValue::Number(value))),
             Err(_) => {
-                let labels = vec![
-                    LabeledSpan::at(self.current_span(), "could not parse")
-                ];
+                let mut colors = ColorGenerator::new();
+
+                let a = colors.next();
+                let b = colors.next();
+                let c = colors.next();
+
+                let report = Report::build(ReportKind::Error, self.file_name.clone(), self.offset())
+                    .with_code(LexerCodes::NumberParseError)
+                    .with_message(format!("could not parse `{}` into type {}", self.current_slice().fg(a), "number".fg(b)))
+                    .with_label(
+                        Label::new((self.file_name, self.current_span()))
+                            .with_message(format!("this is not a {}", "number".fg(b)))
+                            .with_color(a)
+                    )
+                    .with_help(format!("try making literal `{}` into an {} (3) or {} (3.14)",
+                                       self.current_slice().fg(a), "int".fg(b), "float".fg(b)))
+                    .finish();
                 
-                let error = miette!(
-                    labels = labels,
-                    code = "lexer::unknown_token",
-                    help = "this token might not be a valid number",
-                    "{} failed to parse `{}` into number", self.location_string(), substring
-                ).with_source_code(self.source.clone());
-                
-                return Err(error)
+                return Err(report)
             },
             
         }
@@ -339,16 +396,13 @@ impl Lexer {
         let text = self.source.get(self.start..self.current)
             .expect("Internal Compiler Error, This is a BUG")
             .to_string();
-        
-
-        let span_len = self.current - self.start;
 
         self.tokens.push(Token {
             token_type,
             lexeme: text,
             literal,
             line_number: self.line,
-            span: SourceSpan::new(self.start.into(), span_len),
+            span: self.start..self.current,
             source: self.source.clone() // pass a pointer to source
         });
     }
@@ -365,18 +419,19 @@ impl Lexer {
             true
         }
     }
-    
-    
-    fn current_span(&self) -> SourceSpan {
-        SourceSpan::from(self.start..self.current)
-    }
 
     /// generate the location string for errors
-    fn location_string(&self) -> impl Display {
-        let string = format!("{}:{}:{}", self.file_name, self.line, self.start);
-        let string = string.bold();
-        let string = string.red();
-        format!("{string}")
+    fn current_slice(&'l self) -> &'l str {
+         &self.source[self.start..self.current]
+    }
+    
+    
+    fn current_span(&self) -> Range<usize> {
+        self.start..self.current
+    }
+
+    fn offset(&self) -> usize {
+        self.start
     }
 }
 

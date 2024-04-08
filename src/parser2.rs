@@ -1,9 +1,13 @@
+
+
 use std::fmt::Display;
+use std::ops::Range;
 use std::sync::Arc;
 use miette::{Diagnostic, LabeledSpan, miette, NamedSource, Report, Severity, SourceSpan};
 use thiserror::Error;
 use crate::ast::{Ast, Expr, Literal, LogicalOp, Stmt};
 use crate::lexer::LiteralValue;
+use crate::{LReport, LResult, LResults};
 use crate::token::{Token, TokenType};
 use crate::token::TokenType::{Eof, LeftParen, RightParen};
 
@@ -25,7 +29,7 @@ use crate::token::TokenType::{Eof, LeftParen, RightParen};
 
 use crate::token::TokenType::*;
 
-pub struct Parser2 {
+pub struct Parser2<'p> {
     tokens: Vec<Token>,
     source: Arc<str>,
     current: usize,
@@ -43,8 +47,8 @@ impl Parser2 {
         }
     }
 
-    pub(crate) fn parse(&mut self) -> Result<Ast, Vec<Report>> {
-        let mut statements = vec![];
+    pub(crate) fn parse(&mut self) -> LResults<'p, Ast> {
+        let mut statements= vec![];
         let mut reports = vec![];
 
         while !self.is_at_end() {
@@ -74,7 +78,7 @@ impl Parser2 {
 }
 
 /// parse expression
-impl Parser2 {
+impl<'p> Parser2<'p> {
 
     fn declaration(&mut self) -> miette::Result<Stmt> {
         if self.match_token(&Procedure) {
@@ -85,6 +89,8 @@ impl Parser2 {
         self.statement()
     }
 
+
+
     fn procedure(&mut self, proc_token: Token) -> miette::Result<Stmt> {
         let name_token = self.consume(&Identifier, |token| {
             miette!("expected an identifier")
@@ -93,6 +99,8 @@ impl Parser2 {
         // self.ident_warning(&name_token);
         
         let name = name_token.lexeme.clone();
+
+        let offset = self.offset();
         
         let lp_token = self.consume(&LeftParen, |token |{
             miette!(
@@ -127,7 +135,7 @@ impl Parser2 {
     }
 
 
-    fn statement(&mut self) -> miette::Result<Stmt> {
+    fn statement(&mut self) -> LResult<'p, Stmt> {
         // IF (condition) 
         if self.match_token(&If) {
             let if_token = self.previous().clone();
@@ -715,7 +723,7 @@ impl Parser2 {
 
 
 /// Helper methods
-impl Parser2 {
+impl<'p> Parser2<'p> {
     fn synchronize(&mut self) {
         self.advance();
 
@@ -726,7 +734,7 @@ impl Parser2 {
 
             // todo: dont know if this is complete but its "good enough"
             match self.peek().token_type {
-                Procedure | Repeat | For | If | Return | Continue | Break | Print=> return,
+                Procedure | Repeat | For | If | Return | Continue | Break | Print => return,
                 _ => (),
             }
 
@@ -734,24 +742,45 @@ impl Parser2 {
         }
     }
 
-    fn consume(&mut self, token_type: &TokenType, report: impl FnOnce(&Token) -> Report) -> miette::Result<&Token> {
+    fn consume(&mut self, token_type: &TokenType, error_fn: impl FnOnce(Token, ReportBuilder<'p, (&'p str, Range<usize>)>) -> LReport<'p>) -> LResult<'p, Token> {
         let token_type_matches = {
             let token = self.peek(); // Immutable borrow is limited to this block
             token.token_type() == token_type
         };
 
         if token_type_matches {
-            self.advance();
             let token = self.previous();
-            Ok(token)
+            Ok(token.clone())
         } else {
-            let token = &self.previous().clone();
-            self.synchronize();
-            Err(report(token).with_source_code(self.source.clone()))
+            let token = self.previous().clone();
+            let builder = Report::build(ReportKind::Error, self.file_name.clone(), self.offset());
+            let report: LReport<'p> = error_fn(token, builder);
+            Err(report)
         }
     }
-    
-    // fn consume(&mut self, token_type: &TokenType, error_handler: Box<dyn Fn(&Token) -> Report>) -> miette::Result<&Token> {
+
+
+    // fn consume33(&mut self, token_type: &TokenType, error_fn: impl FnOnce(Token, ReportBuilder<'p, (&str, Range<usize>)>) -> ReportBuilder<'p, (&'p str, Range<usize>)>) -> LResult<'p, & Token> {
+    //     let token_type_matches = {
+    //         let token = self.peek(); // Immutable borrow is limited to this block
+    //         token.token_type() == token_type
+    //     };
+    // 
+    //     if token_type_matches {
+    //         let token = self.previous();
+    //         Ok(token)
+    //     } else {
+    //         let token = self.previous().clone();
+    //         let builder = Report::build(ReportKind::Error, self.file_name.clone(), self.offset());
+    //         let report: LReport<'p> = error_fn(token, builder).finish();
+    //         Err(report)
+    //     }
+    // }
+    // 
+
+
+
+        // fn consume(&mut self, token_type: &TokenType, error_handler: Box<dyn Fn(&Token) -> Report>) -> miette::Result<&Token> {
     //     let token = self.peek();
     //
     //     if token.token_type() == token_type {
@@ -771,7 +800,7 @@ impl Parser2 {
         self.peek().token_type() == typ
     }
     
-    fn confirm(&self, typ: &TokenType) -> miette::Result<()> {
+    fn confirm<'a>(&self, typ: &TokenType) -> LResult<&'a Token> {
         let previous = self.previous();
         
         if &previous.token_type != typ {
@@ -812,7 +841,7 @@ impl Parser2 {
         self.tokens
             .get(self.current)
             // todo: switch to miette_expect
-            .expect("internal error: attempted to peek token when there is no token to peek")
+            .expect("internal error: attempted to peek token when there is no token to peek").clone()
     }
 
     fn previous(&self) -> &Token {
@@ -828,7 +857,7 @@ impl Parser2 {
             .get(self.current - 1)
             // todo: improve this message include link to github issues (miette_expect)
             .expect("internal error: this should never happen. \
-            if it does there is a bug in previous method")
+            if it does there is a bug in previous method").clone()
             // .expect_miette(false, || {
             //     todo
             // });
@@ -837,10 +866,13 @@ impl Parser2 {
     fn is_at_end(&self) -> bool {
         self.peek().token_type == Eof
     }
+
+    fn offset(&self) -> usize {
+        self.tokens[self.current].span.start
+    }
 }
 
 pub(super) mod warning {
-    use miette::{miette, Report, Severity};
     use crate::parser2::Parser2;
     use crate::token::{get_keywords_hashmap, Token};
     use crate::token::TokenType::Identifier;

@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::{Display, write};
-use miette::{LabeledSpan, miette, Report, SourceSpan};
+use std::ops::Range;
 use std::sync::Arc;
+use ariadne::{Label, Span};
 use crate::ast::{BinaryOp, LogicalOp, UnaryOp};
 use crate::lexer::LiteralValue;
 
@@ -70,7 +71,7 @@ pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
     pub literal: Option<LiteralValue>,
-    pub span: SourceSpan,
+    pub span: Range<usize>,
     pub line_number: usize,
     pub source: Arc<str>,
 }
@@ -123,30 +124,21 @@ impl Token {
     pub fn token_type(&self) -> &TokenType {
         &self.token_type
     }
-    pub fn label(&self, label: impl Into<String>) -> LabeledSpan {
-        LabeledSpan::at(self.span, label)
+    
+    pub fn label(&self, file_name: &String ) -> Label {
+        Label::new(self.span().clone())
+    }
+    pub fn span(&self) -> &Range<usize> {
+        &self.span
     }
     
-    pub fn span_to_label(&self, other: SourceSpan, label: impl Into<String>) -> LabeledSpan {
-        LabeledSpan::at(self.span_to(other), label)
-    }
-    
-    pub fn span(&self) -> SourceSpan {
-        self.span
-    }
-    
-    pub fn span_to(&self, other: SourceSpan) -> SourceSpan {
+    pub fn span_to(&self, other: &Range<usize>) -> Range<usize> {
         join_spans(self.span(), other)
-    }
-    
-    pub fn span_to_token(&self, other: &Token) -> SourceSpan {
-        self.span_to(other.span())
     }
 }
 
-pub fn join_spans(left: SourceSpan, right: SourceSpan) -> SourceSpan {
-    let length = right.offset() - left.offset() + right.len();
-    SourceSpan::from(left.offset()..length)
+pub fn join_spans(left: &Range<usize>, right: &Range<usize>) -> Range<usize> {
+    left.start..right.end
 }
 
 
