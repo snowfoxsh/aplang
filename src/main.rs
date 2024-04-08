@@ -38,20 +38,20 @@ fn test_file<P: AsRef<Path>>(path: P, parse: bool) {
     
     print_tokens(source.clone());
     
-    // if !parse { return }
-    // let mut parser = Parser2::new(source.0, source.1);
-    // let ast = parser.parse();
-    // 
-    // let ast = match ast {
-    //     Ok(ast) => {ast}
-    //     Err(e) => {
-    //         println!();
-    //         display_errors(contents.clone(), e);
-    //         return
-    //     }
-    // };
-    // println!();
-    // println!();
-    // println!("{:}", ast.print_tree());
+    if !parse { return }
+    let mut parser = Parser2::new(source, contents.clone(), "file.ap");
+    let ast = parser.parse();
+    
+    let ast = match ast {
+        Ok(ast) => {ast}
+        Err(e) => {
+            println!();
+            display_errors(contents.clone(), e);
+            return
+        }
+    };
+    println!();
+    println!();
+    println!("{}", ast.print_tree());
     // println!("{}",expr.print_tree());
 }

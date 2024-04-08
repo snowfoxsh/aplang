@@ -61,7 +61,6 @@ impl<'p> Parser2<'p> {
             match self.declaration() {
                 Ok(stmt) => statements.push(stmt),
                 Err(report) => {
-                    let report = report;
                     self.synchronize();
                     reports.push(report)
                 },
@@ -233,7 +232,9 @@ impl<'p> Parser2<'p> {
                 .finish()
         })?.clone();
 
+        println!("\nbegin");
         let then_branch = self.statement()?.into();
+        println!("end");
         // let (else_branch, else_token) = if self.match_token(&Else) {
         //     let else_token = self.previous().clone();
         //     let else_branch = self.statement()?.into();
@@ -326,7 +327,7 @@ impl<'p> Parser2<'p> {
             self.confirm(&For)?;
         }
         
-        let each_token = self.consume(&Each, |token, report| { 
+        let each_token = self.consume(&Each, |token, report| {
             // todo improve this message
             // miette!("expected each token")
             report
@@ -341,7 +342,7 @@ impl<'p> Parser2<'p> {
                 .with_message("expected an ident")
                 .finish()
         })?;
-        
+
         let item = item_token.lexeme.clone().clone();
         let in_token= self.consume(&In, |token, report| {
             // miette!("expected in token")
@@ -778,8 +779,13 @@ impl<'p> Parser2<'p> {
         //     labels = vec![LabeledSpan::at(self.peek().span, "kill yourself")],
         //     "expected primary found1 {}", self.peek()
         // ).with_source_code(self.source.clone());
+        let span = self.peek().span.clone();
         let report = Report::build(ReportKind::Error, self.file_name, self.offset())
             .with_message(format!("expected primary found1 {}", self.peek()))
+            .with_label(
+                Label::new((self.file_name, span))
+                    .with_message("hello")
+            )
             .finish();
         // mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
         Err(report)
@@ -812,7 +818,7 @@ impl<'p> Parser2<'p> {
             let token = self.peek(); // Immutable borrow is limited to this block
             token.token_type() == token_type
         };
-
+        self.advance();
         if token_type_matches {
             let token = self.previous();
             Ok(token.clone())

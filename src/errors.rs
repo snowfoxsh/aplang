@@ -4,6 +4,6 @@ use crate::LReport;
 
 pub fn display_errors(source: Arc<str>, errors: Vec<LReport>) {
     for error in errors {
-        error.print(("test.ap", Source::from(source.clone()))).unwrap()
+        error.print(("file.ap", Source::from(source.clone()))).unwrap()
     }
 }
