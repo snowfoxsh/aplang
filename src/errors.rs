@@ -1,7 +1,9 @@
-use ariadne::Report;
+use std::sync::Arc;
+use ariadne::{Report, Source};
+use crate::LReport;
 
-pub fn display_errors(errors: Vec<Report>) {
+pub fn display_errors(source: Arc<str>, errors: Vec<LReport>) {
     for error in errors {
-        println!("{:?}\n", error)
+        error.print(("test.ap", Source::from(source.clone()))).unwrap()
     }
 }

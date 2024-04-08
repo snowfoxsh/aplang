@@ -1,6 +1,6 @@
 x <- 2
 
-IF (x = 2) {
+IF (x == 2) {
     DISPLAY("HELLO WORLD")
 }
 

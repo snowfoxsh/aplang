@@ -3,9 +3,10 @@ use std::fmt;
 use std::fmt::{Display, write};
 use std::ops::Range;
 use std::sync::Arc;
-use ariadne::{Label, Span};
+use ariadne::{Label, Report, Span};
 use crate::ast::{BinaryOp, LogicalOp, UnaryOp};
 use crate::lexer::LiteralValue;
+use crate::LResult;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
@@ -143,38 +144,41 @@ pub fn join_spans(left: &Range<usize>, right: &Range<usize>) -> Range<usize> {
 
 
 impl Token {
-    pub fn to_binary_op(&self) -> miette::Result<BinaryOp> {
-        match self.token_type {
-            TokenType::EqualEqual => Ok(BinaryOp::EqualEqual),
-            TokenType::BangEqual => Ok(BinaryOp::NotEqual),
-            TokenType::Less => Ok(BinaryOp::Less),
-            TokenType::LessEqual => Ok(BinaryOp::LessEqual),
-            TokenType::Greater => Ok(BinaryOp::Greater),
-            TokenType::GreaterEqual => Ok(BinaryOp::GreaterEqual),
-            TokenType::Plus => Ok(BinaryOp::Plus),
-            TokenType::Minus => Ok(BinaryOp::Minus),
-            TokenType::Star => Ok(BinaryOp::Star),
-            TokenType::Slash => Ok(BinaryOp::Slash),
-            // todo: improve this message
-            _ => Err(miette!("Conversion to Binary Op Error, Token is not binary Op")), 
-        }
+    pub fn to_binary_op<'a>(&self) ->  LResult<'a, BinaryOp> {
+        Ok(match self.token_type {
+            TokenType::EqualEqual => BinaryOp::EqualEqual,
+            TokenType::BangEqual => BinaryOp::NotEqual,
+            TokenType::Less => BinaryOp::Less,
+            TokenType::LessEqual => BinaryOp::LessEqual,
+            TokenType::Greater => BinaryOp::Greater,
+            TokenType::GreaterEqual => BinaryOp::GreaterEqual,
+            TokenType::Plus => BinaryOp::Plus,
+            TokenType::Minus => BinaryOp::Minus,
+            TokenType::Star => BinaryOp::Star,
+            TokenType::Slash => BinaryOp::Slash,
+            _ =>
+                // miette!("Conversion to Binary Op Error, Token is not binary Op")
+                // todo: improve this message but this should not happen anywyas
+                panic!("conversion to binary op error, token is not a binary op")
+             
+        })
     }
 
-    pub fn to_unary_op(&self) -> miette::Result<UnaryOp> {
-        match self.token_type {
-            TokenType::Minus => Ok(UnaryOp::Minus),
-            TokenType::Not => Ok(UnaryOp::Not),
+    pub fn to_unary_op<'a>(&self) -> LResult<'a, UnaryOp> {
+        Ok(match self.token_type {
+            TokenType::Minus => UnaryOp::Minus,
+            TokenType::Not => UnaryOp::Not,
             // todo: improve this message
-            _ => Err(miette!("Conversion to Binary Unary Error, Token is not Unary op")),
-        }
+            _ => panic!("Conversion to Binary Unary Error, Token is not Unary op"),
+        })
     }
     
-    pub fn to_logical_op(&self) -> miette::Result<LogicalOp> {
+    pub fn to_logical_op<'a>(&self) -> LResult<'a, LogicalOp> {
         match self.token_type {
             TokenType::Or => Ok(LogicalOp::Or),
             TokenType::And => Ok(LogicalOp::And),
             // todo: improve this message
-            _ => Err(miette!("Conversion to Binary Logical Error, Token is not Logical op")),
+            _ => panic!("Conversion to Binary Logical Error, Token is not Logical op"),
         }
     }
 }

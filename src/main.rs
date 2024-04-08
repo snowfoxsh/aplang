@@ -3,6 +3,7 @@
 use std::fs;
 use std::ops::Range;
 use std::path::Path;
+use std::sync::Arc;
 use ariadne::{Report, Span};
 
 
@@ -27,32 +28,30 @@ pub(crate) type LResult<'a, T> = Result<T, LReport<'a>>;
 pub(crate) type LResults<'a, T> = Result<T, Vec<LReport<'a>>>;
 
 
-fn main() -> Result<()> {
+fn main() {
     test_file("./examples.ap/if.ap", true);
-
-    Ok(())
 }
 
 fn test_file<P: AsRef<Path>>(path: P, parse: bool) {
-    let contents = fs::read_to_string(path).unwrap();
-    let source = Lexer::scan(contents, "file.ap".to_string()).unwrap();
+    let contents: Arc<str> = fs::read_to_string(path).unwrap().into();
+    let source = Lexer::scan(contents.clone(), "file.ap").unwrap();
     
-    print_tokens(source.0.clone());
+    print_tokens(source.clone());
     
-    if !parse { return }
-    let mut parser = Parser2::new(source.0, source.1);
-    let ast = parser.parse();
-    
-    let ast = match ast {
-        Ok(ast) => {ast}
-        Err(e) => {
-            println!();
-            display_errors(e, true);
-            return
-        }
-    };
-    println!();
-    println!();
-    println!("{:}", ast.print_tree());
+    // if !parse { return }
+    // let mut parser = Parser2::new(source.0, source.1);
+    // let ast = parser.parse();
+    // 
+    // let ast = match ast {
+    //     Ok(ast) => {ast}
+    //     Err(e) => {
+    //         println!();
+    //         display_errors(contents.clone(), e);
+    //         return
+    //     }
+    // };
+    // println!();
+    // println!();
+    // println!("{:}", ast.print_tree());
     // println!("{}",expr.print_tree());
 }

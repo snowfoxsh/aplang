@@ -181,7 +181,7 @@ pub mod pretty {
 
         fn node(&self) -> Box<dyn fmt::Display> {
             // Box::new(format!("Ast: {}", self.source))
-            Box::new(format!("{}", "Program:".bold()))
+            Box::new(format!("{}", "Program:"))
         }
     }
 
