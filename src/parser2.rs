@@ -627,9 +627,12 @@ impl<'p> Parser2<'p> {
 
             // if it is not string
             let LiteralValue::String(literal) = literal else {
-                let report = miette!(
-                    "internal parser error literal is not a string"
-                );
+                // let report = miette!(
+                //     "internal parser error literal is not a string"
+                // );
+                let report = Report::build(ReportKind::Error, self.file_name, self.offset())
+                    .with_message("internal parser error literal is not a string")
+                    .finish();
                 panic!("{:?}", report)
             };
 
@@ -873,14 +876,18 @@ impl<'p> Parser2<'p> {
         self.peek().token_type() == typ
     }
     
-    fn confirm<'a>(&self, typ: &TokenType) -> LResult<&'a Token> {
+    fn confirm<'a>(&self, typ: &TokenType) -> LResult<()> {
         let previous = self.previous();
         
         if &previous.token_type != typ {
             // todo: improve this msg
-            return Err(miette!(
-                "attempted to look back and find {:?} buf found {}", typ, previous
-            ));
+            // return Err(miette!(
+            //     "attempted to look back and find {:?} buf found {}", typ, previous
+            // ));
+            let report = Report::build(ReportKind::Error, self.file_name, self.offset())
+                .with_message(format!("attempted to look back and find {:?} buf found {}", typ, previous))
+                .finish();
+            return Err(report)
         }
         
         Ok(())
@@ -902,7 +909,7 @@ impl<'p> Parser2<'p> {
         }
         false
     }
-    fn advance(&mut self) -> &Token {
+    fn advance(&mut self) -> Token {
         if !self.is_at_end() {
             self.current += 1;
         }
@@ -910,14 +917,14 @@ impl<'p> Parser2<'p> {
         self.previous()
     }
 
-    fn peek(&self) -> &Token {
+    fn peek(&self) -> Token {
         self.tokens
             .get(self.current)
             // todo: switch to miette_expect
             .expect("internal error: attempted to peek token when there is no token to peek").clone()
     }
 
-    fn previous(&self) -> &Token {
+    fn previous(&self) -> Token {
         if self.current == 0 {
             // todo switch to miette! panic
             panic!("internal error: there is no previous token");
@@ -945,59 +952,60 @@ impl<'p> Parser2<'p> {
     }
 }
 
-pub(super) mod warning {
-    use crate::parser2::Parser2;
-    use crate::token::{get_keywords_hashmap, Token};
-    use crate::token::TokenType::Identifier;
+// pub(super) mod warning {
+//     use crate::parser2::Parser2;
+//     use crate::token::{get_keywords_hashmap, Token};
+//     use crate::token::TokenType::Identifier;
+//     use crate::{LReport, LResult, LResults};
+// 
+//     impl Parser2<'p> {
+//         pub(super) fn warning(&mut self, report: LReport) {
+//             self.warnings.push(report.with_source_code(self.source.clone()))
+//         }
+// 
+//         // todo: add warnings to parameters
+//         // pub(super) fn ident_warning(&mut self, ident: &Token) {
+//         //     if ident.token_type == Identifier {
+//         //         panic!("Internal error trying to warn about ident but input is not ident")
+//         //     }
+//         //     
+//         //     if get_keywords_hashmap().contains_key(ident.lexeme.to_lowercase().as_str()) {
+//         //         let lexeme = &ident.lexeme;
+//         //         let report = miette!(
+//         //             severity = Severity::Warning,
+//         //             "it is not recommended that your identifier echos {}", lexeme
+//         //         );
+//         //         self.warning(report);
+//         //     }
+//         // }
+//     }
+// }
 
-    impl Parser2 {
-        pub(super) fn warning(&mut self, report: Report) {
-            self.warnings.push(report.with_source_code(self.source.clone()))
-        }
-
-        // todo: add warnings to parameters
-        // pub(super) fn ident_warning(&mut self, ident: &Token) {
-        //     if ident.token_type == Identifier {
-        //         panic!("Internal error trying to warn about ident but input is not ident")
-        //     }
-        //     
-        //     if get_keywords_hashmap().contains_key(ident.lexeme.to_lowercase().as_str()) {
-        //         let lexeme = &ident.lexeme;
-        //         let report = miette!(
-        //             severity = Severity::Warning,
-        //             "it is not recommended that your identifier echos {}", lexeme
-        //         );
-        //         self.warning(report);
-        //     }
-        // }
-    }
-}
-
-trait ExpectMiette<T> {
-
-    fn miette_expect(self,  report_handler: fn() -> Report) -> T;
-}
-
-impl<T, E> ExpectMiette<T> for Result<T, E> {
-    fn miette_expect(self, report_handler: fn() -> Report) -> T {
-        match self {
-            Ok(t) => t,
-            Err(_) => {
-                let report = report_handler();
-                panic!()
-            }
-        }
-    }
-}
-
-impl<T> ExpectMiette<T> for Option<T> {
-    fn miette_expect(self, report_handler: fn() -> Report) -> T {
-        match self {
-            Some(t) => t,
-            None => {
-                let report = report_handler();
-                panic!()
-            }
-        }
-    }
-}
+// trait ExpectMiette<T> {
+// 
+//     fn miette_expect(self,  report_handler: fn() -> LReport) -> T;
+// }
+// 
+// impl<T, E> ExpectMiette<T> for Result<T, E> {
+//     fn miette_expect(self, report_handler: fn() -> LReport) -> T {
+//         match self {
+//             Ok(t) => t,
+//             Err(_) => {
+//                 let report = report_handler();
+//                 panic!()
+//             }
+//         }
+//     }
+// }
+// 
+// impl<T> ExpectMiette<T> for Option<T> {
+//     fn miette_expect(self, report_handler: fn() -> LReport) -> T {
+//         match self {
+//             Some(t) => t,
+//             None => {
+//                 let report = report_handler();
+//                 panic!()
+//             }
+//         }
+//     }
+// }
