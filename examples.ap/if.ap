@@ -4,8 +4,9 @@ IF (x == 2) {
     DISPLAY("HELLO WORLD")
 }
 
-REPEAT UNTIL(n == 2 {
+REPEAT n TIMES {
     n <- n + 1
+    list[n]
     DISPLAY(n)
 }
 

@@ -3,7 +3,7 @@ use std::mem::size_of;
 use std::path::Path;
 
 
-use miette::{Result};
+use miette::{MietteHandlerOpts, Result};
 
 
 use lexer::Lexer;
@@ -35,7 +35,7 @@ fn test_file<P: AsRef<Path>>(path: P, parse: bool) {
     print_tokens(source.0.clone());
     
     if !parse { return }
-    let mut parser = Parser2::new(source.0, source.1);
+    let mut parser = Parser2::new(source.0, source.1, "main.ap");
     let ast = parser.parse();
     
     let ast = match ast {
@@ -49,5 +49,6 @@ fn test_file<P: AsRef<Path>>(path: P, parse: bool) {
     println!();
     println!();
     println!("{:}", ast.print_tree());
+    
     // println!("{}",expr.print_tree());
 }

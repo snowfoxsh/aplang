@@ -1,6 +1,7 @@
 use std::fmt::Display;
 use std::sync::Arc;
 use miette::{Diagnostic, LabeledSpan, miette, NamedSource, Report, Severity, SourceSpan};
+use owo_colors::OwoColorize;
 use thiserror::Error;
 use crate::ast::{Ast, Expr, Literal, LogicalOp, Stmt};
 use crate::lexer::LiteralValue;
@@ -23,22 +24,24 @@ use crate::token::TokenType::{Eof, LeftParen, RightParen};
 //     found: SourceSpan,
 // }
 
-
 use crate::token::TokenType::*;
 
 pub struct Parser2 {
     tokens: Vec<Token>,
     source: Arc<str>,
+    named_source: NamedSource<Arc<str>>,
     current: usize,
     warnings: Vec<Report>
 }
 
 
 impl Parser2 {
-    pub(crate) fn new(tokens: Vec<Token>, source: Arc<str>) -> Self {
+    pub(crate) fn new(tokens: Vec<Token>, source: Arc<str>, file_name: &str) -> Self {
         Self {
             tokens,
-            source,
+            source: source.clone(),
+            // named_source: NamedSource::new(file_name, source),
+            named_source: NamedSource::new(format!("{}",file_name), source),
             current: 0,
             warnings: vec![],
         }
@@ -119,7 +122,7 @@ impl Parser2 {
                 labels = labels,
                 code = "missing_lp",
                 help = "a PROCEDURE requires a argument list in `()` after its name",
-                "expected `(` found {}", token.lexeme 
+                "expected `(` found `{}`", token.lexeme 
             )
         })?.clone();
         
@@ -141,7 +144,7 @@ impl Parser2 {
                 labels = labels,
                 code = "missing_rp",
                 help = "mismatched `(`, it seems you missed a `)`.",
-                "expected `)`, found {}", token.lexeme
+                "expected `)`, found `{}`", token.lexeme
             )
         })?.clone();
         
@@ -244,7 +247,7 @@ impl Parser2 {
                 labels = labels,
                 code = "missing_lp",
                 help = "an IF statement requires a condition in `()` after the `IF` keyword",
-                "expected `(` found {}", token.lexeme
+                "expected `(` found `{}`", token.lexeme
             )
         })?.clone();
 
@@ -260,7 +263,7 @@ impl Parser2 {
                 labels = labels,
                 code = "missing_rp",
                 help = "mismatched `(`, it seems you missed a `)`.",
-                "expected `)`, found {}", token.lexeme
+                "expected `)`, found `{}`", token.lexeme
             )
         })?.clone();
 
@@ -299,7 +302,7 @@ impl Parser2 {
                 labels = labels,
                 code = "missing_times",
                 help = "a REPEAT block requires a `TIMES` keyword after the number of times to repeat",
-                "expected `TIMES` found {}", token.lexeme
+                "expected `TIMES` found `{}`", token.lexeme
             )
         })?.clone();
         
@@ -332,7 +335,10 @@ impl Parser2 {
             //     help = "a REPEAT block requires an `UNTIL` keyword with a condition",
             //     "expected `UNTIL` found {}", token.lexeme
             // )
+            // todo consider makeing this advance instad of consume
+            // this should never error
             miette!("how tf do i trigger this")
+
         })?.clone();
         
         let lp_token = self.consume(&LeftParen, |token| {
@@ -346,7 +352,7 @@ impl Parser2 {
                 labels = labels,
                 code = "missing_lp",
                 help = "a REPEAT UNTIL block requires a condition in `()` after the `UNTIL` keyword",
-                "expected `(` found {}", token.lexeme
+                "expected `(` found `{}`", token.lexeme
             )
         })?.clone();
         
@@ -362,7 +368,7 @@ impl Parser2 {
                 labels = labels,
                 code = "missing_rp",
                 help = "mismatched `(`, it seems you missed a `)`.",
-                "expected `)`, found {}", token.lexeme
+                "expected `)`, found `{}`", token.lexeme
             )
         })?.clone();
         
@@ -381,17 +387,49 @@ impl Parser2 {
         
         let each_token = self.consume(&Each, |token| { 
             // todo improve this message
-            miette!("expected each token")
+            // miette!("expected each token")
+            let labels = vec![
+                LabeledSpan::at(token.span(), "expected an `EACH`"),
+            ];
+
+            miette!(
+                labels = labels,
+                code = "missing_each",
+                help = "a FOR block requires an `EACH` keyword after the `FOR` keyword",
+                "expected `EACH` found `{}`", token.lexeme
+            )
         })?.clone();
         
         let item_token = self.consume(&Identifier, |token| {
             // todo improve this message
-            miette!("expected an ident")
+            // miette!("expected an ident")
+            let labels = vec![
+                LabeledSpan::at(each_token.span(), "expected an identifier after `EACH`"),
+                LabeledSpan::at(token.span(), "identifier goes here")
+            ];
+
+            miette!(
+                labels = labels,
+                code = "missing_ident",
+                help = "a FOR EACH block requires an identifier after the `EACH` keyword",
+                "expected `IDENTIFIER` found `{}`", token.lexeme
+            )
         })?.clone();
         let item = item_token.lexeme.clone();
         
         let in_token= self.consume(&In, |token| {
-            miette!("expected in token")
+            // miette!("expected in token")
+            let labels = vec![
+                LabeledSpan::at(item_token.span(), "expected an `IN` after identifier"),
+                LabeledSpan::at(token.span(), "`IN` goes here"),
+            ];
+
+            miette!(
+                labels = labels,
+                code = "missing_in",
+                help = "a FOR EACH block requires an `IN` keyword after the identifier",
+                "expected `IN` found `{}`", token.lexeme
+            )
         })?.clone();
         
         let list = self.expression()?;
@@ -420,7 +458,17 @@ impl Parser2 {
         }
         
         self.consume(&SoftSemi, |token| {
-            miette!("Expected EOL or semi found {}", token)
+            // miette!("Expected EOL or semi found {}", token)
+            let labels = vec![
+                LabeledSpan::at(token.span(), "missing End Of Line indicator"),
+            ];
+
+            miette!(
+                labels = labels,
+                code = "missing_eol",
+                help = "try manually placing a semicolon",
+                "expected `End Of Line` found `{}`", token.lexeme
+            )
         })?;
         Ok(Stmt::Expr {expr})
     }
@@ -431,6 +479,7 @@ impl Parser2 {
 
     fn assignment(&mut self) -> miette::Result<Expr> {
         let expr = self.or()?;
+        let expr_token = self.previous().clone();
 
         if self.match_token(&Arrow) {
             let arrow_token = self.previous().clone();
@@ -454,7 +503,22 @@ impl Parser2 {
 
                 // Error for invalid assignment target
                 // todo: add better error here
-                _ => Err(miette!("Invalid assignment target.")),
+                // _ => Err({
+                //     miette!("Invalid assignment target.")
+                // })
+                _ => {
+                    let labels = vec![
+                        LabeledSpan::at(arrow_token.span(), "expected an assignment target"),
+                        LabeledSpan::at(expr_token.span(), "target goes here")
+                    ];
+
+                    Err(miette!(
+                        labels = labels,
+                        code = "invalid_assignment_target",
+                        help = "an assignment target must be a variable or an access expression (array[index] type)",
+                        "expected an assignment target found {}", expr
+                    ).with_source_code(self.named_source.clone()))
+                }
             }
         } else {
             Ok(expr)
@@ -612,7 +676,18 @@ impl Parser2 {
 
                 let index = self.expression()?;
                 let rb_token = self.consume(&RightBracket, |token| {
-                    miette!("Expected ']' after index")
+                    let labels = vec![
+                        // todo: make expression span
+                        // LabeledSpan::at(index.span(), "expression"),
+                        LabeledSpan::at(token.span(), "requires closing `]`")
+                    ];
+
+                    miette!(
+                        labels = labels,
+                        code = "missing_rbracket",
+                        help = "when indexing an array you must have a closing `]` bracket following the expresion",
+                        "expected ']' found {}", token.lexeme
+                    )
                 })?.clone();
 
                 expr = Expr::Access {
@@ -722,6 +797,7 @@ impl Parser2 {
                             let next_token = self.peek();
                             // todo: improve this message
                             let report = miette!(
+                                // todo: finish this
                                 "todo: max args for function call exceeded"
                             );
                             return Err(report)
@@ -739,7 +815,17 @@ impl Parser2 {
 
                 let rp_token = self.consume(&RightParen,  |token| {
                     // todo
-                    miette!("expected ) after argument list, found {token}")
+                    // miette!("expected ) after argument list, found {token}")
+                    let labels = vec![
+                        LabeledSpan::at(token.span(), "expected a `)`")
+                    ];
+
+                    miette!(
+                        labels = labels,
+                        code = "missing_rp",
+                        help = "mismatched `(`, it seems you missed a `)`.",
+                        "expected `)`, found `{}`", token.lexeme
+                    )
                 })?.clone();
 
                 return Ok(Expr::ProcCall {
@@ -764,7 +850,17 @@ impl Parser2 {
 
             let rp_token = self.consume(&RightParen, |token| {
                 // todo: improve this message
-                miette!("expected `(` found {}", token)
+                // miette!("expected `(` found {}", token)
+                let labels = vec![
+                    LabeledSpan::at(token.span(), "expected a `(`")
+                ];
+
+                miette!(
+                    labels = labels,
+                    code = "missing_lp",
+                    help = "mismatched `)`, it seems you missed a `(`.",
+                    "expected `(` found `{}`", token.lexeme
+                )
             })?;
 
             return Ok(Expr::Grouping {
@@ -792,7 +888,17 @@ impl Parser2 {
 
             let rb_token = self.consume(&RightBracket,  |token| {
                 // todo
-                miette!("expected ] after item list, found {token}")
+                // miette!("expected ] after item list, found {token}")
+                let labels = vec![
+                    LabeledSpan::at(token.span(), "expected a `]`")
+                ];
+
+                miette!(
+                    labels = labels,
+                    code = "missing_rb",
+                    help = "mismatched `[`, it seems you missed a `]`.",
+                    "expected `]`, found `{}`", token.lexeme
+                )
             })?;
 
             return Ok(Expr::List {
@@ -801,11 +907,18 @@ impl Parser2 {
             });
         }
 
+        let cspan = self.previous().span_to(self.peek().span());
+        let labels = vec![
+            LabeledSpan::at(self.peek().span(), "primary expected here"),
+            LabeledSpan::at(cspan, "consider checking your upstream code")
+        ];
         // todo improve this message
         let report = miette!(
-            labels = vec![LabeledSpan::at(self.peek().span, "kill yourself")],
-            "expected primary found1 {}", self.peek()
-        ).with_source_code(self.source.clone());
+            labels = labels,
+            help = "a primary is made up of the following set:\n\
+            [expression | ident | literal | list]",
+            "expected primary, instead found {}\n", self.peek()
+        ).with_source_code(self.named_source.clone());
         // mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
         Err(report)
     }
@@ -839,8 +952,8 @@ impl Parser2 {
             let token = self.previous();
             Ok(token)
         } else {
-            self.synchronize();
-            Err(report(&next_token).with_source_code(self.source.clone()))
+            // self.synchronize();
+            Err(report(&next_token).with_source_code(self.named_source.clone()))
         }
     }
 
@@ -947,7 +1060,7 @@ pub(super) mod warning {
 
     impl Parser2 {
         pub(super) fn warning(&mut self, report: Report) {
-            self.warnings.push(report.with_source_code(self.source.clone()))
+            self.warnings.push(report.with_source_code(self.named_source.clone()))
         }
 
         // todo: add warnings to parameters
