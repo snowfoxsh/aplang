@@ -19,6 +19,7 @@ mod parser2;
 mod lexer;
 mod token;
 mod ast;
+mod interpreter;
 
 
 fn main() -> Result<()> {

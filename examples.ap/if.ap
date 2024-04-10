@@ -1,10 +1,10 @@
 x <- 2
 
-IF (x = 2) {
+IF (x == 2) {
     DISPLAY("HELLO WORLD")
 }
 
-REPEAT x TIMES {
+REPEAT UNTIL(n == 2 {
     n <- n + 1
     DISPLAY(n)
 }

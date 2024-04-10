@@ -2,7 +2,7 @@ use miette::{LabeledSpan, miette, Report, Result};
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::sync::Arc;
-use miette::{Diagnostic, SourceSpan};
+use miette::SourceSpan;
 use owo_colors::OwoColorize;
 use crate::token::TokenType::*;
 use crate::token;

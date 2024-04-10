@@ -23,6 +23,7 @@ use crate::token::TokenType::{Eof, LeftParen, RightParen};
 //     found: SourceSpan,
 // }
 
+
 use crate::token::TokenType::*;
 
 pub struct Parser2 {
@@ -87,7 +88,17 @@ impl Parser2 {
 
     fn procedure(&mut self, proc_token: Token) -> miette::Result<Stmt> {
         let name_token = self.consume(&Identifier, |token| {
-            miette!("expected an identifier")
+            let labels = vec![
+                LabeledSpan::at(proc_token.span(), "this procedure requires a name"),
+                LabeledSpan::at(token.span(), format!("name goes here"))
+            ];
+        
+            miette!(
+                labels = labels,
+                code = "unnamed_procedure",
+                help = "name the PROCEDURE with an IDENT",
+                "expected `IDENT` found `{}`", token.lexeme
+            )
         })?.clone();
         
         // self.ident_warning(&name_token);
@@ -95,9 +106,20 @@ impl Parser2 {
         let name = name_token.lexeme.clone();
         
         let lp_token = self.consume(&LeftParen, |token |{
+            // miette!(
+            //     labels = vec![LabeledSpan::at(token.span, "kill yourself2")],
+            //     "expected lp token, found {token}"
+            // )
+            let labels = vec![
+                LabeledSpan::at(token.span(), "expected a `(`"),
+                LabeledSpan::at(name_token.span(), format!("{} requires `(..)` argument list", name_token.lexeme)),
+            ];
+
             miette!(
-                labels = vec![LabeledSpan::at(token.span, "kill yourself2")],
-                "expected lp token, found {token}"
+                labels = labels,
+                code = "missing_lp",
+                help = "a PROCEDURE requires a argument list in `()` after its name",
+                "expected `(` found {}", token.lexeme 
             )
         })?.clone();
         
@@ -111,7 +133,16 @@ impl Parser2 {
         };
         
         let rp_token = self.consume(&RightParen, |token| {
-            miette!("expected a rparen, found {token}")
+            let labels = vec![
+                LabeledSpan::at(token.span(), "expected a `)`"),
+            ];
+
+            miette!(
+                labels = labels,
+                code = "missing_rp",
+                help = "mismatched `(`, it seems you missed a `)`.",
+                "expected `)`, found {}", token.lexeme
+            )
         })?.clone();
         
         let body = self.statement()?.into();
@@ -179,7 +210,17 @@ impl Parser2 {
         }
 
         let rb_token = self.consume(&RightBrace, |token| {
-            miette!("expected right brace")
+            let labels = vec![
+                LabeledSpan::at(lb_token.span(), "this delimiter requires a closing `}`"),
+            ];
+            // todo: span the next `}` token
+            
+            miette!(
+                labels = labels,
+                code = "missing_rb",
+                help = "mismatched `{`, it seems you missed a `}`",
+                "this block has an unclosed delimiter"
+            )
         })?.clone();
 
 
@@ -192,14 +233,35 @@ impl Parser2 {
 
     fn if_statement(&mut self, if_token: Token) -> miette::Result<Stmt> {
         // todo: improve this report
-        let lp_token = self.consume(&LeftParen, |token|
-            miette!("expected lp_token")
-        )?.clone();
+        let lp_token = self.consume(&LeftParen, |token| {
+            // miette!("expected lp_token")
+            let labels = vec![
+                LabeledSpan::at(token.span(), "expected a `(`"),
+                LabeledSpan::at(if_token.span(), "IF requires `(..)` condition")
+            ];
+            
+            miette!(
+                labels = labels,
+                code = "missing_lp",
+                help = "an IF statement requires a condition in `()` after the `IF` keyword",
+                "expected `(` found {}", token.lexeme
+            )
+        })?.clone();
 
         let condition = self.expression()?;
 
         let rp_token = self.consume(&RightParen, |token| {
-            miette!("Expected `)` found {}", token)
+            // miette!("Expected `)` found {}", token)
+            let labels = vec![
+                LabeledSpan::at(token.span(), "expected a `)`"),
+            ];
+
+            miette!(
+                labels = labels,
+                code = "missing_rp",
+                help = "mismatched `(`, it seems you missed a `)`.",
+                "expected `)`, found {}", token.lexeme
+            )
         })?.clone();
 
         let then_branch = self.statement()?.into();
@@ -228,7 +290,17 @@ impl Parser2 {
         
         let times_token = self.consume(&Times, |token| {
             // todo improve this message
-            miette!("expected times token")
+            // miette!("expected times token")
+            let labels = vec![
+                LabeledSpan::at(token.span(), "expected a `TIMES`"),
+            ];
+
+            miette!(
+                labels = labels,
+                code = "missing_times",
+                help = "a REPEAT block requires a `TIMES` keyword after the number of times to repeat",
+                "expected `TIMES` found {}", token.lexeme
+            )
         })?.clone();
         
         let body = self.statement()?.into();
@@ -247,15 +319,34 @@ impl Parser2 {
         
         let until_token= self.consume(&Until, |token| {
             // todo: improve this error
-            miette!(
-                "expected until token after repeat token"
-            )
+            // miette!(
+            //     "expected until token after repeat token"
+            // )
+            // let labels = vec![
+            //     LabeledSpan::at(token.span(), "expected an `UNTIL`"),
+            // ];
+
+            // miette!(
+            //     labels = labels,
+            //     code = "missing_times",
+            //     help = "a REPEAT block requires an `UNTIL` keyword with a condition",
+            //     "expected `UNTIL` found {}", token.lexeme
+            // )
+            miette!("how tf do i trigger this")
         })?.clone();
         
         let lp_token = self.consume(&LeftParen, |token| {
             // todo: improve this error
+            let labels = vec![
+                LabeledSpan::at(token.span(), "expected a `(`"),
+                LabeledSpan::at(until_token.span(), "REPEAT UNTIL requires `(..)` condition")
+            ];
+
             miette!(
-                "expected lp token"
+                labels = labels,
+                code = "missing_lp",
+                help = "a REPEAT UNTIL block requires a condition in `()` after the `UNTIL` keyword",
+                "expected `(` found {}", token.lexeme
             )
         })?.clone();
         
@@ -263,8 +354,15 @@ impl Parser2 {
         
         let rp_token = self.consume(&RightParen, |token| {
             // todo: improve this error
+            let labels = vec![
+                LabeledSpan::at(token.span(), "expected a `)`"),
+            ];
+
             miette!(
-                "expected rp token"
+                labels = labels,
+                code = "missing_rp",
+                help = "mismatched `(`, it seems you missed a `)`.",
+                "expected `)`, found {}", token.lexeme
             )
         })?.clone();
         
@@ -306,6 +404,7 @@ impl Parser2 {
             body,
             item_token,
             for_token,
+            each_token,
             in_token
         })
     }
@@ -320,7 +419,6 @@ impl Parser2 {
             return Ok(Stmt::Expr {expr})
         }
         
-        let report = miette!("Expected ");
         self.consume(&SoftSemi, |token| {
             miette!("Expected EOL or semi found {}", token)
         })?;
@@ -735,19 +833,21 @@ impl Parser2 {
     }
 
     fn consume(&mut self, token_type: &TokenType, report: impl FnOnce(&Token) -> Report) -> miette::Result<&Token> {
-        let token_type_matches = {
-            let token = self.peek(); // Immutable borrow is limited to this block
-            token.token_type() == token_type
-        };
-
-        if token_type_matches {
+        let next_token = self.peek().clone();
+        if next_token.token_type() == token_type {
             self.advance();
             let token = self.previous();
             Ok(token)
         } else {
-            let token = &self.previous().clone();
             self.synchronize();
-            Err(report(token).with_source_code(self.source.clone()))
+            Err(report(&next_token).with_source_code(self.source.clone()))
+        }
+    }
+
+    fn take_semis(&mut self) {
+        // todo: consider differentiating between if token was added by user or by lexer
+        while self.check(&SoftSemi) {
+            self.advance();
         }
     }
     

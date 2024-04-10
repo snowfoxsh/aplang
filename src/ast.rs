@@ -50,6 +50,7 @@ pub enum Stmt {
 
         item_token: Token,
         for_token: Token,
+        each_token: Token,
         in_token: Token,
     },
     ProcDeclaration {
