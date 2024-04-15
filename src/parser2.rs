@@ -1,4 +1,5 @@
-use crate::ast::{Ast, Expr, Literal, LogicalOp, Stmt};
+// use crate::ast::{Ast, Expr, Literal, LogicalOp, Stmt};
+use crate::ast::*;
 use crate::lexer::LiteralValue;
 use crate::token::TokenType::{Eof, LeftParen, RightParen};
 use crate::token::{Token, TokenType};
@@ -158,14 +159,14 @@ impl Parser2 {
 
         let body = self.statement()?.into();
 
-        Ok(Stmt::ProcDeclaration {
+        Ok(Stmt::ProcDeclaration(Arc::new(ProcDeclaration {
             name,
             params,
             body,
             proc_token,
             name_token,
             params_tokens,
-        })
+        })))
     }
 
     fn statement(&mut self) -> miette::Result<Stmt> {
@@ -235,11 +236,14 @@ impl Parser2 {
             })?
             .clone();
 
-        Ok(Stmt::Block {
-            lb_token,
-            statements,
-            rb_token,
-        })
+        Ok(Stmt::Block(
+            Block {
+                lb_token,
+                statements,
+                rb_token,
+            }
+            .into(),
+        ))
     }
 
     fn if_statement(&mut self, if_token: Token) -> miette::Result<Stmt> {
@@ -287,13 +291,13 @@ impl Parser2 {
         //     (Some(else_branch), Some(else_token))
         // } else { (None, None) };
 
-        Ok(Stmt::If {
+        Ok(Stmt::IfStmt(Arc::new(IfStmt {
             condition,
             then_branch,
             else_branch: None,
             if_token,
             else_token: None,
-        })
+        })))
     }
 
     fn repeat_times(&mut self, repeat_token: Token) -> miette::Result<Stmt> {
@@ -320,12 +324,15 @@ impl Parser2 {
 
         let body = self.statement()?.into();
 
-        Ok(Stmt::RepeatTimes {
-            count,
-            body,
-            repeat_token,
-            times_token,
-        })
+        Ok(Stmt::RepeatTimes(
+            RepeatTimes {
+                count,
+                body,
+                repeat_token,
+                times_token,
+            }
+            .into(),
+        ))
     }
 
     fn repeat_until(&mut self, repeat_token: Token) -> miette::Result<Stmt> {
@@ -388,12 +395,15 @@ impl Parser2 {
 
         let body = self.statement()?.into();
 
-        Ok(Stmt::RepeatUntil {
-            condition,
-            body,
-            repeat_token,
-            until_token,
-        })
+        Ok(Stmt::RepeatUntil(
+            RepeatUntil {
+                condition,
+                body,
+                repeat_token,
+                until_token,
+            }
+            .into(),
+        ))
     }
 
     fn for_each(&mut self, for_token: Token) -> miette::Result<Stmt> {
@@ -457,25 +467,28 @@ impl Parser2 {
 
         let body = self.statement()?.into();
 
-        Ok(Stmt::ForEach {
-            item,
-            list,
-            body,
-            item_token,
-            for_token,
-            each_token,
-            in_token,
-        })
+        Ok(Stmt::ForEach(
+            ForEach {
+                item,
+                list,
+                body,
+                item_token,
+                for_token,
+                each_token,
+                in_token,
+            }
+            .into(),
+        ))
     }
 
     fn expression_statement(&mut self) -> miette::Result<Stmt> {
         let expr = self.expression()?;
         if self.is_at_end() {
-            return Ok(Stmt::Expr { expr });
+            return Ok(Stmt::Expr(Arc::new(expr)));
         }
 
         if self.check(&RightBrace) {
-            return Ok(Stmt::Expr { expr });
+            return Ok(Stmt::Expr(Arc::new(expr)));
         }
 
         self.consume(&SoftSemi, |token| {
@@ -493,7 +506,7 @@ impl Parser2 {
                 token.lexeme
             )
         })?;
-        Ok(Stmt::Expr { expr })
+        Ok(Stmt::Expr(Arc::new(expr)))
     }
 
     pub(crate) fn expression(&mut self) -> miette::Result<Expr> {
@@ -510,27 +523,52 @@ impl Parser2 {
 
             match expr {
                 // Handling assignment to a simple variable
-                Expr::Variable { ident, token } => Ok(Expr::Assign {
-                    target: ident,
-                    value: Box::new(value),
-                    ident_token: token,
-                    arrow_token,
-                }),
+                // Expr::Variable(ref Arc::new(Variable{ ident, token })) => Ok(Expr::Assign(Arc::new(Assignment {
+                //     target: ident,
+                //     value: value,
+                //     ident_token: token,
+                //     arrow_token,
+                // }))),
+                Expr::Variable(ref variable) => Ok(Expr::Assign(
+                    Assignment {
+                        target: variable.ident.clone(),
+                        value: value,
+                        ident_token: variable.token.clone(),
+                        arrow_token,
+                    }
+                    .into(),
+                )),
+
+                // Expr::Access(Access {
+                //     list,
+                //     key,
+                //     brackets,
+                // }) => Ok(Expr::Set(Arc::new(Set {
+                //     target: Expr::Access(Arc::new(Access {
+                //         list,
+                //         key,
+                //         brackets,
+                //     })),
+                //     value: Box::new(value),
+                //     arrow_token,
+                // }))),
 
                 // Handling set assignment for complex expressions like array[index] = value
-                Expr::Access {
-                    list,
-                    key,
-                    brackets,
-                } => Ok(Expr::Set {
-                    target: Box::new(Expr::Access {
-                        list,
-                        key,
-                        brackets,
-                    }),
-                    value: Box::new(value),
-                    arrow_token,
-                }),
+                Expr::Access(ref access) => Ok(Expr::Set(
+                    Set {
+                        target: Expr::Access(
+                            Access {
+                                list: access.list.clone(),
+                                key: access.key.clone(),
+                                brackets: access.brackets.clone(),
+                            }
+                            .into(),
+                        ),
+                        value: value,
+                        arrow_token,
+                    }
+                    .into(),
+                )),
 
                 // Error for invalid assignment target
                 // todo: add better error here
@@ -565,13 +603,13 @@ impl Parser2 {
             let token = self.previous().clone();
 
             let right = self.and()?;
-            expr = Expr::Logical {
-                left: Box::new(expr),
+            expr = Expr::Logical(Arc::new(Logical {
+                left: expr,
                 operator: LogicalOp::Or,
-                right: Box::new(right),
+                right: right,
 
                 token,
-            }
+            }))
         }
 
         Ok(expr)
@@ -586,13 +624,13 @@ impl Parser2 {
             let token = self.previous().clone();
 
             let right = self.and()?;
-            expr = Expr::Logical {
-                left: expr.into(),
+            expr = Expr::Logical(Arc::new(Logical {
+                left: expr,
                 operator: LogicalOp::Or,
-                right: right.into(),
+                right: right,
 
                 token,
-            }
+            }))
         }
 
         Ok(expr)
@@ -606,13 +644,16 @@ impl Parser2 {
             let token = self.previous().clone();
             let right = self.comparison()?.into();
             let operator = token.to_binary_op()?;
-            let left = expr.into();
-            expr = Expr::Binary {
-                left,
-                operator,
-                right,
-                token,
-            }
+            let left = expr;
+            expr = Expr::Binary(
+                Binary {
+                    left,
+                    operator,
+                    right,
+                    token,
+                }
+                .into(),
+            )
         }
 
         Ok(expr)
@@ -626,13 +667,16 @@ impl Parser2 {
             let token = self.previous().clone();
             let right = self.addition()?.into();
             let operator = token.to_binary_op()?;
-            let left = expr.into();
-            expr = Expr::Binary {
-                left,
-                operator,
-                right,
-                token,
-            }
+            let left = expr;
+            expr = Expr::Binary(
+                Binary {
+                    left,
+                    operator,
+                    right,
+                    token,
+                }
+                .into(),
+            )
         }
 
         Ok(expr)
@@ -646,13 +690,16 @@ impl Parser2 {
             let token = self.previous().clone();
             let right = self.multiplication()?.into();
             let operator = token.to_binary_op()?;
-            let left = expr.into();
-            expr = Expr::Binary {
-                left,
-                operator,
-                right,
-                token,
-            }
+            let left = expr;
+            expr = Expr::Binary(
+                Binary {
+                    left,
+                    operator,
+                    right,
+                    token,
+                }
+                .into(),
+            )
         }
 
         Ok(expr)
@@ -666,14 +713,16 @@ impl Parser2 {
             let token = self.previous().clone();
             let right = self.unary()?.into();
             let operator = token.to_binary_op()?;
-            let left = expr.into();
-
-            expr = Expr::Binary {
-                left,
-                operator,
-                right,
-                token,
-            }
+            let left = expr;
+            expr = Expr::Binary(
+                Binary {
+                    left,
+                    operator,
+                    right,
+                    token,
+                }
+                .into(),
+            )
         }
 
         Ok(expr)
@@ -685,11 +734,14 @@ impl Parser2 {
             let right = self.unary()?.into();
             let operator = token.to_unary_op()?;
 
-            let expr = Expr::Unary {
-                operator,
-                right,
-                token,
-            };
+            let expr = Expr::Unary(
+                Unary {
+                    operator,
+                    right,
+                    token,
+                }
+                .into(),
+            );
 
             Ok(expr)
         } else {
@@ -720,11 +772,11 @@ impl Parser2 {
                     )
                 })?.clone();
 
-                expr = Expr::Access {
-                    list: Box::new(expr),
-                    key: Box::new(index),
+                expr = Expr::Access(Arc::new(Access {
+                    list: expr,
+                    key: index,
                     brackets: (lb_token, rb_token),
-                };
+                }));
             } else {
                 break;
             }
@@ -738,26 +790,26 @@ impl Parser2 {
         // TRUE
         if self.match_token(&True) {
             let token = self.previous().clone();
-            return Ok(Expr::Literal {
+            return Ok(Expr::Literal(Arc::new(ExprLiteral {
                 value: Literal::True,
                 token,
-            });
+            })));
         }
         // FALSE
         if self.match_token(&False) {
             let token = self.previous().clone();
-            return Ok(Expr::Literal {
+            return Ok(Expr::Literal(Arc::new(ExprLiteral {
                 value: Literal::True,
                 token,
-            });
+            })));
         }
         // NULL
         if self.match_token(&Null) {
             let token = self.previous().clone();
-            return Ok(Expr::Literal {
+            return Ok(Expr::Literal(Arc::new(ExprLiteral {
                 value: Literal::True,
                 token,
-            });
+            })));
         }
         // string
         if self.match_token(&StringLiteral) {
@@ -775,10 +827,13 @@ impl Parser2 {
                 panic!("{:?}", report)
             };
 
-            return Ok(Expr::Literal {
-                value: Literal::String(literal),
-                token,
-            });
+            return Ok(Expr::Literal(
+                ExprLiteral {
+                    value: Literal::String(literal),
+                    token,
+                }
+                .into(),
+            ));
         }
 
         // number
@@ -797,10 +852,13 @@ impl Parser2 {
                 panic!("{:?}", report)
             };
 
-            return Ok(Expr::Literal {
-                value: Literal::Number(literal),
-                token,
-            });
+            return Ok(Expr::Literal(
+                ExprLiteral {
+                    value: Literal::Number(literal),
+                    token,
+                }
+                .into(),
+            ));
         }
         // done parsing literals
 
@@ -856,16 +914,16 @@ impl Parser2 {
                     })?
                     .clone();
 
-                return Ok(Expr::ProcCall {
+                return Ok(Expr::ProcCall(Arc::new(ProcCall {
                     ident,
                     arguments,
                     token,
                     parens: (lp_token, rp_token),
-                });
+                })));
             }
 
             // ident token
-            return Ok(Expr::Variable { ident, token });
+            return Ok(Expr::Variable(Arc::new(Variable { ident, token })));
         }
 
         // "(" expr ")"
@@ -887,10 +945,10 @@ impl Parser2 {
                 )
             })?;
 
-            return Ok(Expr::Grouping {
+            return Ok(Expr::Grouping(Arc::new(Grouping {
                 expr,
                 parens: (lp_token.clone(), rp_token.clone()),
-            });
+            })));
         }
 
         // "[" ( expr ),* "]"
@@ -924,10 +982,10 @@ impl Parser2 {
                 )
             })?;
 
-            return Ok(Expr::List {
+            return Ok(Expr::List(Arc::new(List {
                 items,
                 brackets: (lb_token, rb_token.clone()),
-            });
+            })));
         }
 
         let cspan = self.previous().span_to(self.peek().span());

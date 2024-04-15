@@ -1,4 +1,5 @@
 use crate::token::Token;
+use std::ops::Deref;
 use std::sync::Arc;
 
 // To facilitate better error handling down the line,
@@ -15,122 +16,170 @@ type Ident = String;
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
-    Expr {
-        expr: Expr,
-    },
-    If {
-        condition: Expr,
-        then_branch: Box<Stmt>,
+    Expr(Arc<Expr>),
 
-        else_branch: Option<Box<Stmt>>,
+    IfStmt(Arc<IfStmt>),
 
-        if_token: Token,
-        else_token: Option<Token>,
-    },
-    RepeatTimes {
-        count: Expr,
-        body: Box<Stmt>,
+    RepeatTimes(Arc<RepeatTimes>),
 
-        repeat_token: Token,
-        times_token: Token,
-    },
-    RepeatUntil {
-        condition: Expr,
-        body: Box<Stmt>,
+    RepeatUntil(Arc<RepeatUntil>),
 
-        repeat_token: Token,
-        until_token: Token,
-    },
-    ForEach {
-        item: Ident,
-        list: Expr,
-        body: Box<Stmt>,
+    ForEach(Arc<ForEach>),
 
-        item_token: Token,
-        for_token: Token,
-        each_token: Token,
-        in_token: Token,
-    },
-    ProcDeclaration {
-        name: Ident,
-        params: Vec<Ident>,
-        body: Box<Stmt>,
+    ProcDeclaration(Arc<ProcDeclaration>),
 
-        proc_token: Token,
-        name_token: Token,
-        params_tokens: Vec<Token>,
-    },
-    Block {
-        lb_token: Token,
-        statements: Vec<Stmt>,
-        rb_token: Token,
-    },
-    Return {
-        token: Token,
-        data: Option<Expr>,
-    },
+    Block(Arc<Block>),
+
+    Return(Arc<Return>),
+}
+#[derive(Debug, Clone)]
+pub struct IfStmt {
+    pub condition: Expr,
+    pub then_branch: Stmt,
+    pub else_branch: Option<Stmt>,
+
+    pub if_token: Token,
+    pub else_token: Option<Token>,
+}
+#[derive(Debug, Clone)]
+pub struct RepeatTimes {
+    pub count: Expr,
+    pub body: Stmt,
+
+    pub repeat_token: Token,
+    pub times_token: Token,
+}
+#[derive(Debug, Clone)]
+pub struct RepeatUntil {
+    pub condition: Expr,
+    pub body: Stmt,
+
+    pub repeat_token: Token,
+    pub until_token: Token,
+}
+#[derive(Debug, Clone)]
+pub struct ForEach {
+    pub item: Ident,
+    pub list: Expr,
+    pub body: Stmt,
+
+    pub item_token: Token,
+    pub for_token: Token,
+    pub each_token: Token,
+    pub in_token: Token,
+}
+#[derive(Debug, Clone)]
+pub struct ProcDeclaration {
+    pub name: Ident,
+    pub params: Vec<Ident>,
+    pub body: Stmt,
+
+    pub proc_token: Token,
+    pub name_token: Token,
+    pub params_tokens: Vec<Token>,
+}
+#[derive(Debug, Clone)]
+pub struct Block {
+    pub lb_token: Token,
+    pub statements: Vec<Stmt>,
+    pub rb_token: Token,
+}
+#[derive(Debug, Clone)]
+pub struct Return {
+    pub token: Token,
+    pub data: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]
 pub enum Expr {
-    Literal {
-        value: Literal,
-        token: Token,
-    },
-    Binary {
-        left: Box<Expr>,
-        operator: BinaryOp,
-        right: Box<Expr>,
-        token: Token,
-    },
-    Logical {
-        left: Box<Expr>,
-        operator: LogicalOp,
-        right: Box<Expr>,
-        token: Token,
-    },
-    Unary {
-        operator: UnaryOp,
-        right: Box<Expr>,
-        token: Token,
-    },
-    Grouping {
-        expr: Box<Expr>,
-        parens: (Token, Token),
-    },
-    ProcCall {
-        ident: String,
-        arguments: Vec<Expr>,
+    Literal(Arc<ExprLiteral>),
+    Binary(Arc<Binary>),
+    Logical(Arc<Logical>),
 
-        token: Token,
-        parens: (Token, Token),
-    },
-    Access {
-        list: Box<Expr>,
-        key: Box<Expr>,
-        brackets: (Token, Token),
-    },
-    List {
-        items: Vec<Expr>,
-        brackets: (Token, Token),
-    },
-    Variable {
-        ident: String,
-        token: Token,
-    },
-    Assign {
-        target: Ident,
-        value: Box<Expr>,
+    Unary(Arc<Unary>),
 
-        ident_token: Token,
-        arrow_token: Token,
-    },
-    Set {
-        target: Box<Expr>,
-        value: Box<Expr>,
+    Grouping(Arc<Grouping>),
 
-        arrow_token: Token,
-    },
+    ProcCall(Arc<ProcCall>),
+
+    Access(Arc<Access>),
+
+    List(Arc<List>),
+
+    Variable(Arc<Variable>),
+
+    Assign(Arc<Assignment>),
+
+    Set(Arc<Set>),
+}
+#[derive(Debug, Clone)]
+pub struct ExprLiteral {
+    pub value: Literal,
+    pub token: Token,
+}
+#[derive(Debug, Clone)]
+pub struct Binary {
+    pub left: Expr,
+    pub operator: BinaryOp,
+    pub right: Expr,
+    pub token: Token,
+}
+#[derive(Debug, Clone)]
+pub struct Logical {
+    pub left: Expr,
+    pub operator: LogicalOp,
+    pub right: Expr,
+    pub token: Token,
+}
+#[derive(Debug, Clone)]
+pub struct Unary {
+    pub operator: UnaryOp,
+    pub right: Expr,
+    pub token: Token,
+}
+#[derive(Debug, Clone)]
+pub struct Grouping {
+    pub expr: Expr,
+    pub parens: (Token, Token),
+}
+#[derive(Debug, Clone)]
+pub struct ProcCall {
+    pub ident: String,
+    pub arguments: Vec<Expr>,
+
+    pub token: Token,
+    pub parens: (Token, Token),
+}
+#[derive(Debug, Clone)]
+pub struct Access {
+    pub list: Expr,
+    pub key: Expr,
+    pub brackets: (Token, Token),
+}
+#[derive(Debug, Clone)]
+pub struct List {
+    pub items: Vec<Expr>,
+    pub brackets: (Token, Token),
+}
+#[derive(Debug, Clone)]
+pub struct Variable {
+    pub ident: String,
+    pub token: Token,
+}
+#[derive(Debug, Clone)]
+pub struct Assignment {
+    pub target: Ident,
+    pub value: Expr,
+
+    pub ident_token: Token,
+    pub arrow_token: Token,
+}
+#[derive(Debug, Clone)]
+pub struct Set {
+    pub target: Expr,
+    pub value: Expr,
+
+    pub arrow_token: Token,
 }
 
 #[derive(Debug, Clone)]
@@ -169,167 +218,9 @@ pub enum LogicalOp {
 }
 
 pub mod pretty {
-    use crate::ast::{Ast, BinaryOp, Expr, Ident, Literal, LogicalOp, Stmt, UnaryOp};
-    use std::fmt::{write, Display};
-    impl TreePrinter for Ast {
-        fn node_children(&self) -> Box<dyn Iterator<Item = Box<dyn TreePrinter>> + '_> {
-            let statements_printer: Vec<_> = self
-                .program
-                .iter()
-                .map(|stmt| Box::new(stmt.clone()) as Box<dyn TreePrinter>)
-                .collect();
-            Box::new(statements_printer.into_iter())
-        }
-
-        fn node(&self) -> Box<dyn fmt::Display> {
-            // Box::new(format!("Ast: {}", self.source))
-            Box::new(format!("{}", "Program:".bold()))
-        }
-    }
-
-    impl TreePrinter for Stmt {
-        fn node_children(&self) -> Box<dyn Iterator<Item = Box<dyn TreePrinter>> + '_> {
-            match self {
-                Stmt::Expr { expr } => {
-                    Box::new(vec![Box::new(expr.clone()) as Box<dyn TreePrinter>].into_iter())
-                }
-                Stmt::If {
-                    condition,
-                    then_branch,
-                    else_branch,
-                    ..
-                } => {
-                    let mut children = vec![
-                        Box::new(condition.clone()) as Box<dyn TreePrinter>,
-                        Box::new((**then_branch).clone()) as Box<dyn TreePrinter>,
-                    ];
-                    if let Some(else_branch) = else_branch {
-                        children.push(Box::new((**else_branch).clone()) as Box<dyn TreePrinter>);
-                    }
-                    Box::new(children.into_iter())
-                }
-                Stmt::RepeatTimes { count, body, .. } => Box::new(
-                    vec![
-                        Box::new(count.clone()) as Box<dyn TreePrinter>,
-                        Box::new((**body).clone()) as Box<dyn TreePrinter>,
-                    ]
-                    .into_iter(),
-                ),
-                Stmt::RepeatUntil {
-                    condition, body, ..
-                } => Box::new(
-                    vec![
-                        Box::new(condition.clone()) as Box<dyn TreePrinter>,
-                        Box::new((**body).clone()) as Box<dyn TreePrinter>,
-                    ]
-                    .into_iter(),
-                ),
-                Stmt::ForEach {
-                    item: _,
-                    list,
-                    item_token: _,
-                    for_token: _,
-                    ..
-                } => Box::new(vec![Box::new(list.clone()) as Box<dyn TreePrinter>].into_iter()),
-                Stmt::ProcDeclaration {
-                    name: _,
-                    params: _,
-                    body,
-                    proc_token: _,
-                    name_token: _,
-                    params_tokens: _,
-                } => Box::new(vec![Box::new((**body).clone()) as Box<dyn TreePrinter>].into_iter()),
-                Stmt::Block {
-                    lb_token: _,
-                    statements,
-                    rb_token: _,
-                } => {
-                    let children = statements
-                        .iter()
-                        .map(|stmt| Box::new(stmt.clone()) as Box<dyn TreePrinter>)
-                        .collect::<Vec<_>>();
-                    Box::new(children.into_iter())
-                }
-                Stmt::Return { token: _, data } => {
-                    if let Some(expr) = data {
-                        Box::new(vec![Box::new(expr.clone()) as Box<dyn TreePrinter>].into_iter())
-                    } else {
-                        Box::new(std::iter::empty())
-                    }
-                }
-            }
-        }
-
-        fn node(&self) -> Box<dyn fmt::Display> {
-            Box::new(format!("{}", self))
-        }
-    }
-
-    impl TreePrinter for Expr {
-        fn node_children(&self) -> Box<dyn Iterator<Item = Box<dyn TreePrinter>> + '_> {
-            match self {
-                Expr::Binary { left, right, .. } | Expr::Logical { left, right, .. } => Box::new(
-                    vec![
-                        Box::new((**left).clone()) as Box<dyn TreePrinter>,
-                        Box::new((**right).clone()) as Box<dyn TreePrinter>,
-                    ]
-                    .into_iter(),
-                ),
-                Expr::Unary { right, .. } | Expr::Grouping { expr: right, .. } => {
-                    Box::new(vec![Box::new((**right).clone()) as Box<dyn TreePrinter>].into_iter())
-                }
-                Expr::ProcCall { arguments, .. } => {
-                    let cloned_args = arguments
-                        .iter()
-                        .map(|arg| Box::new(arg.clone()) as Box<dyn TreePrinter>)
-                        .collect::<Vec<_>>();
-                    Box::new(cloned_args.into_iter())
-                }
-                Expr::Access {
-                    list,
-                    key: accessor,
-                    ..
-                } => Box::new(
-                    vec![
-                        Box::new((**list).clone()) as Box<dyn TreePrinter>,
-                        Box::new((**accessor).clone()) as Box<dyn TreePrinter>,
-                    ]
-                    .into_iter(),
-                ),
-                Expr::List { items, .. } => {
-                    let cloned_items = items
-                        .iter()
-                        .map(|item| Box::new(item.clone()) as Box<dyn TreePrinter>)
-                        .collect::<Vec<_>>();
-                    Box::new(cloned_items.into_iter())
-                }
-                Expr::Literal { .. } | Expr::Variable { .. } => {
-                    // These are leaf nodes and do not have children
-                    Box::new(std::iter::empty())
-                }
-                // Handle Assign and Set variants
-                Expr::Assign {
-                    target,
-                    value,
-                    ident_token,
-                    arrow_token,
-                } => {
-                    Box::new(vec![Box::new((**value).clone()) as Box<dyn TreePrinter>].into_iter())
-                }
-                Expr::Set { value, target, .. } => Box::new(
-                    vec![
-                        Box::new((**target).clone()) as Box<dyn TreePrinter>,
-                        Box::new((**value).clone()) as Box<dyn TreePrinter>,
-                    ]
-                    .into_iter(),
-                ),
-            }
-        }
-
-        fn node(&self) -> Box<dyn Display> {
-            Box::new(format!("{}", self))
-        }
-    }
+    use super::*;
+    use std::fmt;
+    use std::fmt::Display;
 
     pub trait TreePrinter {
         fn node_children(&self) -> Box<dyn Iterator<Item = Box<dyn TreePrinter>> + '_>;
@@ -371,32 +262,320 @@ pub mod pretty {
         }
     }
 
-    use owo_colors::OwoColorize;
-    use std::fmt;
+    impl TreePrinter for Ast {
+        fn node_children(&self) -> Box<dyn Iterator<Item = Box<dyn TreePrinter>> + '_> {
+            Box::new(
+                self.program
+                    .iter()
+                    .map(|stmt| Box::new(stmt.clone()) as Box<dyn TreePrinter>),
+            )
+        }
+
+        fn node(&self) -> Box<dyn Display> {
+            Box::new(format!("Ast (Source: {:?})", self.source))
+        }
+    }
+
+    impl TreePrinter for Stmt {
+        fn node_children(&self) -> Box<dyn Iterator<Item = Box<dyn TreePrinter>> + '_> {
+            match self {
+                Stmt::Expr(expr) => Box::new(std::iter::once(
+                    Box::new(expr.deref().clone()) as Box<dyn TreePrinter>
+                )),
+                Stmt::IfStmt(if_stmt) => Box::new(
+                    std::iter::once(Box::new(if_stmt.condition.clone()) as Box<dyn TreePrinter>)
+                        .chain(std::iter::once(
+                            Box::new(if_stmt.then_branch.clone()) as Box<dyn TreePrinter>
+                        ))
+                        .chain(if_stmt.else_branch.as_ref().map(|else_branch| {
+                            Box::new(else_branch.clone()) as Box<dyn TreePrinter>
+                        })),
+                ),
+                Stmt::RepeatTimes(repeat_times) => Box::new(
+                    std::iter::once(Box::new(repeat_times.count.clone()) as Box<dyn TreePrinter>)
+                        .chain(std::iter::once(
+                            Box::new(repeat_times.body.clone()) as Box<dyn TreePrinter>
+                        )),
+                ),
+                Stmt::RepeatUntil(repeat_until) => Box::new(
+                    std::iter::once(
+                        Box::new(repeat_until.condition.clone()) as Box<dyn TreePrinter>
+                    )
+                    .chain(std::iter::once(
+                        Box::new(repeat_until.body.clone()) as Box<dyn TreePrinter>,
+                    )),
+                ),
+                Stmt::ForEach(for_each) => Box::new(
+                    std::iter::once(Box::new(for_each.list.clone()) as Box<dyn TreePrinter>).chain(
+                        std::iter::once(Box::new(for_each.body.clone()) as Box<dyn TreePrinter>),
+                    ),
+                ),
+                Stmt::ProcDeclaration(proc_decl) => Box::new(std::iter::once(Box::new(
+                    proc_decl.body.clone(),
+                )
+                    as Box<dyn TreePrinter>)),
+                Stmt::Block(block) => Box::new(
+                    block
+                        .statements
+                        .iter()
+                        .map(|stmt| Box::new(stmt.clone()) as Box<dyn TreePrinter>)
+                        .collect::<Vec<_>>()
+                        .into_iter(),
+                ),
+                Stmt::Return(return_stmt) => Box::new(
+                    return_stmt
+                        .data
+                        .as_ref()
+                        .map(|expr| Box::new(expr.clone()) as Box<dyn TreePrinter>)
+                        .into_iter(),
+                ),
+                // .into_iter()
+                // .collect::<Vec<_>>().into_iter()
+            }
+        }
+
+        fn node(&self) -> Box<dyn Display> {
+            Box::new(format!("{}", self)) // Implement Display for Stmt or adjust this to a custom string representation
+        }
+    }
+
+    impl TreePrinter for Expr {
+        fn node_children(&self) -> Box<dyn Iterator<Item = Box<dyn TreePrinter>> + '_> {
+            match self {
+                Expr::Binary(binary) => Box::new(
+                    std::iter::once(Box::new(binary.left.clone()) as Box<dyn TreePrinter>).chain(
+                        std::iter::once(Box::new(binary.right.clone()) as Box<dyn TreePrinter>),
+                    ),
+                ),
+                Expr::Logical(logical) => Box::new(
+                    std::iter::once(Box::new(logical.left.clone()) as Box<dyn TreePrinter>).chain(
+                        std::iter::once(Box::new(logical.right.clone()) as Box<dyn TreePrinter>),
+                    ),
+                ),
+                Expr::Unary(unary) => Box::new(std::iter::once(
+                    Box::new(unary.right.clone()) as Box<dyn TreePrinter>
+                )),
+                Expr::Grouping(grouping) => Box::new(std::iter::once(
+                    Box::new(grouping.expr.clone()) as Box<dyn TreePrinter>,
+                )),
+                Expr::ProcCall(proc_call) => Box::new(
+                    proc_call
+                        .arguments
+                        .iter()
+                        .map(|arg| Box::new(arg.clone()) as Box<dyn TreePrinter>)
+                        .collect::<Vec<_>>()
+                        .into_iter(),
+                ),
+                Expr::Access(access) => Box::new(
+                    std::iter::once(Box::new(access.list.clone()) as Box<dyn TreePrinter>).chain(
+                        std::iter::once(Box::new(access.key.clone()) as Box<dyn TreePrinter>),
+                    ),
+                ),
+                Expr::List(list) => Box::new(
+                    list.items
+                        .iter()
+                        .map(|item| Box::new(item.clone()) as Box<dyn TreePrinter>)
+                        .collect::<Vec<_>>()
+                        .into_iter(),
+                ),
+                Expr::Variable(_) | Expr::Literal(_) => Box::new(std::iter::empty()),
+                Expr::Assign(assignment) => Box::new(std::iter::once(Box::new(
+                    assignment.value.clone(),
+                )
+                    as Box<dyn TreePrinter>)),
+                Expr::Set(set) => Box::new(
+                    std::iter::once(Box::new(set.target.clone()) as Box<dyn TreePrinter>).chain(
+                        std::iter::once(Box::new(set.value.clone()) as Box<dyn TreePrinter>),
+                    ),
+                ),
+            }
+        }
+
+        fn node(&self) -> Box<dyn Display> {
+            Box::new(format!("{}", self)) // Implement Display for Expr or adjust this to a custom string representation
+        }
+    }
 
     impl fmt::Display for Expr {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             match self {
-                Expr::Literal { value, .. } => write!(f, "Literal ({})", value),
-                Expr::Binary { operator, .. } => write!(f, "Binary ({})", operator),
-                Expr::Logical { operator, .. } => write!(f, "Logical ({})", operator),
-                Expr::Unary { operator, .. } => write!(f, "Unary ({})", operator),
-                Expr::Grouping { .. } => write!(f, "Group"),
-                Expr::ProcCall { ident, .. } => write!(f, "Call ({})", ident),
-                Expr::Access { list, key, .. } => write!(f, "Access {}[{}]", list, key),
-                Expr::List { .. } => write!(f, "List"),
-                Expr::Variable { ident, .. } => write!(f, "Variable ({})", ident),
-                Expr::Assign { target, value, .. } => write!(f, "Assign ({} <- {})", target, value),
-                Expr::Set { target, value, .. } => write!(f, "Set ({}[{})", target, value),
+                Expr::Literal(literal) => write!(f, "{}", literal.value),
+                Expr::Binary(binary) => {
+                    write!(f, "({} {} {})", binary.left, binary.operator, binary.right)
+                }
+                Expr::Logical(logical) => write!(
+                    f,
+                    "({} {} {})",
+                    logical.left, logical.operator, logical.right
+                ),
+                Expr::Unary(unary) => write!(f, "({}{})", unary.operator, unary.right),
+                Expr::Grouping(grouping) => write!(f, "(group {})", grouping.expr),
+                Expr::ProcCall(proc_call) => {
+                    let args = proc_call
+                        .arguments
+                        .iter()
+                        .map(|arg| format!("{}", arg))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    write!(f, "{}({})", proc_call.ident, args)
+                }
+                Expr::Access(access) => write!(f, "{}[{}]", access.list, access.key),
+                Expr::List(list) => {
+                    let items = list
+                        .items
+                        .iter()
+                        .map(|item| format!("{}", item))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    write!(f, "[{}]", items)
+                }
+                Expr::Variable(variable) => write!(f, "{}", variable.ident),
+                Expr::Assign(assignment) => {
+                    write!(f, "{} <- {}", assignment.target, assignment.value)
+                }
+                Expr::Set(set) => write!(f, "{}[{}] = {}", set.target, set.arrow_token, set.value),
             }
         }
     }
 
+    impl fmt::Display for Stmt {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            match self {
+                Stmt::Expr(expr) => write!(f, "{}", expr),
+                Stmt::IfStmt(if_stmt) => {
+                    let else_part = if let Some(else_branch) = &if_stmt.else_branch {
+                        format!(" else {}", else_branch)
+                    } else {
+                        String::new()
+                    };
+                    write!(
+                        f,
+                        "if {} then {}{}",
+                        if_stmt.condition, if_stmt.then_branch, else_part
+                    )
+                }
+                Stmt::RepeatTimes(repeat_times) => write!(
+                    f,
+                    "repeat {} times {}",
+                    repeat_times.count, repeat_times.body
+                ),
+                Stmt::RepeatUntil(repeat_until) => write!(
+                    f,
+                    "repeat until {} {}",
+                    repeat_until.condition, repeat_until.body
+                ),
+                Stmt::ForEach(for_each) => write!(
+                    f,
+                    "for {} in {} do {}",
+                    for_each.item, for_each.list, for_each.body
+                ),
+                Stmt::ProcDeclaration(proc_decl) => {
+                    let params = proc_decl.params.join(", ");
+                    write!(
+                        f,
+                        "procedure {}({}) {}",
+                        proc_decl.name, params, proc_decl.body
+                    )
+                }
+                Stmt::Block(block) => {
+                    let statements = block
+                        .statements
+                        .iter()
+                        .map(|stmt| format!("{}", stmt))
+                        .collect::<Vec<_>>()
+                        .join("; ");
+                    write!(f, "{{ {} }}", statements)
+                }
+                Stmt::Return(return_stmt) => match &return_stmt.data {
+                    Some(data) => write!(f, "return {}", data),
+                    None => write!(f, "return"),
+                },
+            }
+        }
+    }
+
+    //     use owo_colors::OwoColorize;
+    //     use std::fmt;
+
+    //     impl fmt::Display for Expr {
+    //         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    //             match self {
+    //                 Expr::Literal { value, .. } => write!(f, "Literal ({})", value),
+    //                 Expr::Binary { operator, .. } => write!(f, "Binary ({})", operator),
+    //                 Expr::Logical { operator, .. } => write!(f, "Logical ({})", operator),
+    //                 Expr::Unary { operator, .. } => write!(f, "Unary ({})", operator),
+    //                 Expr::Grouping { .. } => write!(f, "Group"),
+    //                 Expr::ProcCall { ident, .. } => write!(f, "Call ({})", ident),
+    //                 Expr::Access { list, key, .. } => write!(f, "Access {}[{}]", list, key),
+    //                 Expr::List { .. } => write!(f, "List"),
+    //                 Expr::Variable { ident, .. } => write!(f, "Variable ({})", ident),
+    //                 Expr::Assign { target, value, .. } => write!(f, "Assign ({} <- {})", target, value),
+    //                 Expr::Set { target, value, .. } => write!(f, "Set ({}[{})", target, value),
+    //             }
+    //         }
+    //     }
+
+    //     impl fmt::Display for Literal {
+    //         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    //             match self {
+    //                 Literal::Number(n) => write!(f, "{}", n),
+    //                 Literal::String(s) => write!(f, "\"{}\"", s),
+    //                 Literal::True => write!(f, "true"),
+    //                 Literal::False => write!(f, "false"),
+    //                 Literal::Null => write!(f, "null"),
+    //             }
+    //         }
+    //     }
+
+    //     impl fmt::Display for Stmt {
+    //         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    //             match self {
+    //                 Stmt::Expr { expr } => write!(f, "Expr"),
+    //                 Stmt::If {
+    //                     condition,
+    //                     then_branch: _,
+    //                     else_branch: _,
+    //                     if_token: _,
+    //                     else_token: _,
+    //                 } => write!(f, "If(Condition: {})", condition),
+    //                 Stmt::RepeatTimes {
+    //                     count,
+    //                     body: _,
+    //                     repeat_token: _,
+    //                     times_token: _,
+    //                 } => write!(f, "RepeatTimes(Count: {})", count),
+    //                 Stmt::RepeatUntil { condition, .. } => {
+    //                     write!(f, "RepeatUntil(Condition: {})", condition)
+    //                 }
+    //                 Stmt::ForEach { item, list, .. } => {
+    //                     write!(f, "ForEach(Item: {}, List: {})", item, list)
+    //                 }
+    //                 Stmt::ProcDeclaration {
+    //                     name,
+    //                     params,
+    //                     body: _,
+    //                     proc_token: _,
+    //                     name_token: _,
+    //                     params_tokens: _,
+    //                 } => write!(f, "ProcDeclaration(Name: {}, Params: {:?})", name, params),
+    //                 Stmt::Block {
+    //                     lb_token: _,
+    //                     statements: _,
+    //                     rb_token: _,
+    //                 } => write!(f, "Block"),
+    //                 Stmt::Return { token: _, data } => match data {
+    //                     Some(expr) => write!(f, "Return({})", expr),
+    //                     None => write!(f, "Return"),
+    //                 },
+    //             }
+    //         }
+    //     }
+
     impl fmt::Display for Literal {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             match self {
-                Literal::Number(n) => write!(f, "{}", n),
-                Literal::String(s) => write!(f, "\"{}\"", s),
+                Literal::Number(num) => write!(f, "{}", num),
+                Literal::String(s) => write!(f, "\"{}\"", s), // Enclose strings in quotes
                 Literal::True => write!(f, "true"),
                 Literal::False => write!(f, "false"),
                 Literal::Null => write!(f, "null"),
@@ -419,50 +598,6 @@ pub mod pretty {
                 BinaryOp::Slash => "/",
             };
             write!(f, "{}", op)
-        }
-    }
-
-    impl fmt::Display for Stmt {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            match self {
-                Stmt::Expr { expr } => write!(f, "Expr"),
-                Stmt::If {
-                    condition,
-                    then_branch: _,
-                    else_branch: _,
-                    if_token: _,
-                    else_token: _,
-                } => write!(f, "If(Condition: {})", condition),
-                Stmt::RepeatTimes {
-                    count,
-                    body: _,
-                    repeat_token: _,
-                    times_token: _,
-                } => write!(f, "RepeatTimes(Count: {})", count),
-                Stmt::RepeatUntil { condition, .. } => {
-                    write!(f, "RepeatUntil(Condition: {})", condition)
-                }
-                Stmt::ForEach { item, list, .. } => {
-                    write!(f, "ForEach(Item: {}, List: {})", item, list)
-                }
-                Stmt::ProcDeclaration {
-                    name,
-                    params,
-                    body: _,
-                    proc_token: _,
-                    name_token: _,
-                    params_tokens: _,
-                } => write!(f, "ProcDeclaration(Name: {}, Params: {:?})", name, params),
-                Stmt::Block {
-                    lb_token: _,
-                    statements: _,
-                    rb_token: _,
-                } => write!(f, "Block"),
-                Stmt::Return { token: _, data } => match data {
-                    Some(expr) => write!(f, "Return({})", expr),
-                    None => write!(f, "Return"),
-                },
-            }
         }
     }
 
