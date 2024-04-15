@@ -1,33 +1,28 @@
-// use crate::ast::Stmt;
+use crate::ast::{Expr, Stmt};
 
-// pub struct Interpreter {
-//     pub environment: Environment,
-// }
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+pub enum Type {
+    Number,
+    String,
+    Bool,
+    Nil,
+    NativeFunction,
+    ApFunction,
+    List,
+}
 
-// impl Interpreter {
-//     pub fn interpret(&mut self, stmts: Vec<&Stmt>) -> miette::Result<()> {
-//         for stmt in stmts {
-//             match stmt {
-//                 Stmt::Expr { expr } => {
-//                     todo!()
-//                 }
-//                 Stmt::If {
-                    
-//                 } => {}
-//                 Stmt::RepeatTimes { .. } => {}
-//                 Stmt::RepeatUntil { .. } => {}
-//                 Stmt::ForEach { .. } => {}
-//                 Stmt::ProcDeclaration { .. } => {}
-//                 Stmt::Block { .. } => {}
-//                 Stmt::Return { .. } => {}
-//             }
-//         }
-        
-//         Ok(())
-//     }
-// }
+#[derive(Clone, Debug)]
+pub struct ApFunction {
+    pub id: usize,
+    pub name: String,
+    pub params: Vec<String>,
+}
 
-// pub struct Environment {
+
+pub struct Enviernment {
     
-// }
+}
 
+
+pub struct Interpreter {
+}
