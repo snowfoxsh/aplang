@@ -1,13 +1,12 @@
-use miette::{LabeledSpan, miette, Report, Result};
+use crate::token;
+use crate::token::TokenType::*;
+use crate::token::{Token, TokenType};
+use miette::SourceSpan;
+use miette::{miette, LabeledSpan, Report, Result};
+use owo_colors::OwoColorize;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::sync::Arc;
-use miette::SourceSpan;
-use owo_colors::OwoColorize;
-use crate::token::TokenType::*;
-use crate::token;
-use crate::token::{Token, TokenType};
-
 
 pub struct Lexer {
     file_name: String,
@@ -35,7 +34,10 @@ impl Lexer {
         }
     }
 
-    pub fn scan(input: impl Into<Arc<str>>, file_name: String) -> Result<(Vec<Token>, Arc<str>), Vec<Report>> {
+    pub fn scan(
+        input: impl Into<Arc<str>>,
+        file_name: String,
+    ) -> Result<(Vec<Token>, Arc<str>), Vec<Report>> {
         let mut lexer = Self::new(input, file_name);
         let tokens = lexer.scan_tokens()?;
         let raw = lexer.source; // move the source pointer out of the scanner
@@ -51,24 +53,22 @@ impl Lexer {
             self.start = self.current;
             match self.scan_token() {
                 Ok(_) => (),
-                Err(msg) => errors.push(msg)
+                Err(msg) => errors.push(msg),
             }
         }
 
         // push eof token onto token stack
-        self.tokens.push(
-            Token {
-                token_type: Eof,
-                lexeme: "<EOF>".to_string(),
-                literal: None,
-                span: SourceSpan::new(self.start.into(), 0usize),
-                line_number: self.line,
-                source: self.source.clone() // pass a source ptr to each token
-            }
-        );
-        
+        self.tokens.push(Token {
+            token_type: Eof,
+            lexeme: "<EOF>".to_string(),
+            literal: None,
+            span: SourceSpan::new(self.start.into(), 0usize),
+            line_number: self.line,
+            source: self.source.clone(), // pass a source ptr to each token
+        });
+
         if !errors.is_empty() {
-            return Err(errors)
+            return Err(errors);
         }
 
         Ok(self.tokens.clone())
@@ -98,35 +98,41 @@ impl Lexer {
                 if self.char_match('=') {
                     self.add_token(BangEqual)
                 } else {
-                    let labels = vec![
-                        LabeledSpan::at(self.current_span(), "operator `!` (bang) not allowed in syntax")
-                    ];
+                    let labels = vec![LabeledSpan::at(
+                        self.current_span(),
+                        "operator `!` (bang) not allowed in syntax",
+                    )];
                     let error = miette!(
                         labels = labels,
                         code = "lexer::unknown_symbol::bang",
                         help = "for logical not write `NOT` instead of `!`",
-                        "{} unknown symbol `!`", self.location_string()
-                    ).with_source_code(self.source.clone());
-                    
-                    return Err(error)
+                        "{} unknown symbol `!`",
+                        self.location_string()
+                    )
+                    .with_source_code(self.source.clone());
+
+                    return Err(error);
                 }
             }
             '=' => {
                 if self.char_match('=') {
                     self.add_token(EqualEqual)
                 } else {
-                    let labels = vec![
-                        LabeledSpan::at(self.current_span(), "operator `=` (equals) not allowed in syntax")
-                    ];
+                    let labels = vec![LabeledSpan::at(
+                        self.current_span(),
+                        "operator `=` (equals) not allowed in syntax",
+                    )];
                     let error = miette!(
                         labels = labels,
                         code = "lexer::unknown_symbol::equals",
                         help = "for logical equals write `==` instead of `=`\n\
                         to assign to a variable write `<-` instead of `=`",
-                        "{} unknown symbol `=`", self.location_string()
-                    ).with_source_code(self.source.clone());
+                        "{} unknown symbol `=`",
+                        self.location_string()
+                    )
+                    .with_source_code(self.source.clone());
 
-                    return Err(error)
+                    return Err(error);
                 }
             }
             '<' => {
@@ -185,17 +191,20 @@ impl Lexer {
             ch if ch.is_ascii_digit() => self.number()?,
             ch if ch.is_alphanumeric() => self.identifier(),
             ch => {
-                let labels = vec![
-                    LabeledSpan::at(self.current_span(), format!("symbol `{ch}` is not allowed in syntax"))
-                ];
-                
+                let labels = vec![LabeledSpan::at(
+                    self.current_span(),
+                    format!("symbol `{ch}` is not allowed in syntax"),
+                )];
+
                 let error = miette!(
                     labels = labels,
                     code = "lexer::unknown_symbol",
-                    "{} unknown symbol `{ch}`", self.location_string()
-                ).with_source_code(self.source.clone());
-                
-                return Err(error)
+                    "{} unknown symbol `{ch}`",
+                    self.location_string()
+                )
+                .with_source_code(self.source.clone());
+
+                return Err(error);
             }
         }
 
@@ -214,17 +223,19 @@ impl Lexer {
         if self.is_at_end() {
             let labels = vec![
                 LabeledSpan::at_offset(self.start, "unmatched quote"),
-                LabeledSpan::at(self.current_span(), "unmatched quote")
+                LabeledSpan::at(self.current_span(), "unmatched quote"),
             ];
-            
+
             let error = miette!(
                 labels = labels,
                 code = "lexer::unterminated_string",
                 help = "a string literal must end with a matching quote",
-                "{} unterminated string", self.location_string()
-            ).with_source_code(self.source.clone());
-            
-            return Err(error)
+                "{} unterminated string",
+                self.location_string()
+            )
+            .with_source_code(self.source.clone());
+
+            return Err(error);
         }
 
         self.advance();
@@ -250,24 +261,24 @@ impl Lexer {
         }
         let substring = &self.source[self.start..self.current];
         let value = substring.parse::<f64>();
-        
+
         match value {
             Ok(value) => self.add_token_lit(Number, Some(LiteralValue::Number(value))),
             Err(_) => {
-                let labels = vec![
-                    LabeledSpan::at(self.current_span(), "could not parse")
-                ];
-                
+                let labels = vec![LabeledSpan::at(self.current_span(), "could not parse")];
+
                 let error = miette!(
                     labels = labels,
                     code = "lexer::unknown_token",
                     help = "this token might not be a valid number",
-                    "{} failed to parse `{}` into number", self.location_string(), substring
-                ).with_source_code(self.source.clone());
-                
-                return Err(error)
-            },
-            
+                    "{} failed to parse `{}` into number",
+                    self.location_string(),
+                    substring
+                )
+                .with_source_code(self.source.clone());
+
+                return Err(error);
+            }
         }
 
         Ok(())
@@ -305,16 +316,16 @@ impl Lexer {
 
         c
     }
-    
+
     fn check_next(&self, ch: char) -> bool {
         if self.is_at_end() {
-            return false
+            return false;
         }
-        
+
         let mut i = 1;
         loop {
             let next_char = self.source.chars().nth(self.current + i);
-            
+
             match next_char {
                 // if we are at the end then return false
                 None => {
@@ -324,7 +335,7 @@ impl Lexer {
                     if next_char.is_whitespace() {
                         i += 1;
                     } else {
-                        return next_char == ch
+                        return next_char == ch;
                     }
                 }
             }
@@ -336,10 +347,11 @@ impl Lexer {
     }
 
     fn add_token_lit(&mut self, token_type: TokenType, literal: Option<LiteralValue>) {
-        let text = self.source.get(self.start..self.current)
+        let text = self
+            .source
+            .get(self.start..self.current)
             .expect("Internal Compiler Error, This is a BUG")
             .to_string();
-        
 
         let span_len = self.current - self.start;
 
@@ -349,7 +361,7 @@ impl Lexer {
             literal,
             line_number: self.line,
             span: SourceSpan::new(self.start.into(), span_len),
-            source: self.source.clone() // pass a pointer to source
+            source: self.source.clone(), // pass a pointer to source
         });
     }
 
@@ -365,8 +377,7 @@ impl Lexer {
             true
         }
     }
-    
-    
+
     fn current_span(&self) -> SourceSpan {
         SourceSpan::from(self.start..self.current)
     }
@@ -380,7 +391,6 @@ impl Lexer {
     }
 }
 
-
 #[derive(Debug, Clone)]
 pub enum LiteralValue {
     Number(f64),
@@ -392,7 +402,9 @@ impl TryInto<f64> for LiteralValue {
 
     fn try_into(self) -> Result<f64, Self::Error> {
         let Self::Number(num) = self else {
-            return Err("Trying to convert to number when literal is not of type number".to_string())
+            return Err(
+                "Trying to convert to number when literal is not of type number".to_string(),
+            );
         };
 
         Ok(num)
@@ -404,7 +416,9 @@ impl TryInto<String> for LiteralValue {
 
     fn try_into(self) -> Result<String, Self::Error> {
         let Self::String(string) = self else {
-            return Err("Trying to convert to string when literal is not of type string".to_string())
+            return Err(
+                "Trying to convert to string when literal is not of type string".to_string(),
+            );
         };
 
         Ok(string)
@@ -539,14 +553,29 @@ mod tests {
             let mut scanner = Lexer::new(keyword, String::default());
             let result = scanner.scan_tokens().expect("Scanner failed on lowercase");
             assert_eq!(result.len(), 2, "Failed on keyword length: {}", keyword); // Expecting keyword token and EOF token
-            assert_eq!(result[0].token_type, token_type, "Failed on lowercase keyword: {}", keyword);
+            assert_eq!(
+                result[0].token_type, token_type,
+                "Failed on lowercase keyword: {}",
+                keyword
+            );
 
             // Test uppercase version
             let upper_keyword = keyword.to_uppercase();
             let mut scanner_upper = Lexer::new(upper_keyword.to_owned(), String::default());
-            let result_upper = scanner_upper.scan_tokens().expect("Scanner failed on uppercase");
-            assert_eq!(result_upper.len(), 2, "Failed on keyword length: {}", upper_keyword); // Expecting keyword token and EOF token
-            assert_eq!(result_upper[0].token_type, token_type, "Failed on uppercase keyword: {}", upper_keyword);
+            let result_upper = scanner_upper
+                .scan_tokens()
+                .expect("Scanner failed on uppercase");
+            assert_eq!(
+                result_upper.len(),
+                2,
+                "Failed on keyword length: {}",
+                upper_keyword
+            ); // Expecting keyword token and EOF token
+            assert_eq!(
+                result_upper[0].token_type, token_type,
+                "Failed on uppercase keyword: {}",
+                upper_keyword
+            );
         }
     }
 
@@ -568,14 +597,14 @@ mod tests {
     #[test]
     fn handle_implicit_semicolon() {
         let test_cases = vec![
-            ("varName\n", true), // Identifier ends with newline
-            ("123\n", true), // Number ends with newline
+            ("varName\n", true),    // Identifier ends with newline
+            ("123\n", true),        // Number ends with newline
             ("\"string\"\n", true), // StringLiteral ends with newline
-            (")\n", true), // RightParen ends with newline
-            ("]\n", true), // RightBracket ends with newline
-            ("}\n", true), // RightBrace ends with newline
-            ("+\n", false), // Plus does not end a statement
-            ("varName", false), // No newline, no implicit semicolon
+            (")\n", true),          // RightParen ends with newline
+            ("]\n", true),          // RightBracket ends with newline
+            ("}\n", true),          // RightBrace ends with newline
+            ("+\n", false),         // Plus does not end a statement
+            ("varName", false),     // No newline, no implicit semicolon
         ];
 
         for (source, should_have_semicolon) in test_cases {
@@ -583,7 +612,11 @@ mod tests {
             let result = scanner.scan_tokens().unwrap();
 
             let has_semicolon = result.iter().any(|token| token.token_type == SoftSemi);
-            assert_eq!(has_semicolon, should_have_semicolon, "Failed on source: {}", source);
+            assert_eq!(
+                has_semicolon, should_have_semicolon,
+                "Failed on source: {}",
+                source
+            );
         }
     }
 
@@ -592,12 +625,10 @@ mod tests {
         let input = "IF (a == 3) {\
             a <- a + 1\
             }";
-        
+
         // let num: i32 = input.parse().into_diagnostic().wrap_err("something here")
 
         // let source = Scanner::scan(input).unwrap();
-        
-        
 
         // let error = MietteDiagnostic::new("There was an error").with_code("hell");
 

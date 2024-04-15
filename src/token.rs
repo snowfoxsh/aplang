@@ -1,10 +1,10 @@
-use std::collections::HashMap;
-use std::fmt;
-use std::fmt::{Display, write};
-use miette::{LabeledSpan, miette, Report, SourceSpan};
-use std::sync::Arc;
 use crate::ast::{BinaryOp, LogicalOp, UnaryOp};
 use crate::lexer::LiteralValue;
+use miette::{miette, LabeledSpan, Report, SourceSpan};
+use std::collections::HashMap;
+use std::fmt;
+use std::fmt::{write, Display};
+use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
@@ -84,7 +84,6 @@ impl fmt::Display for Token {
 
 pub fn print_tokens(tokens: Vec<Token>) {
     for token in tokens {
-        
         if matches!(token.token_type, TokenType::SoftSemi) {
             print!(" ;")
         }
@@ -126,19 +125,19 @@ impl Token {
     pub fn label(&self, label: impl Into<String>) -> LabeledSpan {
         LabeledSpan::at(self.span, label)
     }
-    
+
     pub fn span_to_label(&self, other: SourceSpan, label: impl Into<String>) -> LabeledSpan {
         LabeledSpan::at(self.span_to(other), label)
     }
-    
+
     pub fn span(&self) -> SourceSpan {
         self.span
     }
-    
+
     pub fn span_to(&self, other: SourceSpan) -> SourceSpan {
         join_spans(self.span(), other)
     }
-    
+
     pub fn span_to_token(&self, other: &Token) -> SourceSpan {
         self.span_to(other.span())
     }
@@ -148,7 +147,6 @@ pub fn join_spans(left: SourceSpan, right: SourceSpan) -> SourceSpan {
     let length = right.offset() - left.offset() + right.len();
     SourceSpan::from(left.offset()..length)
 }
-
 
 impl Token {
     pub fn to_binary_op(&self) -> miette::Result<BinaryOp> {
@@ -164,7 +162,9 @@ impl Token {
             TokenType::Star => Ok(BinaryOp::Star),
             TokenType::Slash => Ok(BinaryOp::Slash),
             // todo: improve this message
-            _ => Err(miette!("Conversion to Binary Op Error, Token is not binary Op")), 
+            _ => Err(miette!(
+                "Conversion to Binary Op Error, Token is not binary Op"
+            )),
         }
     }
 
@@ -173,16 +173,20 @@ impl Token {
             TokenType::Minus => Ok(UnaryOp::Minus),
             TokenType::Not => Ok(UnaryOp::Not),
             // todo: improve this message
-            _ => Err(miette!("Conversion to Binary Unary Error, Token is not Unary op")),
+            _ => Err(miette!(
+                "Conversion to Binary Unary Error, Token is not Unary op"
+            )),
         }
     }
-    
+
     pub fn to_logical_op(&self) -> miette::Result<LogicalOp> {
         match self.token_type {
             TokenType::Or => Ok(LogicalOp::Or),
             TokenType::And => Ok(LogicalOp::And),
             // todo: improve this message
-            _ => Err(miette!("Conversion to Binary Logical Error, Token is not Logical op")),
+            _ => Err(miette!(
+                "Conversion to Binary Logical Error, Token is not Logical op"
+            )),
         }
     }
 }

@@ -18,11 +18,6 @@ pub struct ApFunction {
     pub params: Vec<String>,
 }
 
+pub struct Enviernment {}
 
-pub struct Enviernment {
-    
-}
-
-
-pub struct Interpreter {
-}
+pub struct Interpreter {}

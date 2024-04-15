@@ -1,12 +1,12 @@
-use std::fmt::Display;
-use std::sync::Arc;
-use miette::{Diagnostic, LabeledSpan, miette, NamedSource, Report, Severity, SourceSpan};
-use owo_colors::OwoColorize;
-use thiserror::Error;
 use crate::ast::{Ast, Expr, Literal, LogicalOp, Stmt};
 use crate::lexer::LiteralValue;
-use crate::token::{Token, TokenType};
 use crate::token::TokenType::{Eof, LeftParen, RightParen};
+use crate::token::{Token, TokenType};
+use miette::{miette, Diagnostic, LabeledSpan, NamedSource, Report, Severity, SourceSpan};
+use owo_colors::OwoColorize;
+use std::fmt::Display;
+use std::sync::Arc;
+use thiserror::Error;
 
 // something like
 // self.consume(Semicolon, "Expected ';' after expression.")?;
@@ -31,9 +31,8 @@ pub struct Parser2 {
     source: Arc<str>,
     named_source: NamedSource<Arc<str>>,
     current: usize,
-    warnings: Vec<Report>
+    warnings: Vec<Report>,
 }
-
 
 impl Parser2 {
     pub(crate) fn new(tokens: Vec<Token>, source: Arc<str>, file_name: &str) -> Self {
@@ -41,7 +40,7 @@ impl Parser2 {
             tokens,
             source: source.clone(),
             // named_source: NamedSource::new(file_name, source),
-            named_source: NamedSource::new(format!("{}",file_name), source),
+            named_source: NamedSource::new(format!("{}", file_name), source),
             current: 0,
             warnings: vec![],
         }
@@ -55,31 +54,30 @@ impl Parser2 {
             if self.match_token(&SoftSemi) {
                 continue;
             }
-            
+
             match self.declaration() {
                 Ok(stmt) => statements.push(stmt),
                 Err(report) => {
                     let report = report;
                     self.synchronize();
                     reports.push(report)
-                },
+                }
             }
         }
 
         if !reports.is_empty() {
-            return Err(reports)
+            return Err(reports);
         }
 
         Ok(Ast {
             source: self.source.clone(),
-            program: statements
+            program: statements,
         })
     }
 }
 
 /// parse expression
 impl Parser2 {
-
     fn declaration(&mut self) -> miette::Result<Stmt> {
         if self.match_token(&Procedure) {
             let proc_token = self.previous().clone();
@@ -90,42 +88,51 @@ impl Parser2 {
     }
 
     fn procedure(&mut self, proc_token: Token) -> miette::Result<Stmt> {
-        let name_token = self.consume(&Identifier, |token| {
-            let labels = vec![
-                LabeledSpan::at(proc_token.span(), "this procedure requires a name"),
-                LabeledSpan::at(token.span(), format!("name goes here"))
-            ];
-        
-            miette!(
-                labels = labels,
-                code = "unnamed_procedure",
-                help = "name the PROCEDURE with an IDENT",
-                "expected `IDENT` found `{}`", token.lexeme
-            )
-        })?.clone();
-        
-        // self.ident_warning(&name_token);
-        
-        let name = name_token.lexeme.clone();
-        
-        let lp_token = self.consume(&LeftParen, |token |{
-            // miette!(
-            //     labels = vec![LabeledSpan::at(token.span, "kill yourself2")],
-            //     "expected lp token, found {token}"
-            // )
-            let labels = vec![
-                LabeledSpan::at(token.span(), "expected a `(`"),
-                LabeledSpan::at(name_token.span(), format!("{} requires `(..)` argument list", name_token.lexeme)),
-            ];
+        let name_token = self
+            .consume(&Identifier, |token| {
+                let labels = vec![
+                    LabeledSpan::at(proc_token.span(), "this procedure requires a name"),
+                    LabeledSpan::at(token.span(), format!("name goes here")),
+                ];
 
-            miette!(
-                labels = labels,
-                code = "missing_lp",
-                help = "a PROCEDURE requires a argument list in `()` after its name",
-                "expected `(` found `{}`", token.lexeme 
-            )
-        })?.clone();
-        
+                miette!(
+                    labels = labels,
+                    code = "unnamed_procedure",
+                    help = "name the PROCEDURE with an IDENT",
+                    "expected `IDENT` found `{}`",
+                    token.lexeme
+                )
+            })?
+            .clone();
+
+        // self.ident_warning(&name_token);
+
+        let name = name_token.lexeme.clone();
+
+        let lp_token = self
+            .consume(&LeftParen, |token| {
+                // miette!(
+                //     labels = vec![LabeledSpan::at(token.span, "kill yourself2")],
+                //     "expected lp token, found {token}"
+                // )
+                let labels = vec![
+                    LabeledSpan::at(token.span(), "expected a `(`"),
+                    LabeledSpan::at(
+                        name_token.span(),
+                        format!("{} requires `(..)` argument list", name_token.lexeme),
+                    ),
+                ];
+
+                miette!(
+                    labels = labels,
+                    code = "missing_lp",
+                    help = "a PROCEDURE requires a argument list in `()` after its name",
+                    "expected `(` found `{}`",
+                    token.lexeme
+                )
+            })?
+            .clone();
+
         let (params, params_tokens) = if !self.check(&RightParen) {
             // parse shit
             // todo
@@ -134,22 +141,23 @@ impl Parser2 {
         } else {
             (vec![], vec![])
         };
-        
-        let rp_token = self.consume(&RightParen, |token| {
-            let labels = vec![
-                LabeledSpan::at(token.span(), "expected a `)`"),
-            ];
 
-            miette!(
-                labels = labels,
-                code = "missing_rp",
-                help = "mismatched `(`, it seems you missed a `)`.",
-                "expected `)`, found `{}`", token.lexeme
-            )
-        })?.clone();
-        
+        let rp_token = self
+            .consume(&RightParen, |token| {
+                let labels = vec![LabeledSpan::at(token.span(), "expected a `)`")];
+
+                miette!(
+                    labels = labels,
+                    code = "missing_rp",
+                    help = "mismatched `(`, it seems you missed a `)`.",
+                    "expected `)`, found `{}`",
+                    token.lexeme
+                )
+            })?
+            .clone();
+
         let body = self.statement()?.into();
-        
+
         Ok(Stmt::ProcDeclaration {
             name,
             params,
@@ -160,25 +168,24 @@ impl Parser2 {
         })
     }
 
-
     fn statement(&mut self) -> miette::Result<Stmt> {
-        // IF (condition) 
+        // IF (condition)
         if self.match_token(&If) {
             let if_token = self.previous().clone();
             return self.if_statement(if_token);
         }
-        
-        // REPEAT UNTIL (condition) 
+
+        // REPEAT UNTIL (condition)
         if self.match_token(&Repeat) {
             let repeat_token = self.previous().clone();
             // this is a repeat until block
             if self.check(&Until) {
                 return self.repeat_until(repeat_token);
             }
-            
+
             return self.repeat_times(repeat_token);
         }
-        
+
         if self.match_token(&For) {
             let for_token = self.previous().clone();
             return self.for_each(for_token);
@@ -187,14 +194,13 @@ impl Parser2 {
         // { expr }
         if self.match_token(&LeftBrace) {
             let lb_token = self.previous().clone();
-            
+
             return self.block(lb_token);
         }
 
         self.expression_statement()
     }
-    
-    
+
     fn block(&mut self, lb_token: Token) -> miette::Result<Stmt> {
         let mut statements = vec![];
 
@@ -208,64 +214,70 @@ impl Parser2 {
             if self.check(&RightBrace) {
                 break;
             }
-            
+
             statements.push(self.declaration()?);
         }
 
-        let rb_token = self.consume(&RightBrace, |token| {
-            let labels = vec![
-                LabeledSpan::at(lb_token.span(), "this delimiter requires a closing `}`"),
-            ];
-            // todo: span the next `}` token
-            
-            miette!(
-                labels = labels,
-                code = "missing_rb",
-                help = "mismatched `{`, it seems you missed a `}`",
-                "this block has an unclosed delimiter"
-            )
-        })?.clone();
+        let rb_token = self
+            .consume(&RightBrace, |token| {
+                let labels = vec![LabeledSpan::at(
+                    lb_token.span(),
+                    "this delimiter requires a closing `}`",
+                )];
+                // todo: span the next `}` token
 
+                miette!(
+                    labels = labels,
+                    code = "missing_rb",
+                    help = "mismatched `{`, it seems you missed a `}`",
+                    "this block has an unclosed delimiter"
+                )
+            })?
+            .clone();
 
         Ok(Stmt::Block {
             lb_token,
             statements,
-            rb_token
+            rb_token,
         })
     }
 
     fn if_statement(&mut self, if_token: Token) -> miette::Result<Stmt> {
         // todo: improve this report
-        let lp_token = self.consume(&LeftParen, |token| {
-            // miette!("expected lp_token")
-            let labels = vec![
-                LabeledSpan::at(token.span(), "expected a `(`"),
-                LabeledSpan::at(if_token.span(), "IF requires `(..)` condition")
-            ];
-            
-            miette!(
-                labels = labels,
-                code = "missing_lp",
-                help = "an IF statement requires a condition in `()` after the `IF` keyword",
-                "expected `(` found `{}`", token.lexeme
-            )
-        })?.clone();
+        let lp_token = self
+            .consume(&LeftParen, |token| {
+                // miette!("expected lp_token")
+                let labels = vec![
+                    LabeledSpan::at(token.span(), "expected a `(`"),
+                    LabeledSpan::at(if_token.span(), "IF requires `(..)` condition"),
+                ];
+
+                miette!(
+                    labels = labels,
+                    code = "missing_lp",
+                    help = "an IF statement requires a condition in `()` after the `IF` keyword",
+                    "expected `(` found `{}`",
+                    token.lexeme
+                )
+            })?
+            .clone();
 
         let condition = self.expression()?;
 
-        let rp_token = self.consume(&RightParen, |token| {
-            // miette!("Expected `)` found {}", token)
-            let labels = vec![
-                LabeledSpan::at(token.span(), "expected a `)`"),
-            ];
+        let rp_token = self
+            .consume(&RightParen, |token| {
+                // miette!("Expected `)` found {}", token)
+                let labels = vec![LabeledSpan::at(token.span(), "expected a `)`")];
 
-            miette!(
-                labels = labels,
-                code = "missing_rp",
-                help = "mismatched `(`, it seems you missed a `)`.",
-                "expected `)`, found `{}`", token.lexeme
-            )
-        })?.clone();
+                miette!(
+                    labels = labels,
+                    code = "missing_rp",
+                    help = "mismatched `(`, it seems you missed a `)`.",
+                    "expected `)`, found `{}`",
+                    token.lexeme
+                )
+            })?
+            .clone();
 
         let then_branch = self.statement()?.into();
         // let (else_branch, else_token) = if self.match_token(&Else) {
@@ -283,14 +295,14 @@ impl Parser2 {
             else_token: None,
         })
     }
-    
+
     fn repeat_times(&mut self, repeat_token: Token) -> miette::Result<Stmt> {
         // confirm that the repeat token was consumed
         self.confirm(&Repeat)?;
-        
-        // expected expression 
+
+        // expected expression
         let count = self.expression()?;
-        
+
         let times_token = self.consume(&Times, |token| {
             // todo improve this message
             // miette!("expected times token")
@@ -305,9 +317,9 @@ impl Parser2 {
                 "expected `TIMES` found `{}`", token.lexeme
             )
         })?.clone();
-        
+
         let body = self.statement()?.into();
-        
+
         Ok(Stmt::RepeatTimes {
             count,
             body,
@@ -315,32 +327,33 @@ impl Parser2 {
             times_token,
         })
     }
-    
+
     fn repeat_until(&mut self, repeat_token: Token) -> miette::Result<Stmt> {
         // confirm that the repeat token has been consumed
         self.confirm(&Repeat)?;
-        
-        let until_token= self.consume(&Until, |token| {
-            // todo: improve this error
-            // miette!(
-            //     "expected until token after repeat token"
-            // )
-            // let labels = vec![
-            //     LabeledSpan::at(token.span(), "expected an `UNTIL`"),
-            // ];
 
-            // miette!(
-            //     labels = labels,
-            //     code = "missing_times",
-            //     help = "a REPEAT block requires an `UNTIL` keyword with a condition",
-            //     "expected `UNTIL` found {}", token.lexeme
-            // )
-            // todo consider makeing this advance instad of consume
-            // this should never error
-            miette!("how tf do i trigger this")
+        let until_token = self
+            .consume(&Until, |token| {
+                // todo: improve this error
+                // miette!(
+                //     "expected until token after repeat token"
+                // )
+                // let labels = vec![
+                //     LabeledSpan::at(token.span(), "expected an `UNTIL`"),
+                // ];
 
-        })?.clone();
-        
+                // miette!(
+                //     labels = labels,
+                //     code = "missing_times",
+                //     help = "a REPEAT block requires an `UNTIL` keyword with a condition",
+                //     "expected `UNTIL` found {}", token.lexeme
+                // )
+                // todo consider makeing this advance instad of consume
+                // this should never error
+                miette!("how tf do i trigger this")
+            })?
+            .clone();
+
         let lp_token = self.consume(&LeftParen, |token| {
             // todo: improve this error
             let labels = vec![
@@ -355,87 +368,95 @@ impl Parser2 {
                 "expected `(` found `{}`", token.lexeme
             )
         })?.clone();
-        
-        let condition = self.expression()?;
-        
-        let rp_token = self.consume(&RightParen, |token| {
-            // todo: improve this error
-            let labels = vec![
-                LabeledSpan::at(token.span(), "expected a `)`"),
-            ];
 
-            miette!(
-                labels = labels,
-                code = "missing_rp",
-                help = "mismatched `(`, it seems you missed a `)`.",
-                "expected `)`, found `{}`", token.lexeme
-            )
-        })?.clone();
-        
+        let condition = self.expression()?;
+
+        let rp_token = self
+            .consume(&RightParen, |token| {
+                // todo: improve this error
+                let labels = vec![LabeledSpan::at(token.span(), "expected a `)`")];
+
+                miette!(
+                    labels = labels,
+                    code = "missing_rp",
+                    help = "mismatched `(`, it seems you missed a `)`.",
+                    "expected `)`, found `{}`",
+                    token.lexeme
+                )
+            })?
+            .clone();
+
         let body = self.statement()?.into();
-        
+
         Ok(Stmt::RepeatUntil {
-            condition, 
+            condition,
             body,
             repeat_token,
             until_token,
         })
     }
-    
+
     fn for_each(&mut self, for_token: Token) -> miette::Result<Stmt> {
         self.confirm(&For)?;
-        
-        let each_token = self.consume(&Each, |token| { 
-            // todo improve this message
-            // miette!("expected each token")
-            let labels = vec![
-                LabeledSpan::at(token.span(), "expected an `EACH`"),
-            ];
 
-            miette!(
-                labels = labels,
-                code = "missing_each",
-                help = "a FOR block requires an `EACH` keyword after the `FOR` keyword",
-                "expected `EACH` found `{}`", token.lexeme
-            )
-        })?.clone();
-        
-        let item_token = self.consume(&Identifier, |token| {
-            // todo improve this message
-            // miette!("expected an ident")
-            let labels = vec![
-                LabeledSpan::at(each_token.span(), "expected an identifier after `EACH`"),
-                LabeledSpan::at(token.span(), "identifier goes here")
-            ];
+        let each_token = self
+            .consume(&Each, |token| {
+                // todo improve this message
+                // miette!("expected each token")
+                let labels = vec![LabeledSpan::at(token.span(), "expected an `EACH`")];
 
-            miette!(
-                labels = labels,
-                code = "missing_ident",
-                help = "a FOR EACH block requires an identifier after the `EACH` keyword",
-                "expected `IDENTIFIER` found `{}`", token.lexeme
-            )
-        })?.clone();
+                miette!(
+                    labels = labels,
+                    code = "missing_each",
+                    help = "a FOR block requires an `EACH` keyword after the `FOR` keyword",
+                    "expected `EACH` found `{}`",
+                    token.lexeme
+                )
+            })?
+            .clone();
+
+        let item_token = self
+            .consume(&Identifier, |token| {
+                // todo improve this message
+                // miette!("expected an ident")
+                let labels = vec![
+                    LabeledSpan::at(each_token.span(), "expected an identifier after `EACH`"),
+                    LabeledSpan::at(token.span(), "identifier goes here"),
+                ];
+
+                miette!(
+                    labels = labels,
+                    code = "missing_ident",
+                    help = "a FOR EACH block requires an identifier after the `EACH` keyword",
+                    "expected `IDENTIFIER` found `{}`",
+                    token.lexeme
+                )
+            })?
+            .clone();
         let item = item_token.lexeme.clone();
-        
-        let in_token= self.consume(&In, |token| {
-            // miette!("expected in token")
-            let labels = vec![
-                LabeledSpan::at(item_token.span(), "expected an `IN` after identifier"),
-                LabeledSpan::at(token.span(), "`IN` goes here"),
-            ];
 
-            miette!(
-                labels = labels,
-                code = "missing_in",
-                help = "a FOR EACH block requires an `IN` keyword after the identifier",
-                "expected `IN` found `{}`", token.lexeme
-            )
-        })?.clone();
-        
+        let in_token = self
+            .consume(&In, |token| {
+                // miette!("expected in token")
+                let labels = vec![
+                    LabeledSpan::at(item_token.span(), "expected an `IN` after identifier"),
+                    LabeledSpan::at(token.span(), "`IN` goes here"),
+                ];
+
+                miette!(
+                    labels = labels,
+                    code = "missing_in",
+                    help = "a FOR EACH block requires an `IN` keyword after the identifier",
+                    "expected `IN` found `{}`",
+                    token.lexeme
+                )
+            })?
+            .clone();
+
         let list = self.expression()?;
-        
+
         let body = self.statement()?.into();
-        
+
         Ok(Stmt::ForEach {
             item,
             list,
@@ -443,34 +464,36 @@ impl Parser2 {
             item_token,
             for_token,
             each_token,
-            in_token
+            in_token,
         })
     }
-    
+
     fn expression_statement(&mut self) -> miette::Result<Stmt> {
         let expr = self.expression()?;
         if self.is_at_end() {
-            return Ok(Stmt::Expr {expr})
+            return Ok(Stmt::Expr { expr });
         }
-        
+
         if self.check(&RightBrace) {
-            return Ok(Stmt::Expr {expr})
+            return Ok(Stmt::Expr { expr });
         }
-        
+
         self.consume(&SoftSemi, |token| {
             // miette!("Expected EOL or semi found {}", token)
-            let labels = vec![
-                LabeledSpan::at(token.span(), "missing End Of Line indicator"),
-            ];
+            let labels = vec![LabeledSpan::at(
+                token.span(),
+                "missing End Of Line indicator",
+            )];
 
             miette!(
                 labels = labels,
                 code = "missing_eol",
                 help = "try manually placing a semicolon",
-                "expected `End Of Line` found `{}`", token.lexeme
+                "expected `End Of Line` found `{}`",
+                token.lexeme
             )
         })?;
-        Ok(Stmt::Expr {expr})
+        Ok(Stmt::Expr { expr })
     }
 
     pub(crate) fn expression(&mut self) -> miette::Result<Expr> {
@@ -495,8 +518,16 @@ impl Parser2 {
                 }),
 
                 // Handling set assignment for complex expressions like array[index] = value
-                Expr::Access { list, key, brackets } => Ok(Expr::Set {
-                    target: Box::new(Expr::Access { list, key, brackets }),
+                Expr::Access {
+                    list,
+                    key,
+                    brackets,
+                } => Ok(Expr::Set {
+                    target: Box::new(Expr::Access {
+                        list,
+                        key,
+                        brackets,
+                    }),
                     value: Box::new(value),
                     arrow_token,
                 }),
@@ -509,7 +540,7 @@ impl Parser2 {
                 _ => {
                     let labels = vec![
                         LabeledSpan::at(arrow_token.span(), "expected an assignment target"),
-                        LabeledSpan::at(expr_token.span(), "target goes here")
+                        LabeledSpan::at(expr_token.span(), "target goes here"),
                     ];
 
                     Err(miette!(
@@ -525,7 +556,6 @@ impl Parser2 {
         }
     }
 
-
     // and ( "OR" and )*
     fn or(&mut self) -> miette::Result<Expr> {
         let mut expr = self.and()?;
@@ -540,7 +570,7 @@ impl Parser2 {
                 operator: LogicalOp::Or,
                 right: Box::new(right),
 
-                token
+                token,
             }
         }
 
@@ -561,7 +591,7 @@ impl Parser2 {
                 operator: LogicalOp::Or,
                 right: right.into(),
 
-                token
+                token,
             }
         }
 
@@ -581,7 +611,7 @@ impl Parser2 {
                 left,
                 operator,
                 right,
-                token
+                token,
             }
         }
 
@@ -601,7 +631,7 @@ impl Parser2 {
                 left,
                 operator,
                 right,
-                token
+                token,
             }
         }
 
@@ -621,7 +651,7 @@ impl Parser2 {
                 left,
                 operator,
                 right,
-                token
+                token,
             }
         }
 
@@ -642,7 +672,7 @@ impl Parser2 {
                 left,
                 operator,
                 right,
-                token
+                token,
             }
         }
 
@@ -693,7 +723,7 @@ impl Parser2 {
                 expr = Expr::Access {
                     list: Box::new(expr),
                     key: Box::new(index),
-                    brackets: (lb_token, rb_token)
+                    brackets: (lb_token, rb_token),
                 };
             } else {
                 break;
@@ -702,7 +732,7 @@ impl Parser2 {
 
         Ok(expr)
     }
-    
+
     // todo: add access "[" expr "]"
     fn primary(&mut self) -> miette::Result<Expr> {
         // TRUE
@@ -711,7 +741,7 @@ impl Parser2 {
             return Ok(Expr::Literal {
                 value: Literal::True,
                 token,
-            })
+            });
         }
         // FALSE
         if self.match_token(&False) {
@@ -719,7 +749,7 @@ impl Parser2 {
             return Ok(Expr::Literal {
                 value: Literal::True,
                 token,
-            })
+            });
         }
         // NULL
         if self.match_token(&Null) {
@@ -727,53 +757,50 @@ impl Parser2 {
             return Ok(Expr::Literal {
                 value: Literal::True,
                 token,
-            })
+            });
         }
         // string
         if self.match_token(&StringLiteral) {
             let token = self.previous().clone();
 
             // todo improve this message
-            let literal = token.literal.clone().miette_expect(|| {
-                miette!("internal parser error. could not find literal")
-            });
+            let literal = token
+                .literal
+                .clone()
+                .miette_expect(|| miette!("internal parser error. could not find literal"));
 
             // if it is not string
             let LiteralValue::String(literal) = literal else {
-                let report = miette!(
-                    "internal parser error literal is not a string"
-                );
+                let report = miette!("internal parser error literal is not a string");
                 panic!("{:?}", report)
             };
 
             return Ok(Expr::Literal {
                 value: Literal::String(literal),
-                token
-            })
+                token,
+            });
         }
 
         // number
         if self.match_token(&Number) {
             let token = self.previous().clone();
 
-
             // todo improve this message
-            let literal = token.literal.clone().miette_expect(|| {
-                miette!("internal parser error. could not find literal")
-            });
+            let literal = token
+                .literal
+                .clone()
+                .miette_expect(|| miette!("internal parser error. could not find literal"));
 
             // if it is not number
             let LiteralValue::Number(literal) = literal else {
-                let report = miette!(
-                    "internal parser error literal is not a number"
-                );
+                let report = miette!("internal parser error literal is not a number");
                 panic!("{:?}", report)
             };
 
             return Ok(Expr::Literal {
                 value: Literal::Number(literal),
-                token
-            })
+                token,
+            });
         }
         // done parsing literals
 
@@ -782,9 +809,9 @@ impl Parser2 {
             let token = self.previous().clone();
             // add possible ident warnings
             // self.ident_warning(&token);
-            
+
             let ident = token.lexeme.clone();
-            
+
             // function call
             // IDENT "(" ( expr ),* ")"
             if self.match_token(&LeftParen) {
@@ -800,7 +827,7 @@ impl Parser2 {
                                 // todo: finish this
                                 "todo: max args for function call exceeded"
                             );
-                            return Err(report)
+                            return Err(report);
                         }
 
                         let expr = self.expression()?;
@@ -813,34 +840,32 @@ impl Parser2 {
                     }
                 }
 
-                let rp_token = self.consume(&RightParen,  |token| {
-                    // todo
-                    // miette!("expected ) after argument list, found {token}")
-                    let labels = vec![
-                        LabeledSpan::at(token.span(), "expected a `)`")
-                    ];
+                let rp_token = self
+                    .consume(&RightParen, |token| {
+                        // todo
+                        // miette!("expected ) after argument list, found {token}")
+                        let labels = vec![LabeledSpan::at(token.span(), "expected a `)`")];
 
-                    miette!(
-                        labels = labels,
-                        code = "missing_rp",
-                        help = "mismatched `(`, it seems you missed a `)`.",
-                        "expected `)`, found `{}`", token.lexeme
-                    )
-                })?.clone();
+                        miette!(
+                            labels = labels,
+                            code = "missing_rp",
+                            help = "mismatched `(`, it seems you missed a `)`.",
+                            "expected `)`, found `{}`",
+                            token.lexeme
+                        )
+                    })?
+                    .clone();
 
                 return Ok(Expr::ProcCall {
                     ident,
                     arguments,
                     token,
                     parens: (lp_token, rp_token),
-                })
+                });
             }
-            
+
             // ident token
-            return Ok(Expr::Variable {
-                ident,
-                token,
-            })
+            return Ok(Expr::Variable { ident, token });
         }
 
         // "(" expr ")"
@@ -851,24 +876,23 @@ impl Parser2 {
             let rp_token = self.consume(&RightParen, |token| {
                 // todo: improve this message
                 // miette!("expected `(` found {}", token)
-                let labels = vec![
-                    LabeledSpan::at(token.span(), "expected a `(`")
-                ];
+                let labels = vec![LabeledSpan::at(token.span(), "expected a `(`")];
 
                 miette!(
                     labels = labels,
                     code = "missing_lp",
                     help = "mismatched `)`, it seems you missed a `(`.",
-                    "expected `(` found `{}`", token.lexeme
+                    "expected `(` found `{}`",
+                    token.lexeme
                 )
             })?;
 
             return Ok(Expr::Grouping {
                 expr,
-                parens: (lp_token.clone(), rp_token.clone())
-            })
+                parens: (lp_token.clone(), rp_token.clone()),
+            });
         }
-        
+
         // "[" ( expr ),* "]"
         if self.match_token(&LeftBracket) {
             let lb_token = self.previous().clone();
@@ -886,18 +910,17 @@ impl Parser2 {
                 }
             }
 
-            let rb_token = self.consume(&RightBracket,  |token| {
+            let rb_token = self.consume(&RightBracket, |token| {
                 // todo
                 // miette!("expected ] after item list, found {token}")
-                let labels = vec![
-                    LabeledSpan::at(token.span(), "expected a `]`")
-                ];
+                let labels = vec![LabeledSpan::at(token.span(), "expected a `]`")];
 
                 miette!(
                     labels = labels,
                     code = "missing_rb",
                     help = "mismatched `[`, it seems you missed a `]`.",
-                    "expected `]`, found `{}`", token.lexeme
+                    "expected `]`, found `{}`",
+                    token.lexeme
                 )
             })?;
 
@@ -910,20 +933,21 @@ impl Parser2 {
         let cspan = self.previous().span_to(self.peek().span());
         let labels = vec![
             LabeledSpan::at(self.peek().span(), "primary expected here"),
-            LabeledSpan::at(cspan, "consider checking your upstream code")
+            LabeledSpan::at(cspan, "consider checking your upstream code"),
         ];
         // todo improve this message
         let report = miette!(
             labels = labels,
             help = "a primary is made up of the following set:\n\
             [expression | ident | literal | list]",
-            "expected primary, instead found {}\n", self.peek()
-        ).with_source_code(self.named_source.clone());
+            "expected primary, instead found {}\n",
+            self.peek()
+        )
+        .with_source_code(self.named_source.clone());
         // mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
         Err(report)
     }
 }
-
 
 /// Helper methods
 impl Parser2 {
@@ -937,7 +961,7 @@ impl Parser2 {
 
             // todo: dont know if this is complete but its "good enough"
             match self.peek().token_type {
-                Procedure | Repeat | For | If | Return | Continue | Break | Print=> return,
+                Procedure | Repeat | For | If | Return | Continue | Break | Print => return,
                 _ => (),
             }
 
@@ -945,7 +969,11 @@ impl Parser2 {
         }
     }
 
-    fn consume(&mut self, token_type: &TokenType, report: impl FnOnce(&Token) -> Report) -> miette::Result<&Token> {
+    fn consume(
+        &mut self,
+        token_type: &TokenType,
+        report: impl FnOnce(&Token) -> Report,
+    ) -> miette::Result<&Token> {
         let next_token = self.peek().clone();
         if next_token.token_type() == token_type {
             self.advance();
@@ -963,7 +991,7 @@ impl Parser2 {
             self.advance();
         }
     }
-    
+
     // fn consume(&mut self, token_type: &TokenType, error_handler: Box<dyn Fn(&Token) -> Report>) -> miette::Result<&Token> {
     //     let token = self.peek();
     //
@@ -978,24 +1006,26 @@ impl Parser2 {
 
     fn check(&self, typ: &TokenType) -> bool {
         if self.is_at_end() {
-            return false
+            return false;
         }
 
         self.peek().token_type() == typ
     }
-    
+
     fn confirm(&self, typ: &TokenType) -> miette::Result<()> {
         let previous = self.previous();
-        
+
         if &previous.token_type != typ {
             // todo: improve this msg
             return Err(miette!(
-                "attempted to look back and find {:?} buf found {}", typ, previous
+                "attempted to look back and find {:?} buf found {}",
+                typ,
+                previous
             ));
         }
-        
+
         Ok(())
-    } 
+    }
 
     fn match_token(&mut self, token_type: &TokenType) -> bool {
         if self.check(token_type) {
@@ -1040,11 +1070,13 @@ impl Parser2 {
         self.tokens
             .get(self.current - 1)
             // todo: improve this message include link to github issues (miette_expect)
-            .expect("internal error: this should never happen. \
-            if it does there is a bug in previous method")
-            // .expect_miette(false, || {
-            //     todo
-            // });
+            .expect(
+                "internal error: this should never happen. \
+            if it does there is a bug in previous method",
+            )
+        // .expect_miette(false, || {
+        //     todo
+        // });
     }
 
     fn is_at_end(&self) -> bool {
@@ -1053,14 +1085,15 @@ impl Parser2 {
 }
 
 pub(super) mod warning {
-    use miette::{miette, Report, Severity};
     use crate::parser2::Parser2;
-    use crate::token::{get_keywords_hashmap, Token};
     use crate::token::TokenType::Identifier;
+    use crate::token::{get_keywords_hashmap, Token};
+    use miette::{miette, Report, Severity};
 
     impl Parser2 {
         pub(super) fn warning(&mut self, report: Report) {
-            self.warnings.push(report.with_source_code(self.named_source.clone()))
+            self.warnings
+                .push(report.with_source_code(self.named_source.clone()))
         }
 
         // todo: add warnings to parameters
@@ -1068,7 +1101,7 @@ pub(super) mod warning {
         //     if ident.token_type == Identifier {
         //         panic!("Internal error trying to warn about ident but input is not ident")
         //     }
-        //     
+        //
         //     if get_keywords_hashmap().contains_key(ident.lexeme.to_lowercase().as_str()) {
         //         let lexeme = &ident.lexeme;
         //         let report = miette!(
@@ -1082,8 +1115,7 @@ pub(super) mod warning {
 }
 
 trait ExpectMiette<T> {
-
-    fn miette_expect(self,  report_handler: fn() -> Report) -> T;
+    fn miette_expect(self, report_handler: fn() -> Report) -> T;
 }
 
 impl<T, E> ExpectMiette<T> for Result<T, E> {
