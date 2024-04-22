@@ -1,0 +1,7 @@
+PROCEDURE outer() {
+    PROCEDURE inner() {
+        RETURN
+    }
+
+    inner()
+}

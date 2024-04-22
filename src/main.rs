@@ -20,7 +20,7 @@ mod parser2;
 mod token;
 
 fn main() -> Result<()> {
-    test_file("./examples.ap/if.ap", true);
+    test_file("./examples.ap/nested.ap", true);
 
     Ok(())
 }
