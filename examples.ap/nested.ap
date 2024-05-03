@@ -18,4 +18,7 @@ IF (n == 1) {
     }
 }
 
+PROCEDURE add(a, b) {
+}
+
 nums

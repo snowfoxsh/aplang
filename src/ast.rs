@@ -71,12 +71,11 @@ pub struct ForEach {
 #[derive(Debug, Clone)]
 pub struct ProcDeclaration {
     pub name: Ident,
-    pub params: Vec<Ident>,
+    pub params: Vec<Variable>,
     pub body: Stmt,
 
     pub proc_token: Token,
     pub name_token: Token,
-    pub params_tokens: Vec<Token>,
 }
 #[derive(Debug, Clone)]
 pub struct Block {
@@ -470,7 +469,12 @@ pub mod pretty {
                     for_each.item, for_each.list, for_each.body
                 ),
                 Stmt::ProcDeclaration(proc_decl) => {
-                    let params = proc_decl.params.join(", ");
+                    // let params = proc_decl.pjoin(", ");
+                    let params= proc_decl.params.iter()
+                        .map(|var| var.ident.clone())
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    
                     write!(
                         f,
                         "procedure {}({}) {}",

@@ -233,7 +233,6 @@ impl Interpreter {
                 Ok(())
             }
             s => {
-                println!("{s:#?}");
                 todo!()
             }
         }

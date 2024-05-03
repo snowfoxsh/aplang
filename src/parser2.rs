@@ -3,11 +3,11 @@ use crate::ast::*;
 use crate::lexer::LiteralValue;
 use crate::token::TokenType::{Eof, LeftParen, RightParen};
 use crate::token::{Token, TokenType};
+use crate::ast::Return as ReturnValue;
 use miette::{miette, Diagnostic, LabeledSpan, NamedSource, Report, Severity, SourceSpan};
 use owo_colors::OwoColorize;
 use std::fmt::Display;
 use std::sync::Arc;
-use thiserror::Error;
 
 // something like
 // self.consume(Semicolon, "Expected ';' after expression.")?;
@@ -32,6 +32,7 @@ pub struct Parser2 {
     source: Arc<str>,
     named_source: NamedSource<Arc<str>>,
     current: usize,
+    in_function_scope: bool,
     warnings: Vec<Report>,
 }
 
@@ -40,6 +41,7 @@ impl Parser2 {
         Self {
             tokens,
             source: source.clone(),
+            in_function_scope: false,
             // named_source: NamedSource::new(file_name, source),
             named_source: NamedSource::new(format!("{}", file_name), source),
             current: 0,
@@ -112,10 +114,6 @@ impl Parser2 {
 
         let lp_token = self
             .consume(&LeftParen, |token| {
-                // miette!(
-                //     labels = vec![LabeledSpan::at(token.span, "kill yourself2")],
-                //     "expected lp token, found {token}"
-                // )
                 let labels = vec![
                     LabeledSpan::at(token.span(), "expected a `(`"),
                     LabeledSpan::at(
@@ -123,7 +121,6 @@ impl Parser2 {
                         format!("{} requires `(..)` argument list", name_token.lexeme),
                     ),
                 ];
-
                 miette!(
                     labels = labels,
                     code = "missing_lp",
@@ -134,14 +131,45 @@ impl Parser2 {
             })?
             .clone();
 
-        let (params, params_tokens) = if !self.check(&RightParen) {
-            // parse shit
-            // todo
 
-            (vec![], vec![])
-        } else {
-            (vec![], vec![])
-        };
+        let mut params = vec![];
+        if !self.check(&RightParen) {
+
+            loop {
+                if params.len() > 255 {
+                    let peeked = self.peek();
+                    return Err(miette! {
+                        "todo: params cannot exceed 255, why the f**k do you need so many?"
+                    });
+                }
+
+                // we expect there to be parameters
+                let token = self.consume(&Identifier, |token| miette!(
+                    "hello"
+                ))?.clone();
+
+                params.push(Variable {
+                    ident: token.lexeme.clone(),
+                    token
+                });
+
+                if !self.match_token(&Comma) {
+                    break;
+                }
+            }
+        }
+
+        // let (params, params_tokens) = if !self.check(&RightParen) {
+        //     parse shit
+        //     todo
+            //
+            // (vec![], vec![])
+        // } else {
+        //     (vec![], vec![])
+        // };
+
+        // params
+
 
         let rp_token = self
             .consume(&RightParen, |token| {
@@ -157,7 +185,9 @@ impl Parser2 {
             })?
             .clone();
 
+        let function_scope_state = self.in_function_scope;
         let body = self.statement()?.into();
+        self.in_function_scope = function_scope_state;
 
         Ok(Stmt::ProcDeclaration(Arc::new(ProcDeclaration {
             name,
@@ -165,7 +195,6 @@ impl Parser2 {
             body,
             proc_token,
             name_token,
-            params_tokens,
         })))
     }
 
@@ -197,6 +226,11 @@ impl Parser2 {
             let lb_token = self.previous().clone();
 
             return self.block(lb_token);
+        }
+
+        if self.match_token(&Return) {
+            let return_token = self.previous().clone();
+            return self.return_statement(return_token);
         }
 
         self.expression_statement()
@@ -243,6 +277,33 @@ impl Parser2 {
                 rb_token,
             }
             .into(),
+        ))
+    }
+
+    fn return_statement(&mut self, return_token: Token) -> miette::Result<Stmt> {
+        if !self.in_function_scope {
+            return Err(miette!{
+                "todo: not allowed to return"
+            })
+        }
+
+        let maybe_value = if !self.match_token(&SoftSemi) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+
+        if maybe_value.is_some() {
+            self.consume(&SoftSemi, |token| miette!{
+                "todo: expected semicolon after return statement"
+            })?;
+        }
+
+        Ok(Stmt::Return(
+            Arc::new(ReturnValue {
+                token: return_token,
+                data: maybe_value
+            })
         ))
     }
 
