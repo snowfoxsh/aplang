@@ -60,8 +60,8 @@ impl Parser2 {
                 Ok(stmt) => statements.push(stmt),
                 Err(report) => {
                     let report = report;
+                    reports.push(report);
                     self.synchronize();
-                    reports.push(report)
                 }
             }
         }
@@ -284,15 +284,17 @@ impl Parser2 {
             .clone();
 
         let then_branch = self.statement()?.into();
-        
+
         let (else_branch, else_token) = if self.match_token(&Else) {
             // there is an ELSE branch
             let else_token = self.previous().clone();
             let else_branch = self.statement()?.into();
 
             (Some(else_branch), Some(else_token))
-        } else { (None, None)};
-        
+        } else {
+            (None, None)
+        };
+
         // let (else_branch, else_token) = if self.match_token(&Else) {
         //     let else_token = self.previous().clone();
         //     let else_branch = self.statement()?.into();
@@ -453,7 +455,10 @@ impl Parser2 {
             })?
             .clone();
         // let item = item_token.lexeme.clone();
-        let item = Variable { ident: item_token.lexeme.to_string(), token: item_token.clone() };
+        let item = Variable {
+            ident: item_token.lexeme.to_string(),
+            token: item_token.clone(),
+        };
 
         // this is sus?
         let in_token = self

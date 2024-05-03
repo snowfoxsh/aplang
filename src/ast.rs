@@ -492,7 +492,6 @@ pub mod pretty {
                 },
             }
         }
-        
     }
 
     impl fmt::Display for Variable {
@@ -627,7 +626,6 @@ pub mod pretty {
         }
     }
 }
-
 
 #[macro_export]
 macro_rules! BinaryOp [

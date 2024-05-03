@@ -49,7 +49,7 @@ fn test_file<P: AsRef<Path>>(path: P, parse: bool) {
     println!();
     println!();
     println!("{:}", ast.print_tree());
-    
+
     let mut interpreter = Interpreter::new(ast);
 
     let now = std::time::Instant::now();
@@ -57,7 +57,7 @@ fn test_file<P: AsRef<Path>>(path: P, parse: bool) {
     let duration = now.elapsed();
 
     results.iter().for_each(|value| println!("{value:?}"));
-    
+
     println!("runtime: {duration:?}");
     // println!("{:?}", results);
 

@@ -62,10 +62,10 @@ impl Env {
         let enclosing = self.activate().clone();
         self.venv.push(enclosing)
     }
-    
+
     pub fn merge_down(&mut self) {
         let context = self.scrape();
-        
+
         *self.activate() = context;
     }
 
@@ -97,15 +97,15 @@ impl Env {
     pub fn lookup_var(&mut self, var: &Variable) -> Result<&Value, String> {
         Ok(&self.lookup_name(var.ident.as_str())?.0)
     }
-    
+
     pub fn remove(&mut self, variable: Arc<Variable>) -> Option<(Value, Arc<Variable>)> {
         self.activate().variables.remove(&variable.ident)
     }
-    
+
     pub fn contains(&mut self, variable: Arc<Variable>) -> bool {
         self.activate().variables.contains_key(&variable.ident)
     }
-    
+
     // pub fn edit(&mut self, var: &str, value: Value) -> Option<Arc<Variable>> {
     //     // retrieve variable, if not found |-> None
     //     let (found_value, location) = self.activate().variables.get_mut(var)?;
@@ -119,9 +119,7 @@ impl Env {
 
 impl Default for Env {
     fn default() -> Self {
-        let mut env = Self {
-            venv: vec![],
-        };
+        let mut env = Self { venv: vec![] };
         // push the base context layer into env so we dont panic
         env.layer();
         env
@@ -153,9 +151,8 @@ impl Interpreter {
                     let value = self.expr(expr.deref())?;
                     values.push(value);
                 }
-                stmt => self.stmt(stmt)?
+                stmt => self.stmt(stmt)?,
             }
-
         }
         self.ast.program = program; // Restore the program
         Ok(values)
@@ -184,8 +181,8 @@ impl Interpreter {
                             self.stmt(&repeat_times.body)?;
                         }
                         Ok(())
-                    },
-                    value => Err(format!("cannot do count for value {value:?}"))
+                    }
+                    value => Err(format!("cannot do count for value {value:?}")),
                 }
             }
             Stmt::RepeatUntil(repeat_until) => {
@@ -197,42 +194,44 @@ impl Interpreter {
             Stmt::ForEach(for_each) => {
                 let values: Vec<Value> = match self.expr(&for_each.list)? {
                     Value::List(list) => list,
-                    Value::String(string) => string.chars().map(|ch| Value::String(ch.to_string())).collect(),
-                    value=> Err(format!("cannot make iterator over value {value:?}"))?
+                    Value::String(string) => string
+                        .chars()
+                        .map(|ch| Value::String(ch.to_string()))
+                        .collect(),
+                    value => Err(format!("cannot make iterator over value {value:?}"))?,
                 };
 
                 let element = Arc::new(for_each.item.clone());
-                
+
                 // if the variable already exists temperately remove it so doesn't get lost
-                let maybe_cached= self.venv.remove(element.clone());
+                let maybe_cached = self.venv.remove(element.clone());
 
                 for value in values {
                     // add the variable to the context for this block
                     self.venv.define(element.clone(), value);
                     self.stmt(&for_each.body)?; // run the block
                 }
-                
+
                 // put it back if it was originally defined
                 if let Some((cached_value, cached_variable)) = maybe_cached {
                     self.venv.define(cached_variable, cached_value)
                 }
-                
+
                 Ok(())
             }
             // Stmt::ProcDeclaration(_) => {}
             // Stmt::Return(_) => {}
-
             Stmt::Block(block) => {
                 self.venv.enclosing_layer();
 
                 for stmt in block.statements.iter() {
                     self.stmt(stmt)?
                 }
-                
+
                 self.venv.merge_down();
 
                 Ok(())
-            },
+            }
             s => {
                 println!("{s:#?}");
                 todo!()
@@ -294,7 +293,8 @@ impl Interpreter {
 
     // help: a string can be thought of a list of chars
     fn list(&mut self, list: &crate::ast::List) -> Result<Value, String> {
-        list.items.iter()
+        list.items
+            .iter()
             .map(|expr: &Expr| self.expr(expr))
             .collect::<Result<Vec<_>, _>>()
             .map(Value::List)
