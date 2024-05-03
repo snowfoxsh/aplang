@@ -284,6 +284,15 @@ impl Parser2 {
             .clone();
 
         let then_branch = self.statement()?.into();
+        
+        let (else_branch, else_token) = if self.match_token(&Else) {
+            // there is an ELSE branch
+            let else_token = self.previous().clone();
+            let else_branch = self.statement()?.into();
+
+            (Some(else_branch), Some(else_token))
+        } else { (None, None)};
+        
         // let (else_branch, else_token) = if self.match_token(&Else) {
         //     let else_token = self.previous().clone();
         //     let else_branch = self.statement()?.into();
@@ -294,9 +303,9 @@ impl Parser2 {
         Ok(Stmt::IfStmt(Arc::new(IfStmt {
             condition,
             then_branch,
-            else_branch: None,
+            else_branch,
             if_token,
-            else_token: None,
+            else_token,
         })))
     }
 
@@ -443,8 +452,10 @@ impl Parser2 {
                 )
             })?
             .clone();
-        let item = item_token.lexeme.clone();
+        // let item = item_token.lexeme.clone();
+        let item = Variable { ident: item_token.lexeme.to_string(), token: item_token.clone() };
 
+        // this is sus?
         let in_token = self
             .consume(&In, |token| {
                 // miette!("expected in token")
@@ -497,7 +508,6 @@ impl Parser2 {
                 token.span(),
                 "missing End Of Line indicator",
             )];
-
             miette!(
                 labels = labels,
                 code = "missing_eol",
@@ -531,7 +541,7 @@ impl Parser2 {
                 // }))),
                 Expr::Variable(ref variable) => Ok(Expr::Assign(
                     Assignment {
-                        target: variable.ident.clone(),
+                        target: variable.clone(),
                         value: value,
                         ident_token: variable.token.clone(),
                         arrow_token,

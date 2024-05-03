@@ -59,7 +59,7 @@ pub struct RepeatUntil {
 }
 #[derive(Debug, Clone)]
 pub struct ForEach {
-    pub item: Ident,
+    pub item: Variable,
     pub list: Expr,
     pub body: Stmt,
 
@@ -168,7 +168,7 @@ pub struct Variable {
 }
 #[derive(Debug, Clone)]
 pub struct Assignment {
-    pub target: Ident,
+    pub target: Arc<Variable>,
     pub value: Expr,
 
     pub ident_token: Token,
@@ -211,7 +211,7 @@ pub enum UnaryOp {
     Not,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LogicalOp {
     Or,
     And,
@@ -220,7 +220,7 @@ pub enum LogicalOp {
 pub mod pretty {
     use super::*;
     use std::fmt;
-    use std::fmt::Display;
+    use std::fmt::{Display, Formatter};
 
     pub trait TreePrinter {
         fn node_children(&self) -> Box<dyn Iterator<Item = Box<dyn TreePrinter>> + '_>;
@@ -492,8 +492,14 @@ pub mod pretty {
                 },
             }
         }
+        
     }
 
+    impl fmt::Display for Variable {
+        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+            write!(f, "{}", self.ident)
+        }
+    }
     //     use owo_colors::OwoColorize;
     //     use std::fmt;
 
@@ -621,3 +627,18 @@ pub mod pretty {
         }
     }
 }
+
+
+#[macro_export]
+macro_rules! BinaryOp [
+    [==] => [crate::ast::BinaryOp::EqualEqual];
+    [!=] => [crate::ast::BinaryOp::NotEqual];
+    [<] => [crate::ast::BinaryOp::Less];
+    [<=] => [crate::ast::BinaryOp::LessEqual];
+    [>] => [crate::ast::BinaryOp::Greater];
+    [>=] => [crate::ast::BinaryOp::GreaterEqual];
+    [+] => [crate::ast::BinaryOp::Plus];
+    [-] => [crate::ast::BinaryOp::Minus];
+    [*] => [crate::ast::BinaryOp::Star];
+    [/] => [crate::ast::BinaryOp::Slash];
+];

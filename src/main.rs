@@ -9,6 +9,7 @@ use lexer::Lexer;
 use crate::ast::pretty::TreePrinter;
 use crate::ast::Stmt;
 use crate::errors::display_errors;
+use crate::interpreter::Interpreter;
 use crate::parser2::Parser2;
 use crate::token::print_tokens;
 
@@ -48,6 +49,17 @@ fn test_file<P: AsRef<Path>>(path: P, parse: bool) {
     println!();
     println!();
     println!("{:}", ast.print_tree());
+    
+    let mut interpreter = Interpreter::new(ast);
+
+    let now = std::time::Instant::now();
+    let results = interpreter.interpret_debug().unwrap();
+    let duration = now.elapsed();
+
+    results.iter().for_each(|value| println!("{value:?}"));
+    
+    println!("runtime: {duration:?}");
+    // println!("{:?}", results);
 
     // println!("{}",expr.print_tree());
 }

@@ -1,7 +1,21 @@
-PROCEDURE outer() {
-    PROCEDURE inner() {
-        RETURN
-    }
+n <- 10000
 
-    inner()
+a <- 0
+b <- 1
+
+nums <- []
+
+IF (n == 1) {
+    nums <- nums + [a]
+} ELSE {
+    nums <- nums + [a]
+    REPEAT n - 1 TIMES {
+        nums <- nums + [b]
+        
+        temp <- b
+        b <- a + b
+        a <- temp
+    }
 }
+
+nums
