@@ -1,8 +1,7 @@
-x <- "x"
 
-IF (x == "x") {
-    y <- "y"
+
+PROCEDURE test() {
+    x <- 0
 }
 
-x
-y
+

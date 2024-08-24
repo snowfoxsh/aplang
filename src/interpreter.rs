@@ -3,7 +3,7 @@ use crate::ast::BinaryOp::{
 };
 use crate::ast::Expr::List;
 use crate::ast::LogicalOp::Or;
-use crate::ast::{Ast, Binary, BinaryOp, Expr, Literal, LogicalOp, ProcDeclaration, Stmt, Unary, UnaryOp, Variable};
+use crate::ast::{Ast, Binary, BinaryOp, Expr, Literal, LogicalOp, ProcCall, ProcDeclaration, Stmt, Unary, UnaryOp, Variable};
 use crate::interpreter::Value::{Bool, Null};
 use std::cmp::PartialEq;
 use std::collections::HashMap;
@@ -26,9 +26,11 @@ pub enum Value {
 }
 
 pub trait Callable {
-    fn call(args: &[Value]) -> Option<Value>;
-    fn arity() -> u8;
+    fn call(&self, args: &[Value]) -> Result<Value, String>;
+    fn arity(&self) -> u8;
 }
+
+
 
 
 // context structure, contains variables
@@ -44,10 +46,11 @@ pub trait Callable {
 // - lookup variable
 // do the same for functions
 struct Env {
-    functions: HashMap<String, (Value, Option<Arc<ProcDeclaration>>)>,
-    //                |^^^^^^  |^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^|> Maybe pointer to function def
-    //                |        |                                      If None: it is native function
-    //                |        |> Value of the
+    functions: HashMap<String, (Box<dyn Callable>, Option<Arc<ProcDeclaration>>)>,
+    //                |^^^^^^  |^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^|> Maybe pointer to function def
+    //                |        |                                                  If None: it is native function
+    //                |        |> Pointer to the function
+    //                |> Function name (symbol)
     venv: Vec<Context>,
 }
 
@@ -117,6 +120,10 @@ impl Env {
     /// looks up the variable by comparing the entire variable object
     pub fn lookup_var(&mut self, var: &Variable) -> Result<&Value, String> {
         Ok(&self.lookup_name(var.ident.as_str())?.0)
+    }
+
+    pub fn lookup_function(&mut self, function_name: String) -> Result<&(Box<dyn Callable>, Option<Arc<ProcDeclaration>>), String> {
+        self.functions.get(&function_name).ok_or("could not find function".to_string())
     }
 
     /// removes a variable
@@ -242,7 +249,10 @@ impl Interpreter {
 
                 Ok(())
             }
-            // Stmt::ProcDeclaration(_) => {}
+            Stmt::ProcDeclaration(proc_dec) => {
+                // create a new non-native aplang function
+                todo!()
+            },
             // Stmt::Return(_) => {}
             Stmt::Block(block) => {
                 self.venv.create_nested_layer();
@@ -284,7 +294,9 @@ impl Interpreter {
             Literal(lit) => Ok(Self::literal(&lit.value)),
             Binary(binary) => self.binary(binary.as_ref()),
             Unary(unary) => self.unary(unary.as_ref()),
-            ProcCall(_) => todo!(),
+            ProcCall(proc) => {
+                self.call(proc.as_ref())
+            },
             Access(_) => todo!(),
             List(list) => self.list(list.as_ref()),
             Variable(v) => self.venv.lookup_name(v.ident.clone().as_str()).cloned().map(|(value, _)| value),
@@ -311,6 +323,34 @@ impl Interpreter {
         };
         // println!("{value:?}");
         value
+    }
+
+    fn call(&mut self, proc: &ProcCall) -> Result<Value, String> {
+        // todo: look into callee expr
+
+        // run the argument expressions before the actual call
+        let argument_evaluations: Result<Vec<_>, _> = proc.arguments // todo: figure out why this type conversion works
+            .iter()
+            .map(|arg| self.expr(arg)) // todo write a better error message here
+            .collect();
+
+        
+        let Ok(argument_evaluations) = argument_evaluations else {
+            // todo: write better error message -- use individual expr source pointers
+            return Err(
+                "could not evaluate arguments".to_string()
+            )
+        };
+
+        let (callable , source_pointer ) = self.venv.lookup_function(proc.ident.clone())?;
+
+        // todo make the source pointer error message better
+
+        if callable.arity() as usize != argument_evaluations.len() {
+            return Err("function called with incorrect number of args".to_string()) // todo make this error message better -- use source proc pointer
+        }
+
+        callable.call(argument_evaluations.as_ref())
     }
 
     // help: a string can be thought of a list of chars
