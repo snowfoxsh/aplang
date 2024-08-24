@@ -7,9 +7,10 @@ use crate::ast::{Ast, Binary, BinaryOp, Expr, Literal, LogicalOp, ProcCall, Proc
 use crate::interpreter::Value::{Bool, Null};
 use std::cmp::PartialEq;
 use std::collections::HashMap;
-use std::fmt::format;
+use std::fmt::{format};
 use std::mem;
 use std::ops::Deref;
+use std::rc::Rc;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
@@ -26,12 +27,45 @@ pub enum Value {
 }
 
 pub trait Callable {
-    fn call(&self, args: &[Value]) -> Result<Value, String>;
+    fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> Result<Value, String>;
     fn arity(&self) -> u8;
 }
 
+pub struct Procedure {
+    pub name: String,
+    pub params: Vec<Variable>,
+    pub body: Vec<Stmt>,
+}
 
+impl Callable for Procedure {
+    fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> Result<Value, String> {
+        // todo: consider allowing variables to be taken into context
+        // ignore the global env
+        interpreter.venv.initialize_empty_scope();
+        
+        // copy in the arguments
+        // assign them to their appropirate name parameter
+        self.params.iter().zip(args.iter().cloned())
+            .for_each(|(param, arg)| {
+                interpreter.venv.define(Arc::new(param.clone()), arg)
+                // (param.clone(), arg)
+            });
+        
+        // interpreter.stmt()
+        self.body.iter().for_each(|stmt| {
+            match interpreter.stmt(&stmt) {
+                Ok() => {}
+                Err(_) => {}
+            }
+        });
+        
+        todo!()
+    }
 
+    fn arity(&self) -> u8 {
+        self.params.len().try_into().unwrap()
+    }
+}
 
 // context structure, contains variables
 //
@@ -45,8 +79,9 @@ pub trait Callable {
 // - update variable
 // - lookup variable
 // do the same for functions
+#[derive(Clone)]
 struct Env {
-    functions: HashMap<String, (Box<dyn Callable>, Option<Arc<ProcDeclaration>>)>,
+    functions: HashMap<String, (Rc<dyn Callable>, Option<Arc<ProcDeclaration>>)>,
     //                |^^^^^^  |^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^|> Maybe pointer to function def
     //                |        |                                                  If None: it is native function
     //                |        |> Pointer to the function
@@ -107,7 +142,7 @@ impl Env {
             .variables
             .insert(variable.ident.clone(), (value, variable));
     }
-
+    
     /// look up a variable based on the symbol
     pub fn lookup_name(&mut self, var: &str) -> Result<&(Value, Arc<Variable>), String> {
         self.activate()
@@ -122,9 +157,12 @@ impl Env {
         Ok(&self.lookup_name(var.ident.as_str())?.0)
     }
 
-    pub fn lookup_function(&mut self, function_name: String) -> Result<&(Box<dyn Callable>, Option<Arc<ProcDeclaration>>), String> {
-        self.functions.get(&function_name).ok_or("could not find function".to_string())
+    pub fn lookup_function(&self, function_name: String) -> Result<Rc<dyn Callable>, String> {
+        let (a, b) = self.functions.get(&function_name).ok_or("could not find function".to_string())?.clone();
+        Ok(a)
     }
+
+    // pub fn create_function(&mut self, function_name: String, )
 
     /// removes a variable
     pub fn remove(&mut self, variable: Arc<Variable>) -> Option<(Value, Arc<Variable>)> {
@@ -156,9 +194,11 @@ impl Default for Env {
     }
 }
 
+#[derive(Clone)]
 pub struct Interpreter {
     venv: Env,
     ast: Ast,
+    ret_val: Option<Value>,
 }
 
 impl Interpreter {
@@ -166,6 +206,7 @@ impl Interpreter {
         Self {
             venv: Env::default(),
             ast,
+            ret_val: None,
         }
     }
 
@@ -251,6 +292,9 @@ impl Interpreter {
             }
             Stmt::ProcDeclaration(proc_dec) => {
                 // create a new non-native aplang function
+
+                // self.venv.
+
                 todo!()
             },
             // Stmt::Return(_) => {}
@@ -334,7 +378,6 @@ impl Interpreter {
             .map(|arg| self.expr(arg)) // todo write a better error message here
             .collect();
 
-        
         let Ok(argument_evaluations) = argument_evaluations else {
             // todo: write better error message -- use individual expr source pointers
             return Err(
@@ -342,7 +385,7 @@ impl Interpreter {
             )
         };
 
-        let (callable , source_pointer ) = self.venv.lookup_function(proc.ident.clone())?;
+        let callable = self.venv.lookup_function(proc.ident.clone())?;
 
         // todo make the source pointer error message better
 
@@ -350,7 +393,7 @@ impl Interpreter {
             return Err("function called with incorrect number of args".to_string()) // todo make this error message better -- use source proc pointer
         }
 
-        callable.call(argument_evaluations.as_ref())
+        callable.call(self, argument_evaluations.as_ref())
     }
 
     // help: a string can be thought of a list of chars

@@ -1,3 +1,4 @@
+use std::hash::{Hash, Hasher};
 use crate::token::Token;
 use std::ops::Deref;
 use std::sync::Arc;
@@ -165,6 +166,21 @@ pub struct Variable {
     pub ident: String,
     pub token: Token,
 }
+impl Hash for Variable {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.ident.hash(state);
+    }
+}
+
+impl PartialEq for Variable {
+    fn eq(&self, other: &Self) -> bool {
+        self.ident.eq(&other.ident)
+    }
+}
+
+impl Eq for Variable {}
+
+
 #[derive(Debug, Clone)]
 pub struct Assignment {
     pub target: Arc<Variable>,
