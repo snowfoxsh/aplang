@@ -3,7 +3,7 @@ use crate::ast::BinaryOp::{
 };
 use crate::ast::Expr::List;
 use crate::ast::LogicalOp::Or;
-use crate::ast::{Ast, Binary, BinaryOp, Expr, Literal, LogicalOp, Stmt, Unary, UnaryOp, Variable};
+use crate::ast::{Ast, Binary, BinaryOp, Expr, Literal, LogicalOp, ProcDeclaration, Stmt, Unary, UnaryOp, Variable};
 use crate::interpreter::Value::{Bool, Null};
 use std::cmp::PartialEq;
 use std::collections::HashMap;
@@ -25,6 +25,12 @@ pub enum Value {
     Function(),
 }
 
+pub trait Callable {
+    fn call(args: &[Value]) -> Option<Value>;
+    fn arity() -> u8;
+}
+
+
 // context structure, contains variables
 //
 // behaviour:
@@ -38,6 +44,10 @@ pub enum Value {
 // - lookup variable
 // do the same for functions
 struct Env {
+    functions: HashMap<String, (Value, Option<Arc<ProcDeclaration>>)>,
+    //                |^^^^^^  |^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^|> Maybe pointer to function def
+    //                |        |                                      If None: it is native function
+    //                |        |> Value of the
     venv: Vec<Context>,
 }
 
@@ -54,32 +64,40 @@ struct Context {
 }
 
 impl Env {
-    pub fn layer(&mut self) {
+    /// used for creating function (or the base env)
+    pub fn initialize_empty_scope(&mut self) {
         self.venv.push(Context::default())
     }
 
-    pub fn enclosing_layer(&mut self) {
+    /// crates a new block scope.
+    /// Used for something like a For Loop, or an If Stmt
+    pub fn create_nested_layer(&mut self) {
         let enclosing = self.activate().clone();
         self.venv.push(enclosing)
     }
 
-    pub fn merge_down(&mut self) {
+    /// replace the previous layer with the current layer.
+    pub fn flatten_nested_layer(&mut self) {
         let context = self.scrape();
 
         *self.activate() = context;
     }
 
+    /// pops of the current layer of the venv
     pub fn scrape(&mut self) -> Context {
         self.venv
             .pop()
             .expect("attempted to remove context but failed")
     }
 
+    /// gets mutable ref to the current layer
     fn activate(&mut self) -> &mut Context {
         let len = self.venv.len();
         &mut self.venv[len - 1]
     }
 
+
+    /// creates a variable with some value
     pub fn define(&mut self, variable: Arc<Variable>, value: Value) {
         // add the variable into the context
         self.activate()
@@ -87,6 +105,7 @@ impl Env {
             .insert(variable.ident.clone(), (value, variable));
     }
 
+    /// look up a variable based on the symbol
     pub fn lookup_name(&mut self, var: &str) -> Result<&(Value, Arc<Variable>), String> {
         self.activate()
             .variables
@@ -94,10 +113,13 @@ impl Env {
             .ok_or("could not find variable".to_string())
     }
 
+
+    /// looks up the variable by comparing the entire variable object
     pub fn lookup_var(&mut self, var: &Variable) -> Result<&Value, String> {
         Ok(&self.lookup_name(var.ident.as_str())?.0)
     }
 
+    /// removes a variable
     pub fn remove(&mut self, variable: Arc<Variable>) -> Option<(Value, Arc<Variable>)> {
         self.activate().variables.remove(&variable.ident)
     }
@@ -119,9 +141,10 @@ impl Env {
 
 impl Default for Env {
     fn default() -> Self {
-        let mut env = Self { venv: vec![] };
+        let mut env = Self { functions: Default::default(), venv: vec![] };
+        // todo: push the std native function on here
         // push the base context layer into env so we dont panic
-        env.layer();
+        env.initialize_empty_scope();
         env
     }
 }
@@ -222,13 +245,13 @@ impl Interpreter {
             // Stmt::ProcDeclaration(_) => {}
             // Stmt::Return(_) => {}
             Stmt::Block(block) => {
-                self.venv.enclosing_layer();
+                self.venv.create_nested_layer();
 
                 for stmt in block.statements.iter() {
                     self.stmt(stmt)?
                 }
 
-                self.venv.merge_down();
+                self.venv.flatten_nested_layer();
 
                 Ok(())
             }
@@ -264,7 +287,7 @@ impl Interpreter {
             ProcCall(_) => todo!(),
             Access(_) => todo!(),
             List(list) => self.list(list.as_ref()),
-            Variable(v) => self.venv.lookup_var(v.as_ref()).cloned(),
+            Variable(v) => self.venv.lookup_name(v.ident.clone().as_str()).cloned().map(|(value, _)| value),
             Assign(assignment) => {
                 // assign to variable
                 let result = self.expr(&assignment.value)?;
@@ -382,4 +405,16 @@ impl Interpreter {
             _ => true,
         }
     }
+}
+
+//
+//
+// do nothing
+fn by_value(mut thing: i32) {
+    thing += 1;
+}
+
+//
+fn by_ref(thing: &mut i32) {
+    *thing += 1;
 }

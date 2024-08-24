@@ -21,7 +21,7 @@ mod parser2;
 mod token;
 
 fn main() -> Result<()> {
-    test_file("./examples.ap/nested.ap", true);
+    test_file("./examples.ap/scope.ap", true);
 
     Ok(())
 }
