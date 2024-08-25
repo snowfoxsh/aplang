@@ -72,6 +72,24 @@ impl Callable for Procedure {
     }
 }
 
+pub struct NativeProcedure {
+    pub name: String,
+    pub arity: u8,
+    pub callable: fn(&mut Interpreter, &[Value]) -> Result<Value, String>
+}
+
+impl Callable for NativeProcedure {
+    fn arity(&self) -> u8 {
+        self.arity
+    }
+
+    fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> Result<Value, String> {
+        (self.callable)(interpreter, args)
+    }
+}
+
+
+
 // context structure, contains variables
 //
 // behaviour:
@@ -85,13 +103,13 @@ impl Callable for Procedure {
 // - lookup variable
 // do the same for functions
 #[derive(Clone)]
-struct Env {
-    functions: HashMap<String, (Rc<dyn Callable>, Option<Arc<ProcDeclaration>>)>,
+pub struct Env {
+    pub functions: HashMap<String, (Rc<dyn Callable>, Option<Arc<ProcDeclaration>>)>,
     //                |^^^^^^  |^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^|> Maybe pointer to function def
     //                |        |                                                  If None: it is native function
     //                |        |> Pointer to the function
     //                |> Function name (symbol)
-    venv: Vec<Context>,
+    pub venv: Vec<Context>,
 }
 
 enum NativeFunction {}
@@ -195,8 +213,10 @@ impl Default for Env {
         // todo: push the std native function on here
         // push the base context layer into env so we dont panic
         env.initialize_empty_scope();
+        env.inject_std();
         env
     }
+    
 }
 
 #[derive(Clone)]

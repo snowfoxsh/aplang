@@ -19,6 +19,7 @@ mod interpreter;
 mod lexer;
 mod parser2;
 mod token;
+mod aplang_std;
 
 fn main() -> Result<()> {
     test_file("./examples.ap/scope.ap", true);
