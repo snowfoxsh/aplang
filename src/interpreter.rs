@@ -17,10 +17,10 @@ use std::sync::Arc;
 // variable value types
 #[derive(Clone, Debug)]
 pub enum Value {
+    Null,
     Number(f64),
     String(String),
     Bool(bool),
-    Null,
     List(Vec<Value>),
     NativeFunction(),
     Function(),
