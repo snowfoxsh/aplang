@@ -1,7 +1,7 @@
-
-
 PROCEDURE test() {
     x <- 0
 }
+
+test()
 
 

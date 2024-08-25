@@ -34,11 +34,14 @@ pub trait Callable {
 pub struct Procedure {
     pub name: String,
     pub params: Vec<Variable>,
-    pub body: Vec<Stmt>,
+    pub body: Stmt,
 }
 
 impl Callable for Procedure {
     fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> Result<Value, String> {
+        // save the retval
+        let cached_retval = interpreter.ret_val.clone();
+        
         // todo: consider allowing variables to be taken into context
         // ignore the global env
         interpreter.venv.initialize_empty_scope();
@@ -51,15 +54,17 @@ impl Callable for Procedure {
                 // (param.clone(), arg)
             });
         
-        // interpreter.stmt()
-        self.body.iter().for_each(|stmt| {
-            match interpreter.stmt(&stmt) {
-                Ok() => {}
-                Err(_) => {}
-            }
-        });
+        // execute the function
+        interpreter.stmt(&self.body)?;
         
-        todo!()
+        let retval = interpreter.ret_val.clone();
+        // todo implement backtrace
+        interpreter.ret_val = cached_retval;
+        
+        match retval {
+            None => Ok(Value::Null),
+            Some(value) =>Ok(value),
+        }
     }
 
     fn arity(&self) -> u8 {
@@ -292,12 +297,29 @@ impl Interpreter {
             }
             Stmt::ProcDeclaration(proc_dec) => {
                 // create a new non-native aplang function
-
-                // self.venv.
-
-                todo!()
+                
+                let procedure = Procedure {
+                    name: proc_dec.name.to_string(),
+                    params: proc_dec.params.clone(),
+                    body: proc_dec.body.clone(),
+                };
+                
+                self.venv.functions.insert(procedure.name.clone(), (Rc::new(procedure), Some(proc_dec.clone())));
+                
+                Ok(())
             },
-            // Stmt::Return(_) => {}
+            Stmt::Return(ret_val) => {
+                // deal with the return value inside the procedure...
+                
+                self.ret_val = match &ret_val.data {
+                    None => Some(Value::Null),
+                    Some(expr) => {
+                        Some(self.expr(expr)?)
+                    }
+                };
+                
+                Ok(())
+            }
             Stmt::Block(block) => {
                 self.venv.create_nested_layer();
 
