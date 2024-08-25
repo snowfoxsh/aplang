@@ -174,7 +174,7 @@ impl Parser2 {
         let rp_token = self
             .consume(&RightParen, |token| {
                 let labels = vec![LabeledSpan::at(token.span(), "expected a `)`")];
-
+                
                 miette!(
                     labels = labels,
                     code = "missing_rp",
@@ -289,7 +289,7 @@ impl Parser2 {
         if !self.in_function_scope {
             // todo make this error better
             return Err(miette!{
-                "todo: not allowed to return"
+                "RETURN can only be called in a PROCEDURE"
             })
         }
 

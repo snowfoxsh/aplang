@@ -1,4 +1,6 @@
-PROCEDURE add2(a, b) {
-    result <- a + b
-    RETURN result
-}
+list <- [1, 2, 4];
+
+INSERT(list, 3, 3);
+APPEND(list, 5);
+
+list

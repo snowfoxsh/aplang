@@ -11,7 +11,7 @@ macro_rules! std_function {
                 name: String::from(stringify!($name)),
                 arity: arity!($($arg)*),
                 callable: |_interpreter: &mut Interpreter,  args: &[Value]| {
-                    let mut iter = args.into_iter(); 
+                    let mut iter = args.into_iter();
                     $( let $arg = iter.next().unwrap();)*
 
                     $($body)*
@@ -31,30 +31,30 @@ macro_rules! arity {
 }
 
 macro_rules! unwrap_arg_type {
-    ($value:expr => Value::Null) => {
+    ($value:ident => Value::Null) => {
         let $value = match $value {
             Value::Null => Value::Null,
             // todo make this a better message
             _ => return Err("Argument cannot be cast into null".to_string())
         }
     };
-    ($value:expr => Value::Number) => {
-        let Value::Number($value) = $value.clone() else {
+    ($value:ident => Value::Number) => {
+        let Value::Number(mut $value) = $value.clone() else {
             return Err(format!("Argument Value ({}) is not of type Number", stringify!($value)));
         };
     };
     ($value:ident => Value::String) => {
-        let Value::String($value) = $value.clone() else {
+        let Value::String(mut $value) = $value.clone() else {
             return Err(format!("Argument Value ({}) is not of type String", stringify!($value)));
         };
     };
-    ($value:expr => Value::Bool) => {
-        let Value::Bool($value) = $value.clone() else {
+    ($value:ident => Value::Bool) => {
+        let Value::Bool(mut $value) = $value.clone() else {
             return Err(format!("Argument Value ({}) is not of type Bool", stringify!($value)));
         };
     };
-    ($value:expr => Value::List) => {
-        let Value::List($value) = $value.clone() else {
+    ($value:ident => Value::List) => {
+        let Value::List(mut $value) = $value.clone() else {
             return Err(format!("Argument Value ({}) is not of type List<Value>", stringify!($value)));
         };
     };
@@ -70,14 +70,31 @@ macro_rules! unwrap_arg_type {
 
 impl Env {
     pub(crate) fn inject_std(&mut self) {
+        // std_function!(self.functions => fn test(hello: Value) {
+        //     unwrap_arg_type!(hello => Value::String);
 
-        std_function!(self.functions => fn test(hello: Value) {
-            unwrap_arg_type!(hello => Value::String);
+        //
+        //     return Ok(Value::String(hello))
+        //
+        // });
+        //
 
-            return Ok(Value::String(hello))
+        std_function!(self.functions => fn INSERT(list: Value, i: Value, value: Value) {
+            unwrap_arg_type!(list => Value::List);
+            unwrap_arg_type!(i => Value::Number);
+            
+            // add one because indexed at one
+            list.insert(i as usize - 1, value.clone());
 
+            return Ok(Value::List(list))
+        }) ;
+
+        std_function!(self.functions => fn APPEND(list: Value, value: Value) {
+            unwrap_arg_type!(list => Value::List);
+            list.push(value.clone());
+            
+            return Ok(Value::List(list))
         });
-        
         self.functions.insert(
             "TIME".to_string(),
             (Rc::new(NativeProcedure {

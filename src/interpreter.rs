@@ -14,13 +14,15 @@ use std::rc::Rc;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
+
+
 // variable value types
 #[derive(Clone, Debug)]
 pub enum Value {
     Null,
     Number(f64),
-    String(String),
     Bool(bool),
+    String(String),
     List(Vec<Value>),
     NativeFunction(),
     Function(),
