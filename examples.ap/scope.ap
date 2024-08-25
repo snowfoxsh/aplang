@@ -1,7 +1,4 @@
-PROCEDURE test() {
-    x <- 0
+PROCEDURE add2(a, b) {
+    result <- a + b
+    RETURN result
 }
-
-test()
-
-

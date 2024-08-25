@@ -10,6 +10,8 @@ REPEAT n TIMES {
     DISPLAY(n)
 }
 
+x <- x
+
 PROCEDURE myProc() {
     DISPLAY(a)
 }

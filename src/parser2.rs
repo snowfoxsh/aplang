@@ -185,9 +185,14 @@ impl Parser2 {
             })?
             .clone();
 
-        let function_scope_state = self.in_function_scope;
-        let body = self.statement()?.into();
-        self.in_function_scope = function_scope_state;
+        // cache previous function state and set to true temporarily, since we are in a 
+        let function_scope_state_cache = self.in_function_scope;
+        self.in_function_scope = true;
+        
+        // parse the body of the function
+        let body = self.statement()?;
+        // restore the previous function scope state
+        self.in_function_scope = function_scope_state_cache;
 
         Ok(Stmt::ProcDeclaration(Arc::new(ProcDeclaration {
             name,
@@ -282,6 +287,7 @@ impl Parser2 {
 
     fn return_statement(&mut self, return_token: Token) -> miette::Result<Stmt> {
         if !self.in_function_scope {
+            // todo make this error better
             return Err(miette!{
                 "todo: not allowed to return"
             })
