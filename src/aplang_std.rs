@@ -1,10 +1,12 @@
 use std::fmt::format;
 use std::fs;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
+use std::io::Write;
 use std::ops::Deref;
 use std::path::Path;
 use std::rc::Rc;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use owo_colors::OwoColorize;
 use crate::interpreter::{Env, Interpreter, NativeProcedure, Value};
 use crate::interpreter::Value::Bool;
 
@@ -155,6 +157,34 @@ impl Env {
             }
         });
 
+        std_function!(self.functions => fn FILE_APPEND(file_path: Value, contents: Value) {
+            unwrap_arg_type!(file_path => Value::String);
 
+            let Ok(mut file) = OpenOptions::new().write(true).append(true).open(file_path) else {
+                return Ok(Value::Bool(false))
+            };
+
+            if let Err(e) = write!(file, "{}" , contents) {
+                return Ok(Value::Bool(false))
+            };
+
+            return Ok(Value::Bool(true))
+        });
+
+        std_function!(self.functions => fn FILE_OVERWRITE(file_path: Value, contents: Value) {
+            unwrap_arg_type!(file_path => Value::String);
+
+            let Ok(mut file) = OpenOptions::new().write(true).truncate(true).open(file_path) else {
+                return Ok(Value::Bool(false))
+            };
+
+            if let Err(e) = write!(file, "{}", contents){
+                return Ok(Value::Bool(false))
+            };
+
+            return Ok(Value::Bool(true))
+        });
+        // todo implement directory functions
+        // todo: sort function
     }
 }

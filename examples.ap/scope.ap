@@ -1,3 +1,0 @@
-i <- [1, 2, 3]
-INSERT(i, 2, 10)
-DISPLAY(i)
