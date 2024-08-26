@@ -1,3 +1,4 @@
+use std::fmt::format;
 use std::ops::Deref;
 use std::rc::Rc;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
@@ -60,38 +61,27 @@ macro_rules! unwrap_arg_type {
     };
 }
 
-
-
-// count!(hello: Value);
-
-// fn test() {
-//     count!(hello: Value);
-// }
-
 impl Env {
     pub(crate) fn inject_std(&mut self) {
-        // std_function!(self.functions => fn test(hello: Value) {
-        //     unwrap_arg_type!(hello => Value::String);
+        std_function!(self.functions => fn DISPLAY(value: Value) {
+            println!("PRINT OUTPUT: {}", value);
 
-        //
-        //     return Ok(Value::String(hello))
-        //
-        // });
-        //
+            return Ok(Value::Null)
+        });
 
         std_function!(self.functions => fn INSERT(list: Value, i: Value, value: Value) {
             unwrap_arg_type!(list => Value::List);
             unwrap_arg_type!(i => Value::Number);
             
             // add one because indexed at one
-            list.insert(i as usize - 1, value.clone());
+            list.borrow_mut().insert(i as usize - 1, value.clone());
 
             return Ok(Value::List(list))
         }) ;
 
         std_function!(self.functions => fn APPEND(list: Value, value: Value) {
             unwrap_arg_type!(list => Value::List);
-            list.push(value.clone());
+            list.borrow_mut().push(value.clone());
             
             return Ok(Value::List(list))
         });

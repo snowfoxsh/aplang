@@ -1,19 +1,21 @@
+use std::cell::{Ref, RefCell};
 use crate::ast::BinaryOp::{
     EqualEqual, Greater, GreaterEqual, Less, LessEqual, Minus, NotEqual, Plus, Star,
 };
 use crate::ast::Expr::List;
 use crate::ast::LogicalOp::Or;
 use crate::ast::{Ast, Binary, BinaryOp, Expr, Literal, LogicalOp, ProcCall, ProcDeclaration, Stmt, Unary, UnaryOp, Variable};
-use crate::interpreter::Value::{Bool, Null};
+use crate::interpreter::Value::{Bool, Null, Number};
 use std::cmp::PartialEq;
 use std::collections::HashMap;
-use std::fmt::{format};
+use std::fmt::{Display, format, Formatter};
 use std::mem;
 use std::ops::Deref;
+use std::ptr::write;
 use std::rc::Rc;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-
+use owo_colors::OwoColorize;
 
 
 // variable value types
@@ -23,9 +25,41 @@ pub enum Value {
     Number(f64),
     Bool(bool),
     String(String),
-    List(Vec<Value>),
+    List(Rc<RefCell<Vec<Value>>>),
     NativeFunction(),
     Function(),
+}
+
+impl Display for Value {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+                Value::Null => write!(f, "NULL"),
+                Value::List(l) => {
+                    // Borrow the list to access its elements
+                    let list = l.borrow();
+
+                    // Begin the list with an opening bracket
+                    write!(f, "[")?;
+
+                    // Iterate over the elements, formatting each one
+                    for (i, item) in list.iter().enumerate() {
+                        if i > 0 {
+                            // Add a comma and space before all elements except the first
+                            write!(f, ", ")?;
+                        }
+                        // Write the current element using its Display implementation
+                        write!(f, "{}", item)?;
+                    }
+
+                    // Close the list with a closing bracket
+                    write!(f, "]")
+                }
+                Value::String(s) => write!(f, "{s}"),
+                Value::Number(v) => write!(f, "{v}"),
+                Value::Bool(b) => write!(f, "{b}", ),
+                _ => { write!(f, "FUNCTION")}
+        }
+    }
 }
 
 pub trait Callable {
@@ -43,17 +77,16 @@ impl Callable for Procedure {
     fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> Result<Value, String> {
         // save the retval
         let cached_retval = interpreter.ret_val.clone();
-        
+
         // todo: consider allowing variables to be taken into context
         // ignore the global env
         interpreter.venv.initialize_empty_scope();
-        
+
         // copy in the arguments
         // assign them to their appropirate name parameter
         self.params.iter().zip(args.iter().cloned())
             .for_each(|(param, arg)| {
                 interpreter.venv.define(Arc::new(param.clone()), arg)
-                // (param.clone(), arg)
             });
         
         // execute the function
@@ -62,6 +95,9 @@ impl Callable for Procedure {
         let retval = interpreter.ret_val.clone();
         // todo implement backtrace
         interpreter.ret_val = cached_retval;
+
+        // restore the previous env
+        interpreter.venv.scrape();
         
         match retval {
             None => Ok(Value::Null),
@@ -224,6 +260,8 @@ impl Default for Env {
 #[derive(Clone)]
 pub struct Interpreter {
     venv: Env,
+    lists: HashMap<u64, Vec<Value>>,
+    strings: HashMap<u64, String>,
     ast: Ast,
     ret_val: Option<Value>,
 }
@@ -231,6 +269,8 @@ pub struct Interpreter {
 impl Interpreter {
     pub fn new(ast: Ast) -> Self {
         Self {
+            lists: Default::default(),
+            strings: Default::default(),
             venv: Env::default(),
             ast,
             ret_val: None,
@@ -290,12 +330,12 @@ impl Interpreter {
                 Ok(())
             }
             Stmt::ForEach(for_each) => {
-                let values: Vec<Value> = match self.expr(&for_each.list)? {
-                    Value::List(list) => list,
-                    Value::String(string) => string
+                let mut values = match self.expr(&for_each.list)? {
+                    Value::List(mut list) => list,
+                    Value::String(string) => Rc::new(RefCell::new(string
                         .chars()
                         .map(|ch| Value::String(ch.to_string()))
-                        .collect(),
+                        .collect::<Vec<Value>>())),
                     value => Err(format!("cannot make iterator over value {value:?}"))?,
                 };
 
@@ -304,10 +344,14 @@ impl Interpreter {
                 // if the variable already exists temperately remove it so doesn't get lost
                 let maybe_cached = self.venv.remove(element.clone());
 
-                for value in values {
-                    // add the variable to the context for this block
-                    self.venv.define(element.clone(), value);
-                    self.stmt(&for_each.body)?; // run the block
+                let len = values.borrow().len();
+                for i in 0..len {
+                    // inserting temporary value into env
+                    self.venv.define(element.clone(), values.borrow()[i].clone());
+                    // execute body
+                    self.stmt(&for_each.body)?;
+                    // get temp val out and change it in vec
+                    (*values.borrow_mut())[i] = self.venv.remove(element.clone()).unwrap().0;
                 }
 
                 // put it back if it was originally defined
@@ -353,9 +397,6 @@ impl Interpreter {
 
                 Ok(())
             }
-            s => {
-                todo!()
-            }
         }
     }
 
@@ -389,9 +430,20 @@ impl Interpreter {
             List(list) => self.list(list.as_ref()),
             Variable(v) => self.venv.lookup_name(v.ident.clone().as_str()).cloned().map(|(value, _)| value),
             Assign(assignment) => {
-                // assign to variable
+                // execute the expression
                 let result = self.expr(&assignment.value)?;
-                self.venv.define(assignment.target.clone(), result.clone());
+                match &result {
+                    Value::List(list) => {
+                        match self.venv.lookup_var(&assignment.target.clone()) {
+                            Ok(Value::List(target_list)) => {
+                                target_list.swap(list);
+                            },
+                            _ => self.venv.define(assignment.target.clone(), result.clone()),
+                        }
+                    }
+                    _ => self.venv.define(assignment.target.clone(), result.clone()),
+                }
+
                 Ok(result)
             }
             Set(set) => todo!(),
@@ -445,8 +497,8 @@ impl Interpreter {
         list.items
             .iter()
             .map(|expr: &Expr| self.expr(expr))
-            .collect::<Result<Vec<_>, _>>()
-            .map(Value::List)
+            .collect::<Result<Vec<Value>, String>>()
+            .map(|x|Value::List(RefCell::new(x).into()))
     }
 
     fn binary(&mut self, node: &Binary) -> Result<Value, String> {
@@ -474,7 +526,10 @@ impl Interpreter {
             }
             (String(a), Plus, String(b)) => Ok(String(format!("{a}{b}"))),
             (List(a), Plus, List(b)) => {
-                Ok(List(a.iter().cloned().chain(b.iter().cloned()).collect()))
+                // adding two lists
+                // todo: consider using try_borrow?
+                let new_list: Vec<_> = a.borrow().iter().cloned().chain(b.borrow().iter().cloned()).collect();
+                Ok(List(RefCell::new(new_list).into()))
             }
             _ => Err("invalid operands in binary op not equal".to_string()),
         }
@@ -532,6 +587,7 @@ impl Interpreter {
             _ => true,
         }
     }
+
 }
 
 //
