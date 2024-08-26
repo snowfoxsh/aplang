@@ -1,8 +1,12 @@
 use std::fmt::format;
+use std::fs;
+use std::fs::File;
 use std::ops::Deref;
+use std::path::Path;
 use std::rc::Rc;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use crate::interpreter::{Env, Interpreter, NativeProcedure, Value};
+use crate::interpreter::Value::Bool;
 
 macro_rules! std_function {
     ($location:expr => fn $name:ident ($($arg:ident: Value),*) {$($body:tt)*}) => {
@@ -76,15 +80,35 @@ impl Env {
             // add one because indexed at one
             list.borrow_mut().insert(i as usize - 1, value.clone());
 
-            return Ok(Value::List(list))
-        }) ;
+            return Ok(Value::Null)
+        });
+
+        std_function!(self.functions => fn REMOVE(list: Value, i: Value) {
+            unwrap_arg_type!(list => Value::List);
+            unwrap_arg_type!(i => Value::Number);
+
+            // todo instead of panic with default hook make this return a nice error
+            let poped = list.borrow_mut().remove(i as usize - 1);
+
+            return Ok(poped);
+        });
+
+        std_function!(self.functions => fn LENGTH(list: Value) {
+            unwrap_arg_type!(list => Value::List);
+
+            let len = list.borrow().len() as f64;
+
+            return Ok(Value::Number(len))
+        });
 
         std_function!(self.functions => fn APPEND(list: Value, value: Value) {
             unwrap_arg_type!(list => Value::List);
             list.borrow_mut().push(value.clone());
             
-            return Ok(Value::List(list))
+            return Ok(Value::Null)
         });
+
+        /// TIME related functions
         self.functions.insert(
             "TIME".to_string(),
             (Rc::new(NativeProcedure {
@@ -97,5 +121,40 @@ impl Env {
                 },
             }), None),
         );
+
+        /// FILE SYSTEM INTERACTIONS
+        std_function!(self.functions => fn PATH_EXISTS(path: Value) {
+            unwrap_arg_type!(path => Value::String);
+
+            let exists = Path::new(&path).exists();
+
+            return Ok(Value::Bool(exists))
+        });
+
+        // returns a of if it was sucessful or not
+        std_function!(self.functions => fn FILE_CREATE(file_path: Value) {
+            unwrap_arg_type!(file_path => Value::String);
+
+            return match File::create_new(file_path) {
+                Ok(_) => Ok(Value::Bool(true)),
+                Err(_) => Ok(Value::Bool(false)),
+            }
+        });
+
+        std_function!(self.functions => fn FILE_READ(file_path: Value) {
+            unwrap_arg_type!(file_path => Value::String);
+
+            return match fs::read_to_string(file_path) {
+                Ok(s) => {
+                    Ok(Value::String(s))
+                }
+                Err(_) => {
+                    // return NULL if the file cannot be read
+                    Ok(Value::Null)
+                }
+            }
+        });
+
+
     }
 }

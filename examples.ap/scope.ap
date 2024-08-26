@@ -1,3 +1,3 @@
 i <- [1, 2, 3]
-APPEND(i, 4)
+INSERT(i, 2, 10)
 DISPLAY(i)
