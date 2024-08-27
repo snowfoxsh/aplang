@@ -1,21 +1,15 @@
-use std::cell::{Ref, RefCell};
+use std::cell::{RefCell};
 use crate::ast::BinaryOp::{
     EqualEqual, Greater, GreaterEqual, Less, LessEqual, Minus, NotEqual, Plus, Star,
 };
 use crate::ast::Expr::List;
-use crate::ast::LogicalOp::Or;
 use crate::ast::{Ast, Binary, BinaryOp, Expr, Literal, LogicalOp, ProcCall, ProcDeclaration, Stmt, Unary, UnaryOp, Variable};
-use crate::interpreter::Value::{Bool, Null, Number};
-use std::cmp::PartialEq;
 use std::collections::HashMap;
-use std::fmt::{Display, format, Formatter};
+use std::fmt::{Display, Formatter};
 use std::mem;
 use std::ops::Deref;
-use std::ptr::write;
 use std::rc::Rc;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use owo_colors::OwoColorize;
 
 
 // variable value types
@@ -426,7 +420,9 @@ impl Interpreter {
             ProcCall(proc) => {
                 self.call(proc.as_ref())
             },
-            Access(_) => todo!(),
+            Access(access) => {
+                sh
+            },
             List(list) => self.list(list.as_ref()),
             Variable(v) => self.venv.lookup_name(v.ident.clone().as_str()).cloned().map(|(value, _)| value),
             Assign(assignment) => {
@@ -588,16 +584,4 @@ impl Interpreter {
         }
     }
 
-}
-
-//
-//
-// do nothing
-fn by_value(mut thing: i32) {
-    thing += 1;
-}
-
-//
-fn by_ref(thing: &mut i32) {
-    *thing += 1;
 }
