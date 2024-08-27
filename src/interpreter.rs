@@ -4,6 +4,7 @@ use crate::ast::BinaryOp::{
 };
 use crate::ast::Expr::List;
 use crate::ast::{Ast, Binary, BinaryOp, Expr, Literal, LogicalOp, ProcCall, ProcDeclaration, Stmt, Unary, UnaryOp, Variable};
+use crate::aplang_std;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::mem;
@@ -245,7 +246,7 @@ impl Default for Env {
         // todo: push the std native function on here
         // push the base context layer into env so we dont panic
         env.initialize_empty_scope();
-        env.inject_std();
+        env.inject_std_default();
         env
     }
     
@@ -420,8 +421,8 @@ impl Interpreter {
             ProcCall(proc) => {
                 self.call(proc.as_ref())
             },
-            Access(access) => {
-                sh
+            Access(_) => {
+                todo!()
             },
             List(list) => self.list(list.as_ref()),
             Variable(v) => self.venv.lookup_name(v.ident.clone().as_str()).cloned().map(|(value, _)| value),

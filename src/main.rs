@@ -1,13 +1,11 @@
 use std::fs;
-use std::mem::size_of;
 use std::path::Path;
 
-use miette::{MietteHandlerOpts, Result};
+use miette::Result;
 
 use lexer::Lexer;
 
 use crate::ast::pretty::TreePrinter;
-use crate::ast::Stmt;
 use crate::errors::display_errors;
 use crate::interpreter::Interpreter;
 use crate::parser2::Parser2;
@@ -20,7 +18,6 @@ mod lexer;
 mod parser2;
 mod token;
 mod aplang_std;
-mod aplang_std_macros;
 
 fn main() -> Result<()> {
     test_file("./examples.ap/scope.ap", true);
