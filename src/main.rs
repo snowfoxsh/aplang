@@ -21,7 +21,6 @@ mod parser2;
 mod token;
 mod aplang_std;
 mod aplang_std_macros;
-mod aplang_std_turtle;
 
 fn main() -> Result<()> {
     test_file("./examples.ap/scope.ap", true);

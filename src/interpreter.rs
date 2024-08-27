@@ -16,7 +16,7 @@ use std::rc::Rc;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use owo_colors::OwoColorize;
-use turtle::Turtle;
+
 
 // variable value types
 #[derive(Clone, Debug)]
@@ -252,7 +252,6 @@ impl Default for Env {
         // push the base context layer into env so we dont panic
         env.initialize_empty_scope();
         env.inject_std();
-        env.inject_std_turtle();
         env
     }
     
@@ -261,17 +260,19 @@ impl Default for Env {
 #[derive(Clone)]
 pub struct Interpreter {
     venv: Env,
+    lists: HashMap<u64, Vec<Value>>,
+    strings: HashMap<u64, String>,
     ast: Ast,
-    pub turtle: Option<Rc<RefCell<Turtle>>>,
     ret_val: Option<Value>,
 }
 
 impl Interpreter {
     pub fn new(ast: Ast) -> Self {
         Self {
+            lists: Default::default(),
+            strings: Default::default(),
             venv: Env::default(),
             ast,
-            turtle: None,
             ret_val: None,
         }
     }
