@@ -7,11 +7,13 @@ use crate::ast::{Ast, Binary, BinaryOp, Expr, Literal, LogicalOp, ProcCall, Proc
 use crate::aplang_std;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
+use std::iter::Peekable;
 use std::mem;
 use std::ops::Deref;
+use std::slice::Iter;
+use std::process::id;
 use std::rc::Rc;
 use std::sync::Arc;
-
 
 // variable value types
 #[derive(Clone, Debug)]
@@ -255,29 +257,33 @@ impl Default for Env {
 #[derive(Clone)]
 pub struct Interpreter {
     venv: Env,
-    lists: HashMap<u64, Vec<Value>>,
-    strings: HashMap<u64, String>,
     ast: Ast,
     ret_val: Option<Value>,
+    idx: usize,
+    program: Vec<Stmt>,
 }
 
 impl Interpreter {
     pub fn new(ast: Ast) -> Self {
         Self {
-            lists: Default::default(),
-            strings: Default::default(),
             venv: Env::default(),
             ast,
             ret_val: None,
+            idx: 0,
+            program: Default::default()
         }
     }
 
     pub fn interpret_debug(&mut self) -> Result<Vec<Value>, String> {
         let mut values = vec![];
 
+        self.program = self.ast.program.clone();
         let program = mem::take(&mut self.ast.program); // Temporarily take the program
-        for stmt in &program {
-            // self.stmt(stmt)?; // Process each statement.
+        // let mut iter = Box::leak(Box::new(program.iter().peekable()));
+        // self.program = Some(mem::take(&mut self.ast.program));
+
+        for (i, stmt) in program.iter().enumerate() {
+            self.idx = i;
 
             match stmt {
                 Stmt::Expr(expr) => {
@@ -287,8 +293,28 @@ impl Interpreter {
                 stmt => self.stmt(stmt)?,
             }
         }
+        // for stmt in &program {
+        //     self.stmt(stmt)?; // Process each statement.
+        //
+        //     // set current index
+        //     self.idx = idx;
+        //
+        //     match stmt {
+        //         Stmt::Expr(expr) => {
+        //             let value = self.expr(expr.deref())?;
+        //             values.push(value);
+        //         }
+        //         stmt => self.stmt(stmt)?,
+        //     }
+        // }
+
+        // self.iter = None;
         self.ast.program = program; // Restore the program
         Ok(values)
+    }
+
+    fn peek_next_stmt(&mut self) -> Option<&Stmt> {
+        self.program.get(self.idx)
     }
 
     // a stmt by definition returns nothing
@@ -421,8 +447,8 @@ impl Interpreter {
             ProcCall(proc) => {
                 self.call(proc.as_ref())
             },
-            Access(_) => {
-                todo!()
+            Access(access) => {
+                self.access(access.as_ref())
             },
             List(list) => self.list(list.as_ref()),
             Variable(v) => self.venv.lookup_name(v.ident.clone().as_str()).cloned().map(|(value, _)| value),
@@ -443,7 +469,9 @@ impl Interpreter {
 
                 Ok(result)
             }
-            Set(set) => todo!(),
+            Set(set) => {
+                self.set(set.as_ref())
+            },
             Logical(log) => {
                 let left = self.expr(&log.left)?;
                 let short_circuit = match log.operator {
@@ -456,7 +484,7 @@ impl Interpreter {
                 } else {
                     Ok(self.expr(&log.right)?)
                 }
-            }
+            },
         };
         // println!("{value:?}");
         value
@@ -496,6 +524,68 @@ impl Interpreter {
             .map(|expr: &Expr| self.expr(expr))
             .collect::<Result<Vec<Value>, String>>()
             .map(|x|Value::List(RefCell::new(x).into()))
+    }
+
+    fn access(&mut self, access: &crate::ast::Access) -> Result<Value, String> {
+        let list = self.expr(&access.list)?;
+        let idx = self.expr(&access.key)?;
+
+        if let Value::List(ref l) = list {
+
+            // unwrapping the index
+            let Value::Number(idx) = idx else {
+                // todo: make better error message
+                return Err("Invalid Index. Index Must Be A Number".to_string());
+            };
+
+            if let Some(next_stmt) = self.peek_next_stmt() {
+                if let Stmt::Expr(expr) = next_stmt {
+                    if let Expr::Set(_) = expr.as_ref() {
+                        return Ok(Value::List(
+                            Rc::new(RefCell::new(
+                                vec![
+                                    Value::Number(idx),
+                                    list
+                                ]
+                            ))
+                        ))
+                    }
+                }
+            }
+
+            // this returns the get inside the list
+            // issue with Set is here... this becomes the target inside Set
+            // todo: make better error message
+            // let x = self.ast.program.iter().peekable();
+            // list.borrow().cloned().get(idx).ok_or_else(|| "Index out of Bounds".to_string())
+            l.borrow().get((idx - 1.0) as usize).cloned().ok_or_else(|| "Index out of Bounds".to_string())
+        } else {
+            // todo: make better error message
+            Err("Invalid types for access".to_string())
+        }
+    }
+
+    fn set(&mut self, set: &crate::ast::Set) -> Result<Value, String> {
+        let target = self.expr(&set.target)?;
+        let value = self.expr(&set.value)?;
+
+        if let Value::List(list) = target {
+            let list = list.borrow();
+            if list.len() == 2 {
+                if let Value::Number(i) = list[0] {
+                    if let Value::List(ref l) = list[1] {
+                        if let Some(t) = l.borrow_mut().get_mut((i - 1.0) as usize) {
+                            *t = value;
+                        }
+                    }
+                }
+            }
+            Ok(Value::Null)
+        } else {
+            Err("Invalid types for set".to_string())
+        }
+
+        // Ok(Value::Null)
     }
 
     fn binary(&mut self, node: &Binary) -> Result<Value, String> {
