@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::rc::Rc;
 use crate::interpreter::{Env, Value, Interpreter, NativeProcedure};
 use crate::{std_function, arity, unwrap_arg_type};
@@ -51,5 +52,15 @@ impl Env {
 
             return Ok(Value::Number(len))
         });
+    }
+}
+
+struct Modules {
+    modules: HashMap<String, fn(&mut Env)>
+}
+
+impl Modules {
+    fn lookup(&self, module: &str) -> Option<&fn(&mut Env)> {
+        self.modules.get(module)
     }
 }

@@ -32,6 +32,8 @@ pub enum Stmt {
     Block(Arc<Block>),
 
     Return(Arc<Return>),
+
+    Import(Arc<Import>),
 }
 #[derive(Debug, Clone)]
 pub struct IfStmt {
@@ -88,6 +90,13 @@ pub struct Block {
 pub struct Return {
     pub token: Token,
     pub data: Option<Expr>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Import {
+    pub import_token: Token,
+    pub mod_token: Token,
+    pub import_string: Token,
 }
 
 #[derive(Debug, Clone)]
@@ -344,6 +353,10 @@ pub mod pretty {
                         .map(|expr| Box::new(expr.clone()) as Box<dyn TreePrinter>)
                         .into_iter(),
                 ),
+                Stmt::Import(import_stmt) => Box::new(std::iter::once(
+                    // Box::new(import_stmt.deref().clone()) as Box<dyn TreePrinter> // todo: this is just a placeholder so itll compile lmao
+                    todo!()
+                ))
                 // .into_iter()
                 // .collect::<Vec<_>>().into_iter()
             }
@@ -510,6 +523,9 @@ pub mod pretty {
                     Some(data) => write!(f, "return {}", data),
                     None => write!(f, "return"),
                 },
+                Stmt::Import(import_stmt) => {
+                    write!(f, "import module {}", import_stmt.import_string)
+                }
             }
         }
     }

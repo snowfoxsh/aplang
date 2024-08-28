@@ -4,6 +4,7 @@ use crate::lexer::LiteralValue;
 use crate::token::TokenType::{Eof, LeftParen, RightParen};
 use crate::token::{Token, TokenType};
 use crate::ast::Return as ReturnValue;
+use crate::ast::Import as ImportStatement;
 use miette::{miette, Diagnostic, LabeledSpan, NamedSource, Report, Severity, SourceSpan};
 use owo_colors::OwoColorize;
 use std::fmt::Display;
@@ -204,6 +205,13 @@ impl Parser2 {
     }
 
     fn statement(&mut self) -> miette::Result<Stmt> {
+        // import statement
+        if self.match_token(&Import) {
+            let import_token = self.previous().clone();
+            todo!()
+            // return self.import_statement(import_token);
+        }
+
         // IF (condition)
         if self.match_token(&If) {
             let if_token = self.previous().clone();
@@ -312,6 +320,26 @@ impl Parser2 {
             })
         ))
     }
+
+    // fn import_statement(&mut self, import_token: Token) -> miette::Result<Stmt> {
+    //     let mod_token = self.consume(&Mod, |token| miette! {
+    //         "todo: expected a mod token following import" // todo make this better
+    //     })?;
+    // 
+    //     let string = self.consume(&StringLiteral, |token| miette! {
+    //         "todo: expected a string literal specifing the type of import"
+    //     })?;
+    // 
+    //     self.consume(&SoftSemi, |token| miette! {
+    //         "todo: expected a semicolon following "
+    //     })?;
+    // 
+    //     Ok(Stmt::Import(Arc::new(ImportStatement {
+    //         import_token,
+    //         mod_token: mod_token.clone(),
+    //         import_string: string.clone(), 
+    //     })))
+    // }
 
     fn if_statement(&mut self, if_token: Token) -> miette::Result<Stmt> {
         // todo: improve this report

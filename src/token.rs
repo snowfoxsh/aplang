@@ -61,6 +61,9 @@ pub enum TokenType {
     True,
     False,
     Null,
+    
+    // Modules
+    Import, Export, 
 
     Eof,
 }
@@ -115,6 +118,8 @@ pub fn get_keywords_hashmap() -> HashMap<&'static str, TokenType> {
         "true" => True, "TRUE" => True,
         "false" => False, "FALSE" => False,
         "null" => Null, "NULL" => Null,
+        "import" => Import, "IMPORT" => Import,
+        "export" => Export, "EXPORT" => Export,
     }
 }
 
