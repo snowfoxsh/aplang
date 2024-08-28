@@ -14,7 +14,7 @@ use std::slice::Iter;
 use std::process::id;
 use std::rc::Rc;
 use std::sync::Arc;
-use miette::miette;
+use miette::{miette, LabeledSpan, Report};
 
 // variable value types
 #[derive(Clone, Debug)]
@@ -61,7 +61,8 @@ impl Display for Value {
 }
 
 pub trait Callable {
-    fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> Result<Value, String>;
+    // fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> Result<Value, String>;
+    fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> miette::Result<Value>;
     fn arity(&self) -> u8;
 }
 
@@ -72,7 +73,8 @@ pub struct Procedure {
 }
 
 impl Callable for Procedure {
-    fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> Result<Value, String> {
+    // fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> Result<Value, String> {
+    fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> miette::Result<Value> {
         // save the retval
         let cached_retval = interpreter.ret_val.clone();
 
@@ -111,7 +113,8 @@ impl Callable for Procedure {
 pub struct NativeProcedure {
     pub name: String,
     pub arity: u8,
-    pub callable: fn(&mut Interpreter, &[Value]) -> Result<Value, String>
+    // pub callable: fn(&mut Interpreter, &[Value]) -> Result<Value, String>
+    pub callable: fn(&mut Interpreter, &[Value]) -> miette::Result<Value>
 }
 
 impl Callable for NativeProcedure {
@@ -119,7 +122,8 @@ impl Callable for NativeProcedure {
         self.arity
     }
 
-    fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> Result<Value, String> {
+    // fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> Result<Value, String> {
+    fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> miette::Result<Value> {
         (self.callable)(interpreter, args)
     }
 }
@@ -203,21 +207,24 @@ impl Env {
     }
     
     /// look up a variable based on the symbol
-    pub fn lookup_name(&mut self, var: &str) -> Result<&(Value, Arc<Variable>), String> {
+    // pub fn lookup_name(&mut self, var: &str) -> Result<&(Value, Arc<Variable>), String> {
+    pub fn lookup_name(&mut self, var: &str) -> miette::Result<&(Value, Arc<Variable>)> {
         self.activate()
             .variables
             .get(var)
-            .ok_or("could not find variable".to_string())
+            .ok_or(miette!("could not find variable"))
     }
 
 
     /// looks up the variable by comparing the entire variable object
-    pub fn lookup_var(&mut self, var: &Variable) -> Result<&Value, String> {
+    // pub fn lookup_var(&mut self, var: &Variable) -> Result<&Value, String> {
+    pub fn lookup_var(&mut self, var: &Variable) -> miette::Result<&Value> {
         Ok(&self.lookup_name(var.ident.as_str())?.0)
     }
 
-    pub fn lookup_function(&self, function_name: String) -> Result<Rc<dyn Callable>, String> {
-        let (a, b) = self.functions.get(&function_name).ok_or("could not find function".to_string())?.clone();
+    // pub fn lookup_function(&self, function_name: String) -> Result<Rc<dyn Callable>, String> {
+    pub fn lookup_function(&self, function_name: String) -> miette::Result<Rc<dyn Callable>> {
+        let (a, b) = self.functions.get(&function_name).ok_or(miette!("could not find function"))?.clone();
         Ok(a)
     }
 
@@ -275,7 +282,8 @@ impl Interpreter {
         }
     }
 
-    pub fn interpret_debug(&mut self) -> Result<Vec<Value>, String> {
+    // pub fn interpret_debug(&mut self) -> Result<Vec<Value>, String> {
+    pub fn interpret_debug(&mut self) -> Result<Vec<Value>, Report> {
         let mut values = vec![];
 
         self.program = self.ast.program.clone(); // todo: get rid of the clone here somehow
@@ -303,7 +311,8 @@ impl Interpreter {
     }
 
     // a stmt by definition returns nothing
-    fn stmt(&mut self, stmt: &Stmt) -> Result<(), String> {
+    // fn stmt(&mut self, stmt: &Stmt) -> Result<(), String> {
+    fn stmt(&mut self, stmt: &Stmt) -> miette::Result<()> {
         match stmt {
             Stmt::Expr(expr) => self.expr(expr.as_ref()).map(|_| ()),
             Stmt::IfStmt(if_stmt) => {
@@ -326,7 +335,10 @@ impl Interpreter {
                         }
                         Ok(())
                     }
-                    value => Err(format!("cannot do count for value {value:?}")),
+                    // value => Err(format!("cannot do count for value {value:?}")),
+                    value => Err(miette!(
+                        "todo: cannot do count for value {:?}", value
+                    ))
                 }
             }
             Stmt::RepeatUntil(repeat_until) => {
@@ -342,7 +354,7 @@ impl Interpreter {
                         .chars()
                         .map(|ch| Value::String(ch.to_string()))
                         .collect::<Vec<Value>>())),
-                    value => Err(format!("cannot make iterator over value {value:?}"))?,
+                    value => Err(miette!("cannot make iterator over value {:?}", value))?,
                 };
 
                 let element = Arc::new(for_each.item.clone());
@@ -411,7 +423,8 @@ impl Interpreter {
         }
     }
 
-    pub fn interpret_expr_temp(&mut self) -> Result<Vec<Value>, String> {
+    // pub fn interpret_expr_temp(&mut self) -> Result<Vec<Value>, String> {
+    pub fn interpret_expr_temp(&mut self) -> miette::Result<Vec<Value>> {
         let expressions: Vec<Expr> = self
             .ast
             .program
@@ -427,7 +440,8 @@ impl Interpreter {
             .map(|expr| self.expr(expr)) // Directly use Expr reference
             .collect()
     }
-    fn expr(&mut self, expr: &Expr) -> Result<Value, String> {
+    // fn expr(&mut self, expr: &Expr) -> Result<Value, String> {
+    fn expr(&mut self, expr: &Expr) -> miette::Result<Value> {
         use Expr::*;
         let value = match expr {
             Grouping(inside) => self.expr(&inside.expr),
@@ -480,7 +494,8 @@ impl Interpreter {
         value
     }
 
-    fn call(&mut self, proc: &ProcCall) -> Result<Value, String> {
+    // fn call(&mut self, proc: &ProcCall) -> Result<Value, String> {
+    fn call(&mut self, proc: &ProcCall) -> miette::Result<Value> {
         // todo: look into callee expr
 
         // run the argument expressions before the actual call
@@ -492,7 +507,10 @@ impl Interpreter {
         let Ok(argument_evaluations) = argument_evaluations else {
             // todo: write better error message -- use individual expr source pointers
             return Err(
-                "could not evaluate arguments".to_string()
+                // "could not evaluate arguments".to_string()
+                miette!(
+                    "todo: could not evaluate arguments"
+                )
             )
         };
 
@@ -501,22 +519,26 @@ impl Interpreter {
         // todo make the source pointer error message better
 
         if callable.arity() as usize != argument_evaluations.len() {
-            return Err("function called with incorrect number of args".to_string()) // todo make this error message better -- use source proc pointer
+            // return Err("function called with incorrect number of args".to_string()) // todo make this error message better -- use source proc pointer
+            return Err(miette!("todo: function called with incorrect number of args"))
         }
 
         callable.call(self, argument_evaluations.as_ref())
     }
 
     // help: a string can be thought of a list of chars
-    fn list(&mut self, list: &crate::ast::List) -> Result<Value, String> {
+    // fn list(&mut self, list: &crate::ast::List) -> Result<Value, String> {
+    fn list(&mut self, list: &crate::ast::List) -> miette::Result<Value> {
         list.items
             .iter()
             .map(|expr: &Expr| self.expr(expr))
-            .collect::<Result<Vec<Value>, String>>()
+            // .collect::<Result<Vec<Value>, String>>()
+            .collect::<miette::Result<Vec<Value>>>()
             .map(|x|Value::List(RefCell::new(x).into()))
     }
 
-    fn access(&mut self, access: &crate::ast::Access) -> Result<Value, String> {
+    // fn access(&mut self, access: &crate::ast::Access) -> Result<Value, String> {
+    fn access(&mut self, access: &crate::ast::Access) -> miette::Result<Value> {
         let list = self.expr(&access.list)?;
         let idx = self.expr(&access.key)?;
 
@@ -526,7 +548,8 @@ impl Interpreter {
             // Unwrapping the index and checking that it's a Number
             let Value::Number(idx) = idx else {
                 // todo: make better error message
-                return Err("Invalid Index. Index Must Be A Number".to_string());
+                // return Err("Invalid Index. Index Must Be A Number".to_string());
+                return Err(miette!("todo: Invalid Index. Index must be a number."))
             };
 
             // Checking if the next Statement is a Set()
@@ -543,14 +566,16 @@ impl Interpreter {
 
             // Returning the accessed value if it's not a set
             // We subtract the idx by 1 to account for lists being indexed at 1, not 0
-            l.borrow().get((idx - 1.0) as usize).cloned().ok_or_else(|| "Index out of Bounds".to_string())
+            l.borrow().get((idx - 1.0) as usize).cloned().ok_or_else(|| miette!("Index out of Bounds"))
         } else {
             // todo: make better error message
-            Err("Invalid types for access".to_string())
+            // Err("Invalid types for access".to_string())
+            Err(miette!("todo: Invalid types for access."))
         }
     }
 
-    fn set(&mut self, set: &crate::ast::Set) -> Result<Value, String> {
+    // fn set(&mut self, set: &crate::ast::Set) -> Result<Value, String> {
+    fn set(&mut self, set: &crate::ast::Set) -> miette::Result<Value> {
         let target = self.expr(&set.target)?;
         let value = self.expr(&set.value)?;
 
@@ -565,16 +590,23 @@ impl Interpreter {
                     if let Some(t) = l.borrow_mut().get_mut((i - 1.0) as usize) {
                         *t = value;
                     } else {
-                        return Err("Index out of Bounds".to_string())
+                        return Err(miette!(
+                            labels = vec![
+                                LabeledSpan::at_offset(2, "here")
+                            ],
+                            help = "Make sure the INDEX is less than the length of the LIST",
+                            "Index out of Bounds"
+                        ).with_source_code(self.peek_next_stmt().clone().unwrap().to_string()))
                     }
                 }
                 Ok(Value::Bool(true)) // returning TRUE because target was set properly
             }
-            _ => Err("Invalid types for set".to_string()),
+            _ => Err(miette!("Invalid types for set")),
         }
     }
 
-    fn binary(&mut self, node: &Binary) -> Result<Value, String> {
+    // fn binary(&mut self, node: &Binary) -> Result<Value, String> {
+    fn binary(&mut self, node: &Binary) -> miette::Result<Value> {
         let lhs = self.expr(&node.left)?;
         let rhs = self.expr(&node.right)?;
 
@@ -594,7 +626,7 @@ impl Interpreter {
                 if *b != 0.0 {
                     Ok(Number(a / b))
                 } else {
-                    Err("dev by zero error".to_string())
+                    Err(miette!("dev by zero error"))
                 }
             }
             (String(a), Plus, String(b)) => Ok(String(format!("{a}{b}"))),
@@ -604,7 +636,7 @@ impl Interpreter {
                 let new_list: Vec<_> = a.borrow().iter().cloned().chain(b.borrow().iter().cloned()).collect();
                 Ok(List(RefCell::new(new_list).into()))
             }
-            _ => Err("invalid operands in binary op not equal".to_string()),
+            _ => Err(miette!("invalid operands in binary op not equal")),
         }
     }
 
@@ -617,7 +649,8 @@ impl Interpreter {
             Literal::Null => Value::Null,
         }
     }
-    fn unary(&mut self, node: &Unary) -> Result<Value, String> {
+    // fn unary(&mut self, node: &Unary) -> Result<Value, String> {
+    fn unary(&mut self, node: &Unary) -> miette::Result<Value> {
         let value = self.expr(&node.right)?;
 
         use UnaryOp::*;
@@ -625,20 +658,20 @@ impl Interpreter {
         match (&node.operator, value) {
             (Minus, Number(num)) => Ok(Number(-num)),
             (Not, value) => Ok(Bool(!Self::is_truthy(&value))),
-            (op, String(_)) => Err(format!(
+            (op, String(_)) => Err(miette!(
                 "Invalid application of unary op {op} to String type"
             )),
-            (op, NativeFunction()) => Err(format!(
+            (op, NativeFunction()) => Err(miette!(
                 "Invalid application of unary op {op} to NativeFunction type"
             )),
-            (op, Function()) => Err(format!(
+            (op, Function()) => Err(miette!(
                 "Invalid application of unary op {op} to Function type"
             )),
-            (Minus, Bool(b)) => Err(format!(
+            (Minus, Bool(b)) => Err(miette!(
                 "Invalid application of unary op Minus to Bool type (value) {b}"
             )),
-            (op, Null) => Err(format!("Invalid application of unary op {op} to Null type")),
-            (op, List(l)) => Err(format!("Invalid application of unary op {op} to List type")),
+            (op, Null) => Err(miette!("Invalid application of unary op {op} to Null type")),
+            (op, List(l)) => Err(miette!("Invalid application of unary op {op} to List type")),
         }
     }
 

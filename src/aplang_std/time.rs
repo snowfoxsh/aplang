@@ -2,6 +2,7 @@ use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use crate::interpreter::{Env, NativeProcedure, Value, Interpreter};
 use crate::{std_function, arity, unwrap_arg_type};
+use miette::miette;
 
 impl Env {
     pub(crate) fn inject_std_time(&mut self) {
