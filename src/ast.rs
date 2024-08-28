@@ -353,12 +353,9 @@ pub mod pretty {
                         .map(|expr| Box::new(expr.clone()) as Box<dyn TreePrinter>)
                         .into_iter(),
                 ),
-                Stmt::Import(import_stmt) => Box::new(std::iter::once(
-                    // Box::new(import_stmt.deref().clone()) as Box<dyn TreePrinter> // todo: this is just a placeholder so itll compile lmao
-                    todo!()
-                ))
-                // .into_iter()
-                // .collect::<Vec<_>>().into_iter()
+                Stmt::Import(import_stmt) => Box::new(
+                    std::iter::empty()
+                ),
             }
         }
 

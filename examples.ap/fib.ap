@@ -1,0 +1,13 @@
+IMPORT MOD "hello"
+
+PROCEDURE fib(n) {
+    IF (n == 1) {
+        RETURN 1
+    } ELSE IF (n == 2) {
+        RETURN 1
+    } ELSE {
+        RETURN fib(n-1) + fib(n-2)
+    }
+}
+
+DISPLAY(fib(10))

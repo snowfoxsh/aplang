@@ -403,7 +403,11 @@ impl Interpreter {
 
                 Ok(())
             }
-            Stmt::Import(_) => todo!()
+            Stmt::Import(import) => {
+                // todo!()
+                
+                Ok(())
+            },
         }
     }
 

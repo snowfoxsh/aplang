@@ -208,8 +208,7 @@ impl Parser2 {
         // import statement
         if self.match_token(&Import) {
             let import_token = self.previous().clone();
-            todo!()
-            // return self.import_statement(import_token);
+            return self.import_statement(import_token);
         }
 
         // IF (condition)
@@ -321,25 +320,25 @@ impl Parser2 {
         ))
     }
 
-    // fn import_statement(&mut self, import_token: Token) -> miette::Result<Stmt> {
-    //     let mod_token = self.consume(&Mod, |token| miette! {
-    //         "todo: expected a mod token following import" // todo make this better
-    //     })?;
-    // 
-    //     let string = self.consume(&StringLiteral, |token| miette! {
-    //         "todo: expected a string literal specifing the type of import"
-    //     })?;
-    // 
-    //     self.consume(&SoftSemi, |token| miette! {
-    //         "todo: expected a semicolon following "
-    //     })?;
-    // 
-    //     Ok(Stmt::Import(Arc::new(ImportStatement {
-    //         import_token,
-    //         mod_token: mod_token.clone(),
-    //         import_string: string.clone(), 
-    //     })))
-    // }
+    fn import_statement(&mut self, import_token: Token) -> miette::Result<Stmt> {
+        let mod_token = self.consume(&Mod, |token| miette! {
+            "todo: expected a mod token following import" // todo make this better
+        })?.clone();
+    
+        let import_string = self.consume(&StringLiteral, |token| miette! {
+            "todo: expected a string literal specifing the type of import"
+        })?.clone();
+    
+        self.consume(&SoftSemi, |token| miette! {
+            "todo: expected a semicolon following "
+        })?;
+    
+        Ok(Stmt::Import(Arc::new(ImportStatement {
+            import_token,
+            mod_token,
+            import_string,
+        })))
+    }
 
     fn if_statement(&mut self, if_token: Token) -> miette::Result<Stmt> {
         // todo: improve this report

@@ -20,14 +20,14 @@ mod token;
 mod aplang_std;
 
 fn main() -> Result<()> {
-    test_file("./examples.ap/scope.ap", true);
+    test_file("./examples.ap/fib.ap", true);
 
     Ok(())
 }
 
 fn test_file<P: AsRef<Path>>(path: P, parse: bool) {
     let contents = fs::read_to_string(path).unwrap();
-    let source = Lexer::scan(contents, "file.ap".to_string()).unwrap();
+    let source = Lexer::scan(contents, "fib.ap".to_string()).unwrap();
 
     print_tokens(source.0.clone());
 
