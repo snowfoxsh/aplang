@@ -14,6 +14,7 @@ use std::slice::Iter;
 use std::process::id;
 use std::rc::Rc;
 use std::sync::Arc;
+use miette::miette;
 
 // variable value types
 #[derive(Clone, Debug)]
@@ -277,10 +278,8 @@ impl Interpreter {
     pub fn interpret_debug(&mut self) -> Result<Vec<Value>, String> {
         let mut values = vec![];
 
-        self.program = self.ast.program.clone();
+        self.program = self.ast.program.clone(); // todo: get rid of the clone here somehow
         let program = mem::take(&mut self.ast.program); // Temporarily take the program
-        // let mut iter = Box::leak(Box::new(program.iter().peekable()));
-        // self.program = Some(mem::take(&mut self.ast.program));
 
         for (i, stmt) in program.iter().enumerate() {
             self.idx = i;
@@ -293,20 +292,6 @@ impl Interpreter {
                 stmt => self.stmt(stmt)?,
             }
         }
-        // for stmt in &program {
-        //     self.stmt(stmt)?; // Process each statement.
-        //
-        //     // set current index
-        //     self.idx = idx;
-        //
-        //     match stmt {
-        //         Stmt::Expr(expr) => {
-        //             let value = self.expr(expr.deref())?;
-        //             values.push(value);
-        //         }
-        //         stmt => self.stmt(stmt)?,
-        //     }
-        // }
 
         // self.iter = None;
         self.ast.program = program; // Restore the program
@@ -530,34 +515,29 @@ impl Interpreter {
         let list = self.expr(&access.list)?;
         let idx = self.expr(&access.key)?;
 
+        // Access is only called when accessing an element in a list by index
         if let Value::List(ref l) = list {
 
-            // unwrapping the index
+            // Unwrapping the index and checking that it's a Number
             let Value::Number(idx) = idx else {
                 // todo: make better error message
                 return Err("Invalid Index. Index Must Be A Number".to_string());
             };
 
-            if let Some(next_stmt) = self.peek_next_stmt() {
-                if let Stmt::Expr(expr) = next_stmt {
-                    if let Expr::Set(_) = expr.as_ref() {
-                        return Ok(Value::List(
-                            Rc::new(RefCell::new(
-                                vec![
-                                    Value::Number(idx),
-                                    list
-                                ]
-                            ))
-                        ))
-                    }
-                }
+            // Checking if the next Statement is a Set()
+            // If it's a set, we need to feed it the list and index we will be assigning the new value to
+            if matches!(
+                self.peek_next_stmt(),
+                Some(Stmt::Expr(expr)) if matches!(expr.as_ref(), Expr::Set(_))
+            ) {
+                return Ok(Value::List(Rc::new(RefCell::new(vec![
+                    Value::Number(idx),
+                    list, // we disguise this essentially mutable copy as a List
+                ]))));
             }
 
-            // this returns the get inside the list
-            // issue with Set is here... this becomes the target inside Set
-            // todo: make better error message
-            // let x = self.ast.program.iter().peekable();
-            // list.borrow().cloned().get(idx).ok_or_else(|| "Index out of Bounds".to_string())
+            // Returning the accessed value if it's not a set
+            // We subtract the idx by 1 to account for lists being indexed at 1, not 0
             l.borrow().get((idx - 1.0) as usize).cloned().ok_or_else(|| "Index out of Bounds".to_string())
         } else {
             // todo: make better error message
@@ -569,23 +549,24 @@ impl Interpreter {
         let target = self.expr(&set.target)?;
         let value = self.expr(&set.value)?;
 
-        if let Value::List(list) = target {
-            let list = list.borrow();
-            if list.len() == 2 {
-                if let Value::Number(i) = list[0] {
-                    if let Value::List(ref l) = list[1] {
-                        if let Some(t) = l.borrow_mut().get_mut((i - 1.0) as usize) {
-                            *t = value;
-                        }
+        // The previous statement to this should be Access, which returns what is now our target
+        // All we need to do is unpack it
+        match target {
+            Value::List(list) if list.borrow().len() == 2 => {
+                let list = list.borrow();
+                if let (Value::Number(i), Value::List(ref l)) = (&list[0], &list[1]) {
+                    // Mutably editing the list given to us
+                    // Subtracting index by 1 to account for lists being indexed at 1, not 0
+                    if let Some(t) = l.borrow_mut().get_mut((i - 1.0) as usize) {
+                        *t = value;
+                    } else {
+                        return Err("Index out of Bounds".to_string())
                     }
                 }
+                Ok(Value::Bool(true)) // returning TRUE because target was set properly
             }
-            Ok(Value::Null)
-        } else {
-            Err("Invalid types for set".to_string())
+            _ => Err("Invalid types for set".to_string()),
         }
-
-        // Ok(Value::Null)
     }
 
     fn binary(&mut self, node: &Binary) -> Result<Value, String> {
