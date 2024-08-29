@@ -1,12 +1,19 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::rc::Rc;
 use crate::interpreter::{Env, Value, Interpreter, NativeProcedure};
 use crate::{std_function, arity, unwrap_arg_type};
 use miette::miette;
+use crate::aplang_std::file_system::file_system;
 
 mod time;
 mod std_macros;
 mod file_system;
+
+fn std_core(env: &mut Env) {
+    todo!()
+}
 
 impl Env {
     pub(crate) fn inject_std_default(&mut self) {
@@ -56,12 +63,34 @@ impl Env {
     }
 }
 
-struct Modules {
+#[derive(Debug, Clone, Default)]
+pub struct Modules {
     modules: HashMap<String, fn(&mut Env)>
 }
 
+
 impl Modules {
-    fn lookup(&self, module: &str) -> Option<&fn(&mut Env)> {
+    fn inject(&mut self) {
+        self.register("core", std_core);
+        self.register("fs", file_system::file_system);
+        self.register("time", time::time);
+    }
+    pub fn init() -> Self {
+        // create bland hashmap of modules
+        let mut modules = Self::default();
+        // load in the module functions
+        modules.inject();
+        // return handle
+        modules
+    }
+
+    pub fn lookup(&self, module: &str) -> Option<&fn(&mut Env)> {
         self.modules.get(module)
+    }
+
+    pub fn register(&mut self, module_name: &str, injector: fn(&mut Env)) {
+
+        // if a module is defined again with the same name then the prev will be discarded
+        let _ = self.modules.insert(module_name.to_string(), injector);
     }
 }

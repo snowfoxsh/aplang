@@ -202,6 +202,9 @@ pub struct Assignment {
 pub struct Set {
     pub target: Expr,
     pub value: Expr,
+    
+    pub list: Expr,
+    pub idx: Expr,
 
     pub arrow_token: Token,
 }

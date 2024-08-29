@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::fs;
 use std::fs::{File, OpenOptions};
 use std::path::Path;
@@ -6,6 +7,13 @@ use std::io::Write;
 use crate::interpreter::{Env, Value, NativeProcedure, Interpreter};
 use crate::{std_function, arity, unwrap_arg_type};
 use miette::miette;
+
+
+
+pub(super) fn file_system(env: &mut Env) {
+    todo!()
+}
+
 
 impl Env {
     pub(crate) fn inject_std_file_system(&mut self) {

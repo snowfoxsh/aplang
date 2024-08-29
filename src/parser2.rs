@@ -673,6 +673,8 @@ impl Parser2 {
                             }
                             .into(),
                         ),
+                        list: access.list.clone(),
+                        idx: access.key.clone(),
                         value: value,
                         arrow_token,
                     }

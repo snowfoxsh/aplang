@@ -1,8 +1,13 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use crate::interpreter::{Env, NativeProcedure, Value, Interpreter};
 use crate::{std_function, arity, unwrap_arg_type};
 use miette::miette;
+
+pub(super) fn time(env: &mut Env) {
+    todo!()
+}
 
 impl Env {
     pub(crate) fn inject_std_time(&mut self) {
