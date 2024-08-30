@@ -62,7 +62,7 @@ impl Display for Value {
 
 pub trait Callable {
     // fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> Result<Value, String>;
-    fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> miette::Result<Value>;
+    fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> Result<Value, Report>;
     fn arity(&self) -> u8;
 }
 
@@ -74,7 +74,7 @@ pub struct Procedure {
 
 impl Callable for Procedure {
     // fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> Result<Value, String> {
-    fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> miette::Result<Value> {
+    fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> Result<Value, Report> {
         // save the retval
         let cached_retval = interpreter.ret_val.clone();
 
@@ -114,7 +114,7 @@ pub struct NativeProcedure {
     pub name: String,
     pub arity: u8,
     // pub callable: fn(&mut Interpreter, &[Value]) -> Result<Value, String>
-    pub callable: fn(&mut Interpreter, &[Value]) -> miette::Result<Value>
+    pub callable: fn(&mut Interpreter, &[Value]) -> Result<Value, Report>
 }
 
 impl Callable for NativeProcedure {
@@ -123,7 +123,7 @@ impl Callable for NativeProcedure {
     }
 
     // fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> Result<Value, String> {
-    fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> miette::Result<Value> {
+    fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> Result<Value, Report> {
         (self.callable)(interpreter, args)
     }
 }
@@ -208,7 +208,7 @@ impl Env {
     
     /// look up a variable based on the symbol
     // pub fn lookup_name(&mut self, var: &str) -> Result<&(Value, Arc<Variable>), String> {
-    pub fn lookup_name(&mut self, var: &str) -> miette::Result<&(Value, Arc<Variable>)> {
+    pub fn lookup_name(&mut self, var: &str) -> Result<&(Value, Arc<Variable>), Report> {
         self.activate()
             .variables
             .get(var)
@@ -218,12 +218,12 @@ impl Env {
 
     /// looks up the variable by comparing the entire variable object
     // pub fn lookup_var(&mut self, var: &Variable) -> Result<&Value, String> {
-    pub fn lookup_var(&mut self, var: &Variable) -> miette::Result<&Value> {
+    pub fn lookup_var(&mut self, var: &Variable) -> Result<&Value, Report> {
         Ok(&self.lookup_name(var.ident.as_str())?.0)
     }
 
     // pub fn lookup_function(&self, function_name: String) -> Result<Rc<dyn Callable>, String> {
-    pub fn lookup_function(&self, function_name: String) -> miette::Result<Rc<dyn Callable>> {
+    pub fn lookup_function(&self, function_name: String) -> Result<Rc<dyn Callable>, Report> {
         let (a, b) = self.functions.get(&function_name).ok_or(miette!("could not find function"))?.clone();
         Ok(a)
     }
@@ -267,8 +267,8 @@ pub struct Interpreter {
     venv: Env,
     ast: Ast,
     ret_val: Option<Value>,
-    idx: usize,
-    program: Vec<Stmt>,
+    // idx: usize,
+    // program: Vec<Stmt>,
 }
 
 impl Interpreter {
@@ -277,8 +277,8 @@ impl Interpreter {
             venv: Env::default(),
             ast,
             ret_val: None,
-            idx: 0,
-            program: Default::default()
+            // idx: 0,
+            // program: Default::default()
         }
     }
 
@@ -286,11 +286,12 @@ impl Interpreter {
     pub fn interpret_debug(&mut self) -> Result<Vec<Value>, Report> {
         let mut values = vec![];
 
-        self.program = self.ast.program.clone(); // todo: get rid of the clone here somehow
+        // self.program = self.ast.program.clone(); // todo: get rid of the clone here somehow
         let program = mem::take(&mut self.ast.program); // Temporarily take the program
 
-        for (i, stmt) in program.iter().enumerate() {
-            self.idx = i;
+        // for (i, stmt) in program.iter().enumerate() {
+            // self.idx = i;
+        for stmt in &program {
 
             match stmt {
                 Stmt::Expr(expr) => {
@@ -306,13 +307,13 @@ impl Interpreter {
         Ok(values)
     }
 
-    fn peek_next_stmt(&mut self) -> Option<&Stmt> {
-        self.program.get(self.idx)
-    }
+    // fn peek_next_stmt(&mut self) -> Option<&Stmt> {
+    //     self.program.get(self.idx)
+    // }
 
     // a stmt by definition returns nothing
     // fn stmt(&mut self, stmt: &Stmt) -> Result<(), String> {
-    fn stmt(&mut self, stmt: &Stmt) -> miette::Result<()> {
+    fn stmt(&mut self, stmt: &Stmt) -> Result<(), Report> {
         match stmt {
             Stmt::Expr(expr) => self.expr(expr.as_ref()).map(|_| ()),
             Stmt::IfStmt(if_stmt) => {
@@ -424,7 +425,7 @@ impl Interpreter {
     }
 
     // pub fn interpret_expr_temp(&mut self) -> Result<Vec<Value>, String> {
-    pub fn interpret_expr_temp(&mut self) -> miette::Result<Vec<Value>> {
+    pub fn interpret_expr_temp(&mut self) -> Result<Vec<Value>, Report> {
         let expressions: Vec<Expr> = self
             .ast
             .program
@@ -441,7 +442,7 @@ impl Interpreter {
             .collect()
     }
     // fn expr(&mut self, expr: &Expr) -> Result<Value, String> {
-    fn expr(&mut self, expr: &Expr) -> miette::Result<Value> {
+    fn expr(&mut self, expr: &Expr) -> Result<Value, Report> {
         use Expr::*;
         let value = match expr {
             Grouping(inside) => self.expr(&inside.expr),
@@ -495,7 +496,7 @@ impl Interpreter {
     }
 
     // fn call(&mut self, proc: &ProcCall) -> Result<Value, String> {
-    fn call(&mut self, proc: &ProcCall) -> miette::Result<Value> {
+    fn call(&mut self, proc: &ProcCall) -> Result<Value, Report> {
         // todo: look into callee expr
 
         // run the argument expressions before the actual call
@@ -528,85 +529,54 @@ impl Interpreter {
 
     // help: a string can be thought of a list of chars
     // fn list(&mut self, list: &crate::ast::List) -> Result<Value, String> {
-    fn list(&mut self, list: &crate::ast::List) -> miette::Result<Value> {
+    fn list(&mut self, list: &crate::ast::List) -> Result<Value, Report> {
         list.items
             .iter()
             .map(|expr: &Expr| self.expr(expr))
-            // .collect::<Result<Vec<Value>, String>>()
-            .collect::<miette::Result<Vec<Value>>>()
+            .collect::<Result<Vec<Value>, Report>>()
+            // .collect::<miette::Result<Vec<Value>>>()
             .map(|x|Value::List(RefCell::new(x).into()))
     }
 
     // fn access(&mut self, access: &crate::ast::Access) -> Result<Value, String> {
-    fn access(&mut self, access: &crate::ast::Access) -> miette::Result<Value> {
+    fn access(&mut self, access: &crate::ast::Access) -> Result<Value, Report> {
         let list = self.expr(&access.list)?;
         let idx = self.expr(&access.key)?;
 
-        // Access is only called when accessing an element in a list by index
-        if let Value::List(ref l) = list {
+        let Value::List(list) = list else {
+            return Err(miette!("Invalid type for Access!"))
+        };
 
-            // Unwrapping the index and checking that it's a Number
-            let Value::Number(idx) = idx else {
-                // todo: make better error message
-                // return Err("Invalid Index. Index Must Be A Number".to_string());
-                return Err(miette!("todo: Invalid Index. Index must be a number."))
-            };
+        let Value::Number(idx) = idx else {
+            return Err(miette!("Invalid List Index. Index must be a Number!"))
+        };
 
-            // Checking if the next Statement is a Set()
-            // If it's a set, we need to feed it the list and index we will be assigning the new value to
-            if matches!(
-                self.peek_next_stmt(),
-                Some(Stmt::Expr(expr)) if matches!(expr.as_ref(), Expr::Set(_))
-            ) {
-                return Ok(Value::List(Rc::new(RefCell::new(vec![
-                    Value::Number(idx),
-                    list, // we disguise this essentially mutable copy as a List
-                ]))));
-            }
-
-            // Returning the accessed value if it's not a set
-            // We subtract the idx by 1 to account for lists being indexed at 1, not 0
-            l.borrow().get((idx - 1.0) as usize).cloned().ok_or_else(|| miette!("Index out of Bounds"))
-        } else {
-            // todo: make better error message
-            // Err("Invalid types for access".to_string())
-            Err(miette!("todo: Invalid types for access."))
-        }
+       let target = list.borrow().get((idx - 1.0) as usize).cloned().ok_or_else(|| miette!("Invalid Index"));
+        target
     }
 
-    // fn set(&mut self, set: &crate::ast::Set) -> Result<Value, String> {
-    fn set(&mut self, set: &crate::ast::Set) -> miette::Result<Value> {
-        let target = self.expr(&set.target)?;
+    fn set(&mut self, set: &crate::ast::Set) -> Result<Value, Report> {
+        let list = self.expr(&set.list)?;
+        let idx = self.expr(&set.idx)?;
         let value = self.expr(&set.value)?;
 
-        // The previous statement to this should be Access, which returns what is now our target
-        // All we need to do is unpack it
-        match target {
-            Value::List(list) if list.borrow().len() == 2 => {
-                let list = list.borrow();
-                if let (Value::Number(i), Value::List(ref l)) = (&list[0], &list[1]) {
-                    // Mutably editing the list given to us
-                    // Subtracting index by 1 to account for lists being indexed at 1, not 0
-                    if let Some(t) = l.borrow_mut().get_mut((i - 1.0) as usize) {
-                        *t = value;
-                    } else {
-                        return Err(miette!(
-                            labels = vec![
-                                LabeledSpan::at_offset(2, "here")
-                            ],
-                            help = "Make sure the INDEX is less than the length of the LIST",
-                            "Index out of Bounds"
-                        ).with_source_code(self.peek_next_stmt().clone().unwrap().to_string()))
-                    }
-                }
-                Ok(Value::Bool(true)) // returning TRUE because target was set properly
-            }
-            _ => Err(miette!("Invalid types for set")),
+        let Value::List(ref list) = list else {
+            return Err(miette!("Invalid type for Access!"))
+        };
+
+        let Value::Number(idx) = idx else {
+            return Err(miette!("Invalid List Index. Index must be a Number!"))
+        };
+
+        if let Some(mut target) = list.borrow_mut().get_mut((idx - 1.0) as usize) {
+            *target = value.clone();
         }
+
+        Ok(value)
     }
 
     // fn binary(&mut self, node: &Binary) -> Result<Value, String> {
-    fn binary(&mut self, node: &Binary) -> miette::Result<Value> {
+    fn binary(&mut self, node: &Binary) -> Result<Value, Report> {
         let lhs = self.expr(&node.left)?;
         let rhs = self.expr(&node.right)?;
 
@@ -650,7 +620,7 @@ impl Interpreter {
         }
     }
     // fn unary(&mut self, node: &Unary) -> Result<Value, String> {
-    fn unary(&mut self, node: &Unary) -> miette::Result<Value> {
+    fn unary(&mut self, node: &Unary) -> Result<Value, Report> {
         let value = self.expr(&node.right)?;
 
         use UnaryOp::*;
