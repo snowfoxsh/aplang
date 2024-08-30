@@ -14,6 +14,8 @@ use std::slice::Iter;
 use std::process::id;
 use std::rc::Rc;
 use std::sync::Arc;
+use crate::aplang_std::Modules;
+use crate::lexer::LiteralValue;
 
 // variable value types
 #[derive(Clone, Debug)]
@@ -245,10 +247,8 @@ impl Env {
 impl Default for Env {
     fn default() -> Self {
         let mut env = Self { functions: Default::default(), venv: vec![] };
-        // todo: push the std native function on here
         // push the base context layer into env so we dont panic
         env.initialize_empty_scope();
-        env.inject_std_default();
         env
     }
     
@@ -259,29 +259,28 @@ pub struct Interpreter {
     venv: Env,
     ast: Ast,
     ret_val: Option<Value>,
-    // idx: usize,
-    // program: Vec<Stmt>,
+    modules: Modules,
 }
 
 impl Interpreter {
     pub fn new(ast: Ast) -> Self {
-        Self {
+        let mut interpreter = Self {
             venv: Env::default(),
             ast,
             ret_val: None,
-            // idx: 0,
-            // program: Default::default()
-        }
+            modules: Modules::init(),
+        };
+
+        // initiate the core std functions
+        interpreter.modules.lookup("core").unwrap()(&mut interpreter.venv);
+        interpreter
     }
 
     pub fn interpret_debug(&mut self) -> Result<Vec<Value>, String> {
         let mut values = vec![];
 
-        // self.program = self.ast.program.clone(); // todo: get rid of the clone here somehow
         let program = mem::take(&mut self.ast.program); // Temporarily take the program
 
-        // for (i, stmt) in program.iter().enumerate() {
-            // self.idx = i;
         for stmt in &program {
 
             match stmt {
@@ -293,14 +292,9 @@ impl Interpreter {
             }
         }
 
-        // self.iter = None;
         self.ast.program = program; // Restore the program
         Ok(values)
     }
-
-    // fn peek_next_stmt(&mut self) -> Option<&Stmt> {
-    //     self.program.get(self.idx)
-    // }
 
     // a stmt by definition returns nothing
     fn stmt(&mut self, stmt: &Stmt) -> Result<(), String> {
@@ -404,8 +398,17 @@ impl Interpreter {
                 Ok(())
             }
             Stmt::Import(import) => {
-                // todo!()
+                // get a ref to the module name to be imported / activated
+                let Some(LiteralValue::String(module_name)) = import.import_string.literal.as_ref() else {
+                    unreachable!() //
+                };
                 
+                println!("Try Import Module Name: {module_name}");
+
+                // load the module into the venv / activate it
+                self.modules.lookup(module_name)
+                    .ok_or("module not found (todo)".to_string())?(&mut self.venv);
+
                 Ok(())
             },
         }
