@@ -2,7 +2,9 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use crate::interpreter::{Env, Value, Interpreter, NativeProcedure};
 use crate::{std_function, arity, unwrap_arg_type};
+use crate::aplang_error::RuntimeError;
 use crate::aplang_std::file_system::file_system;
+use std::sync::Arc;
 
 mod time;
 mod std_macros;

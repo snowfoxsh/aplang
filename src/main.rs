@@ -4,10 +4,10 @@ use std::path::Path;
 use miette::Result;
 
 use lexer::Lexer;
-
+use crate::aplang_error::RuntimeError;
 use crate::ast::pretty::TreePrinter;
 use crate::errors::display_errors;
-use crate::interpreter::Interpreter;
+use crate::interpreter::{Interpreter, Value};
 use crate::parser2::Parser2;
 use crate::token::print_tokens;
 
@@ -18,21 +18,22 @@ mod lexer;
 mod parser2;
 mod token;
 mod aplang_std;
+mod aplang_error;
 
 fn main() -> Result<()> {
-    test_file("./examples.ap/fib.ap", true);
+    test_file("./examples.ap/fib.ap", true)?;
 
     Ok(())
 }
 
-fn test_file<P: AsRef<Path>>(path: P, parse: bool) {
+fn test_file<P: AsRef<Path>>(path: P, parse: bool) -> Result<(), RuntimeError> {
     let contents = fs::read_to_string(path).unwrap();
     let source = Lexer::scan(contents, "fib.ap".to_string()).unwrap();
 
     print_tokens(source.0.clone());
 
     if !parse {
-        return;
+        return Ok(());
     }
     let mut parser = Parser2::new(source.0, source.1, "main.ap");
     let ast = parser.parse();
@@ -42,7 +43,7 @@ fn test_file<P: AsRef<Path>>(path: P, parse: bool) {
         Err(e) => {
             println!();
             display_errors(e, true);
-            return;
+            return Ok(());
         }
     };
     println!();
@@ -52,7 +53,7 @@ fn test_file<P: AsRef<Path>>(path: P, parse: bool) {
     let mut interpreter = Interpreter::new(ast);
 
     let now = std::time::Instant::now();
-    let results = interpreter.interpret_debug().unwrap();
+    let results = interpreter.interpret_debug()?;
     let duration = now.elapsed();
 
     results.iter().for_each(|value| println!("{value:?}"));
@@ -61,4 +62,5 @@ fn test_file<P: AsRef<Path>>(path: P, parse: bool) {
     // println!("{:?}", results);
 
     // println!("{}",expr.print_tree());
+    Ok(())
 }

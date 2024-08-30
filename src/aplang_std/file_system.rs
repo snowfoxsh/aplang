@@ -3,8 +3,10 @@ use std::fs::{File, OpenOptions};
 use std::path::Path;
 use std::rc::Rc;
 use std::io::Write;
+use crate::aplang_error::RuntimeError;
 use crate::interpreter::{Env, Value, NativeProcedure, Interpreter};
 use crate::{std_function, arity, unwrap_arg_type};
+use std::sync::Arc;
 
 
 pub(super) fn file_system(env: &mut Env) {

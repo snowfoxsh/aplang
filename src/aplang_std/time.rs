@@ -1,7 +1,9 @@
 use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use crate::interpreter::{Env, NativeProcedure, Value, Interpreter};
+use crate::aplang_error::RuntimeError;
 use crate::{std_function, arity, unwrap_arg_type};
+use std::sync::Arc;
 
 pub(super) fn time(env: &mut Env) {
     
