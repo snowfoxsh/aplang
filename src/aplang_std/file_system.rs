@@ -5,7 +5,6 @@ use std::rc::Rc;
 use std::io::Write;
 use crate::interpreter::{Env, Value, NativeProcedure, Interpreter};
 use crate::{std_function, arity, unwrap_arg_type};
-use miette::miette;
 
 impl Env {
     pub(crate) fn inject_std_file_system(&mut self) {
