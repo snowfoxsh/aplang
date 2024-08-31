@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use crate::aplang_error::RuntimeError;
+use crate::errors::RuntimeError;
 use crate::interpreter::{Env, Interpreter, NativeProcedure, Value};
 use std::sync::Arc;
 

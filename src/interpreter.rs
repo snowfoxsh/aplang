@@ -10,7 +10,7 @@ use std::mem;
 use std::ops::Deref;
 use std::rc::Rc;
 use std::sync::Arc;
-use crate::aplang_error::RuntimeError;
+use crate::errors::RuntimeError;
 use crate::aplang_std::Modules;
 use crate::lexer::LiteralValue;
 

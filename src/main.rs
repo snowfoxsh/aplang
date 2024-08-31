@@ -16,7 +16,6 @@ mod lexer;
 mod parser2;
 mod token;
 mod aplang_std;
-mod aplang_error;
 mod arguments;
 mod aplang;
 

@@ -1,19 +1,8 @@
 use std::fmt::{Debug, Display};
-use miette::{Diagnostic, LabeledSpan, Report, SourceCode};
+use miette::{Diagnostic, LabeledSpan, Report, SourceCode, SourceSpan};
 use thiserror::Error;
 use std::fmt;
-
-pub fn display_errors(errors: Vec<Report>, pretty: bool) {
-    if pretty {
-        for error in errors {
-            println!("{:?}\n", error)
-        }
-    } else {
-        for error in errors {
-            println!("{}", error)
-        }
-    }
-}
+use std::sync::Arc;
 
 #[derive(Error, Debug)]
 #[error("error{} occurred", if reports.len() > 1 {"s"} else {""})]
@@ -47,4 +36,16 @@ impl From<Vec<Report>> for Reports {
     fn from(value: Vec<Report>) -> Self {
         Self {reports: value}
     }
+}
+
+#[derive(Debug, Error, Diagnostic)]
+#[error("message {src}")]
+#[diagnostic()]
+#[diagnostic(code(aplang::runtime))]
+pub struct RuntimeError {
+    #[source_code] pub src: Arc<str>,
+    #[label("{label}")] pub span: SourceSpan,
+    pub message: String,
+    pub help: String,
+    pub label: String,
 }
