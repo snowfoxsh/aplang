@@ -106,7 +106,7 @@ impl ApLang<Parsed> {
         Interpreter::new(unsafe { self.ast.unwrap_unchecked() })
             .interpret()
             .map_err(|err|
-                Report::from(*err).with_source_code(self.source_code.clone())
+                Report::from(err).with_source_code(self.source_code.clone())
             )?;
 
         Ok(ApLang {
@@ -126,7 +126,7 @@ impl ApLang<Parsed> {
         let values = interpreter
             .interpret_debug()
             .map_err(|err|
-                Report::from(*err).with_source_code(self.source_code.clone())
+                Report::from(err).with_source_code(self.source_code.clone())
             )?;
 
         Ok(ApLang {
