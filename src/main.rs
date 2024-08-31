@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::{fs, io};
 use std::io::Read;
 use std::sync::Arc;

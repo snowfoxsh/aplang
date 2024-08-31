@@ -145,8 +145,6 @@ pub struct Env {
     pub venv: Vec<Context>,
 }
 
-enum NativeFunction {}
-
 #[derive(Default, Clone, Debug)]
 struct Context {
     variables: HashMap<String, (Value, Arc<Variable>)>,

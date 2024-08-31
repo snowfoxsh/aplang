@@ -90,15 +90,6 @@ impl Token {
     }
 }
 
-pub fn print_tokens(tokens: Vec<Token>) {
-    for token in tokens {
-        if matches!(token.token_type, TokenType::SoftSemi) {
-            print!(" ;")
-        }
-        print!("{token}")
-    }
-}
-
 pub fn get_keywords_hashmap() -> HashMap<&'static str, TokenType> {
     use mapro::map;
     use TokenType::*;

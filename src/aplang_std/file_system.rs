@@ -49,7 +49,7 @@ pub(super) fn file_system(env: &mut Env) {
     std_function!(env.functions => fn FILE_APPEND(file_path: Value, contents: Value) {
         unwrap_arg_type!(file_path => Value::String);
 
-        let Ok(mut file) = OpenOptions::new().write(true).append(true).open(file_path) else {
+        let Ok(mut file) = OpenOptions::new().append(true).open(file_path) else {
             return Ok(Value::Bool(false))
         };
 
