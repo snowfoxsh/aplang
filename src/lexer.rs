@@ -37,13 +37,11 @@ impl Lexer {
     pub fn scan(
         input: impl Into<Arc<str>>,
         file_name: String,
-    ) -> Result<(Vec<Token>, Arc<str>), Vec<Report>> {
+    ) -> Result<Vec<Token>, Vec<Report>> {
         let mut lexer = Self::new(input, file_name);
         let tokens = lexer.scan_tokens()?;
-        let raw = lexer.source; // move the source pointer out of the scanner
 
-        Ok((tokens, raw))
-        // Ok(Source::new(tokens, raw))
+        Ok(tokens)
     }
 
     pub fn scan_tokens(&mut self) -> Result<Vec<Token>, Vec<Report>> {

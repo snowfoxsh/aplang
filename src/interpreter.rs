@@ -292,14 +292,31 @@ impl Interpreter {
         interpreter.modules.lookup("core").unwrap()(&mut interpreter.venv);
         interpreter
     }
-
+    
+    pub fn interpret(&mut self) -> Result<(), RuntimeError> {
+        // temporarily take the program to avoid borrow error
+        let program = mem::take(&mut self.ast.program);
+        
+        for stmt in &program {
+            match stmt {
+                Stmt::Expr(expr) => {
+                    self.expr(expr.deref())?;
+                }
+                stmt => self.stmt(stmt)?,
+            }
+        }
+        
+        self.ast.program = program; // restore program
+        Ok(())
+    }
+    
     pub fn interpret_debug(&mut self) -> Result<Vec<Value>, RuntimeError> {
         let mut values = vec![];
-
+    
         let program = mem::take(&mut self.ast.program); // Temporarily take the program
-
+    
         for stmt in &program {
-
+    
             match stmt {
                 Stmt::Expr(expr) => {
                     let value = self.expr(expr.deref())?;
@@ -308,11 +325,11 @@ impl Interpreter {
                 stmt => self.stmt(stmt)?,
             }
         }
-
+    
         self.ast.program = program; // Restore the program
         Ok(values)
     }
-
+    
     // a stmt by definition returns nothing
     fn stmt(&mut self, stmt: &Stmt) -> Result<(), RuntimeError> {
         match stmt {

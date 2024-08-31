@@ -1,4 +1,4 @@
-IMPORT MOD "hello"
+// IMPORT MOD "time"
 
 PROCEDURE fib(n) {
     IF (n == 1) {
@@ -10,4 +10,4 @@ PROCEDURE fib(n) {
     }
 }
 
-DISPLAY(fib(10))
+DISPLAY(fib(30))

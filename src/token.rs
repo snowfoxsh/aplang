@@ -85,6 +85,12 @@ impl fmt::Display for Token {
     }
 }
 
+impl Token {
+    pub fn is_soft_semi(&self) -> bool {
+        matches!(self.token_type, TokenType::SoftSemi)
+    }
+}
+
 pub fn print_tokens(tokens: Vec<Token>) {
     for token in tokens {
         if matches!(token.token_type, TokenType::SoftSemi) {

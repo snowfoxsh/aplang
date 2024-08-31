@@ -1,16 +1,11 @@
-use std::fs;
-use std::path::Path;
+use std::{fs, io};
+use std::io::Read;
+use std::sync::Arc;
+use clap::Parser;
+use miette::{miette, Result};
 
-use miette::Result;
-
-use lexer::Lexer;
-use crate::aplang_error::RuntimeError;
-use crate::ast::pretty::TreePrinter;
-use crate::errors::display_errors;
-use crate::interpreter::{Interpreter, Value};
-use crate::parser2::Parser2;
-use crate::token::print_tokens;
-
+use crate::aplang::ApLang;
+use crate::arguments::{CommandLine, DebugMode};
 mod ast;
 mod errors;
 mod interpreter;
@@ -19,48 +14,77 @@ mod parser2;
 mod token;
 mod aplang_std;
 mod aplang_error;
+mod arguments;
+mod aplang;
 
 fn main() -> Result<()> {
-    test_file("./examples.ap/fib.ap", true)?;
+    let mut debug_buffer = String::new();
 
-    Ok(())
-}
+    let args = CommandLine::parse();
 
-fn test_file<P: AsRef<Path>>(path: P, parse: bool) -> Result<(), RuntimeError> {
-    let contents = fs::read_to_string(path).unwrap();
-    let source = Lexer::scan(contents, "fib.ap".to_string()).unwrap();
+    let mut file_name = "".to_string();
 
-    print_tokens(source.0.clone());
-
-    if !parse {
-        return Ok(());
-    }
-    let mut parser = Parser2::new(source.0, source.1, "main.ap");
-    let ast = parser.parse();
-
-    let ast = match ast {
-        Ok(ast) => ast,
-        Err(e) => {
-            println!();
-            display_errors(e, true);
-            return Ok(());
-        }
+    // note: consider adding debug logs here
+    // load the source code
+    let source_code: Arc<str> = if let Some(file_path) = &args.file {
+        file_name = file_path.file_name()
+            .map(|os_str| os_str.to_string_lossy().into_owned())
+            .ok_or(miette!("failed to read file name from file"))?;
+        
+        fs::read_to_string(file_path).map_err(|error| miette!(
+           "failed to open file {:?}\n{}", file_path.as_path(), error
+        ))?.into()
+    } else if let Some(eval) = args.eval {
+        eval
+    } else if args.eval_stdin {
+        let mut buffer = String::new();
+        io::stdin().read_to_string(&mut buffer).map_err(|error| miette!(
+            "failed to read from stdin\n{}", error
+        ))?;
+        buffer.into()
+    } else {
+        unreachable!()
     };
-    println!();
-    println!();
-    println!("{:}", ast.print_tree());
 
-    let mut interpreter = Interpreter::new(ast);
-
-    let now = std::time::Instant::now();
-    let results = interpreter.interpret_debug()?;
-    let duration = now.elapsed();
-
-    results.iter().for_each(|value| println!("{value:?}"));
-
-    println!("runtime: {duration:?}");
-    // println!("{:?}", results);
-
-    // println!("{}",expr.print_tree());
+    let aplang = ApLang::new(source_code, file_name);
+    
+    // execute the lexer
+    let lexed = aplang.lex().unwrap(); // todo implement errors here
+    
+    // if the flag is enabled capture the debug info
+    if matches!(args.debug, DebugMode::All | DebugMode::Lexer) {
+        lexed.debug_output(&mut debug_buffer).map_err(|err| {
+            miette!("could not write debug info for lexer!\n{}", err)
+        })?
+    } 
+    
+    // execute the parser
+    let parsed = lexed.parse().unwrap(); // todo implement errors here
+    
+    if matches!(args.debug, DebugMode::All | DebugMode::Parser) {
+        parsed.debug_output(&mut debug_buffer).map_err(|err| {
+            miette!("could not write debug info for parser!\n{}", err)
+        })?
+    }
+    
+    // stop if we are only checking
+    if args.check { return Ok(()) }
+    
+    // execute the interpreter
+    if matches!(args.debug, DebugMode::All | DebugMode::Interpreter) {
+        let executed = parsed.execute_with_debug()?;
+        executed.debug_output(&mut debug_buffer).map_err( |err| {
+            miette!("could not write debug info for parser!\n{}", err)
+        })?
+    } else {
+        parsed.execute()?;
+    }
+    
+    // todo: consider adding a flag that will specify a write location for the debug string
+    // write out our debug buffer if requested
+    if !matches!(args.debug, DebugMode::None) {
+        eprintln!("{}", debug_buffer);
+    }
+    
     Ok(())
 }
