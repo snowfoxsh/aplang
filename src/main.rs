@@ -6,6 +6,8 @@ use miette::{miette, Result};
 
 use crate::aplang::ApLang;
 use crate::arguments::{CommandLine, DebugMode};
+use crate::errors::Reports;
+
 mod ast;
 mod errors;
 mod interpreter;
@@ -49,7 +51,7 @@ fn main() -> Result<()> {
     let aplang = ApLang::new(source_code, file_name);
     
     // execute the lexer
-    let lexed = aplang.lex().unwrap(); // todo implement errors here
+    let lexed = aplang.lex().map_err(Reports::from)?; // todo implement errors here
     
     // if the flag is enabled capture the debug info
     if matches!(args.debug, DebugMode::All | DebugMode::Lexer) {
@@ -59,7 +61,11 @@ fn main() -> Result<()> {
     } 
     
     // execute the parser
-    let parsed = lexed.parse().unwrap(); // todo implement errors here
+    let parsed = lexed
+        .parse()
+        .map_err(Reports::from)?; 
+    
+    // todo implement errors here
     
     if matches!(args.debug, DebugMode::All | DebugMode::Parser) {
         parsed.debug_output(&mut debug_buffer).map_err(|err| {
