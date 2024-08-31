@@ -13,7 +13,7 @@ mod ast;
 mod errors;
 mod interpreter;
 mod lexer;
-mod parser2;
+mod parser;
 mod token;
 mod aplang_std;
 mod arguments;

@@ -7,7 +7,7 @@ use crate::ast::Ast;
 use crate::ast::pretty::TreePrinter;
 use crate::interpreter::{Interpreter, Value};
 use crate::lexer::Lexer;
-use crate::parser2::Parser2;
+use crate::parser::Parser2;
 use crate::token::Token;
 
 

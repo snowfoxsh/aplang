@@ -1251,7 +1251,7 @@ impl Parser2 {
 }
 
 pub(super) mod warning {
-    use crate::parser2::Parser2;
+    use crate::parser::Parser2;
     use crate::token::TokenType::Identifier;
     use crate::token::{get_keywords_hashmap, Token};
     use miette::{miette, Report, Severity};

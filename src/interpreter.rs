@@ -1,8 +1,4 @@
 use std::cell::{RefCell};
-use crate::ast::BinaryOp::{
-    EqualEqual, Greater, GreaterEqual, Less, LessEqual, Minus, NotEqual, Plus, Star,
-};
-use crate::ast::Expr::List;
 use crate::ast::{Ast, Binary, BinaryOp, Expr, Literal, LogicalOp, ProcCall, ProcDeclaration, Stmt, Unary, UnaryOp, Variable};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
