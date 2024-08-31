@@ -20,9 +20,13 @@ mod arguments;
 mod aplang;
 
 fn main() -> Result<()> {
-    let mut debug_buffer = String::new();
-
     let args = CommandLine::parse();
+    
+    stacker::maybe_grow(1024 * 1024, args.stack_size, || {run(args) })
+}
+
+fn run(args: CommandLine) -> Result<()> {
+    let mut debug_buffer = String::new();
 
     let mut file_name = "".to_string();
 

@@ -42,4 +42,13 @@ pub struct CommandLine {
     /// Run the checker without executing the code
     #[arg(short='c', long, conflicts_with="debug")]
     pub check: bool,
+    
+    /// Increase this if you are running deeply recursive code and are
+    ///  getting stack overflow errors.
+    /// Or if you know what you are doing
+    /// Max size (in Bytes) of the stack for the interpreter
+    /// Default stack size is 1MiB which grows to 8MiB if needed
+    /// DO NOT SET LESS THAN 1MiB
+    #[arg(long, default_value_t={8 * 1024 * 1024})]
+    pub stack_size: usize,
 }
