@@ -6,6 +6,11 @@ use clap::{Parser, ValueEnum};
 pub enum DebugMode {
     /// Display no debug output at all by default
     None,
+
+    /// Displays the execution time for the program.
+    /// Does not include lexer and parser speed
+    Time,
+
     /// Display debug output for all modes
     All,
     /// Display tokens from the lexer
@@ -23,12 +28,12 @@ pub enum DebugMode {
     about="A language designed for AP Computer Science Principals students"
 )]
 pub struct CommandLine {
-    /// The file that will be run, pass in a file path
-    #[arg(required_unless_present_any=&["eval", "eval_stdin"], conflicts_with_all=&["eval", "eval_stdin"])]
+    /// The source file that will be run, pass in a file path
+    #[arg(value_name="FILE_PATH", required_unless_present_any=&["eval", "eval_stdin"], conflicts_with_all=&["eval", "eval_stdin"])]
     pub file: Option<PathBuf>,
 
     /// Execute code passed into stdin
-    #[arg(short='e', long, conflicts_with_all=&["file", "eval_stdin"])]
+    #[arg(short='e', long, value_name="CODE", conflicts_with_all=&["file", "eval_stdin"])]
     pub eval: Option<Arc<str>>,
 
     /// Execute code from standard input (not a repl)
@@ -36,19 +41,28 @@ pub struct CommandLine {
     pub eval_stdin: bool,
 
     /// Specify the internal debug mode
-    #[arg(short='d', long, value_enum, default_value="none")] 
+    #[arg(short='d', long, value_name="MODE", value_enum, default_value="none",
+    help_heading = "Advanced Options")]
     pub debug: DebugMode,
 
     /// Run the checker without executing the code
     #[arg(short='c', long, conflicts_with="debug")]
     pub check: bool,
-    
-    /// Increase this if you are running deeply recursive code and are
-    ///  getting stack overflow errors.
-    /// Or if you know what you are doing
-    /// Max size (in Bytes) of the stack for the interpreter
-    /// Default stack size is 1MiB which grows to 8MiB if needed
-    /// DO NOT SET LESS THAN 1MiB
-    #[arg(long, default_value_t={8 * 1024 * 1024})]
+
+    // windows stack size is 1MB which is way too small for some nested recursive code
+    // on linux you should be okay most of the time without `stacker`
+    // but on windows you 100% do
+    /// The size (in Bytes) of the stack in the interpreter
+    #[arg(
+        long,
+        default_value_t={8 * 1024 * 1024},
+        help_heading = "Advanced Options",
+        long_help="The size (in Bytes) of the stack in the interpreter\n\
+        By default it starts at 8MiB and grows in 8 MiB increments as needed.\n\
+        Increase this if you are getting stack overflow errors\n\
+        DONT EDIT THIS VALUE IF YOU DONT UNDERSTAND THIS MESSAGE\n\
+        DO NOT SET LESS THAN 1MiB!
+        "
+    )]
     pub stack_size: usize,
 }

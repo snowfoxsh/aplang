@@ -1,13 +1,10 @@
-// use crate::ast::{Ast, Expr, Literal, LogicalOp, Stmt};
 use crate::ast::*;
 use crate::lexer::LiteralValue;
 use crate::token::TokenType::{Eof, LeftParen, RightParen};
 use crate::token::{Token, TokenType};
 use crate::ast::Return as ReturnValue;
 use crate::ast::Import as ImportStatement;
-use miette::{miette, Diagnostic, LabeledSpan, NamedSource, Report, Severity, SourceSpan};
-use owo_colors::OwoColorize;
-use std::fmt::Display;
+use miette::{miette, Diagnostic, LabeledSpan, NamedSource, Report};
 use std::sync::Arc;
 
 // something like

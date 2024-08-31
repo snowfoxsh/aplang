@@ -1,9 +1,8 @@
 use crate::ast::{BinaryOp, LogicalOp, UnaryOp};
 use crate::lexer::LiteralValue;
-use miette::{miette, LabeledSpan, Report, SourceSpan};
+use miette::{miette, LabeledSpan, SourceSpan};
 use std::collections::HashMap;
 use std::fmt;
-use std::fmt::{write, Display};
 use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq)]

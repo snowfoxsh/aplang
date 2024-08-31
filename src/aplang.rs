@@ -152,7 +152,7 @@ impl ApLang<ExecutedWithDebug> {
         let values = unsafe { self.values.as_ref().unwrap_unchecked() };
         
         for value in values {
-            writeln!(buf, "{}", value)?;
+            writeln!(buf, "EXPR OUTPUT: {}", value)?;
         }
         
         Ok(())

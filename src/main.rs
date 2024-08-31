@@ -1,6 +1,7 @@
 use std::{fs, io};
 use std::io::Read;
 use std::sync::Arc;
+use std::time::Instant;
 use clap::Parser;
 use miette::{miette, Result};
 
@@ -81,19 +82,28 @@ fn run(args: CommandLine) -> Result<()> {
     if args.check { return Ok(()) }
     
     // execute the interpreter
-    if matches!(args.debug, DebugMode::All | DebugMode::Interpreter) {
+    let runtime = if matches!(args.debug, DebugMode::All | DebugMode::Interpreter) {
+        let start = Instant::now();
         let executed = parsed.execute_with_debug()?;
+        let elapsed = start.elapsed();
         executed.debug_output(&mut debug_buffer).map_err( |err| {
             miette!("could not write debug info for parser!\n{}", err)
-        })?
+        })?;
+        
+        elapsed
     } else {
+        let start = Instant::now();
         parsed.execute()?;
-    }
+        start.elapsed()
+    };
     
     // todo: consider adding a flag that will specify a write location for the debug string
     // write out our debug buffer if requested
     if !matches!(args.debug, DebugMode::None) {
         eprintln!("{}", debug_buffer);
+        if matches!(args.debug, DebugMode::Time | DebugMode::All) {
+            eprintln!("EXECUTION TIME: {:?}", runtime)
+        }
     }
     
     Ok(())

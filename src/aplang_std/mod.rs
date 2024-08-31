@@ -21,6 +21,9 @@ impl Modules {
         self.register("core", std_core);
         self.register("fs", file_system::file_system);
         self.register("time", time::time);
+        // math lib, sin cos etc. rounding
+        // casting to int
+        // input functions
     }
     pub fn init() -> Self {
         // create bland hashmap of modules
@@ -44,7 +47,7 @@ impl Modules {
 
 fn std_core(env: &mut Env) {
     std_function!(env.functions => fn DISPLAY(value: Value) {
-        println!("PRINT OUTPUT: {}", value);
+        println!("{}", value);
 
         return Ok(Value::Null)
     });

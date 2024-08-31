@@ -452,8 +452,6 @@ impl Interpreter {
                     unreachable!() //
                 };
                 
-                println!("Try Import Module Name: {module_name}");
-
                 // load the module into the venv / activate it
                 self.modules.lookup(module_name)
                     .ok_or(
