@@ -42,9 +42,9 @@ macro_rules! unwrap_arg_type {
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: (0..2).into(),
-                    message: "Bad Argument Here".to_string(),
-                    help: "Argument cannot be cast into null".to_string(),
-                    label: "Invalid Argument Cast".to_string()
+                    message: "Invalid Argument Cast".to_string(),
+                    help: "".to_string(),
+                    label: "Argument cannot be cast into null".to_string(),
                 }
             )
         }
@@ -55,9 +55,9 @@ macro_rules! unwrap_arg_type {
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: (0..2).into(),
-                    message: "Bad Argument Here".to_string(),
-                    help: format!("Argument Value ({}) is not of type Number", stringify!($value)),
-                    label: "Invalid Argument Cast".to_string()
+                    message: "Invalid Argument Cast".to_string(),
+                    help: "".to_string(),
+                    label: format!("Argument Value ({}) is not of type Number", stringify!($value)),
                 }
             );
        };
@@ -68,9 +68,9 @@ macro_rules! unwrap_arg_type {
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: (0..2).into(),
-                    message: "Bad Argument Here".to_string(),
-                    help: format!("Argument Value ({}) is not of type Number", stringify!($value)),
-                    label: "Invalid Argument Cast".to_string()
+                    message: "Invalid Argument Cast".to_string(),
+                    help: "".to_string(),
+                    label: format!("Argument Value ({}) is not of type Number", stringify!($value)),
                 }
             );
        };
@@ -81,9 +81,9 @@ macro_rules! unwrap_arg_type {
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: (0..2).into(),
-                    message: "Bad Argument Here".to_string(),
-                    help: format!("Argument Value ({}) is not of type String", stringify!($value)),
-                    label: "Invalid Argument Cast".to_string()
+                    message: "Invalid Argument Cast".to_string(),
+                    help: "".to_string(),
+                    label: format!("Argument Value ({}) is not of type String", stringify!($value)),
                 }
             );
         };
@@ -94,9 +94,9 @@ macro_rules! unwrap_arg_type {
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: (0..2).into(),
-                    message: "Bad Argument Here".to_string(),
-                    help: format!("Argument Value ({}) is not of type String", stringify!($value)),
-                    label: "Invalid Argument Cast".to_string()
+                    message: "Invalid Argument Cast".to_string(),
+                    help: "".to_string(),
+                    label: format!("Argument Value ({}) is not of type String", stringify!($value)),
                 }
             );
         };
@@ -107,9 +107,9 @@ macro_rules! unwrap_arg_type {
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: (0..2).into(),
-                    message: "Bad Argument Here".to_string(),
-                    help: format!("Argument Value ({}) is not of type Bool", stringify!($value)),
-                    label: "Invalid Argument Cast".to_string()
+                    message: "Invalid Argument Cast".to_string(),
+                    help: "".to_string(),
+                    label: format!("Argument Value ({}) is not of type Bool", stringify!($value)),
                 }
             );
         };
@@ -120,9 +120,9 @@ macro_rules! unwrap_arg_type {
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: (0..2).into(),
-                    message: "Bad Argument Here".to_string(),
-                    help: format!("Argument Value ({}) is not of type Bool", stringify!($value)),
-                    label: "Invalid Argument Cast".to_string()
+                    message: "Invalid Argument Cast".to_string(),
+                    help: "".to_string(),
+                    label: format!("Argument Value ({}) is not of type Bool", stringify!($value)),
                 }
             );
         };
@@ -133,9 +133,9 @@ macro_rules! unwrap_arg_type {
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: (0..2).into(),
-                    message: "Bad Argument Here".to_string(),
-                    help: format!("Argument Value ({}) is not of type List<Value>", stringify!($value)),
-                    label: "Invalid Argument Cast".to_string()
+                    message: "Invalid Argument Cast".to_string(),
+                    help: "".to_string(),
+                    label: format!("Argument Value ({}) is not of type List<Value>", stringify!($value)),
                 }
             );
         };
@@ -146,9 +146,9 @@ macro_rules! unwrap_arg_type {
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: (0..2).into(),
-                    message: "Bad Argument Here".to_string(),
-                    help: format!("Argument Value ({}) is not of type List<Value>", stringify!($value)),
-                    label: "Invalid Argument Cast".to_string()
+                    message: "Invalid Argument Cast".to_string(),
+                    help: "".to_string(),
+                    label: format!("Argument Value ({}) is not of type List<Value>", stringify!($value)),
                 }
             );
         };

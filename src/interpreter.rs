@@ -536,25 +536,12 @@ impl Interpreter {
 
     fn call(&mut self, proc: &ProcCall) -> Result<Value, RuntimeError> {
         // todo: look into callee expr
-
-        // run the argument expressions before the actual call
-        let argument_evaluations: Result<Vec<_>, _> = proc.arguments // todo: figure out why this type conversion works
-            .iter()
-            .map(|arg| self.expr(arg)) // todo write a better error message here
-            .collect();
-
-        let Ok(argument_evaluations) = argument_evaluations else {
-            // todo: write better error message -- use individual expr source pointers
-            return Err(
-                RuntimeError {
-                    // src: Arc::from("... code here".to_string()),
-                    span: (proc.parens.0.span.offset() + proc.parens.0.span.len() .. proc.parens.1.span.offset()).into(),
-                    message: "Cannot evaluate these arguments".to_string(),
-                    help: "Could not evaluate arguments".to_string(),
-                    label: "Invalid Arguments".to_string()
-                }
-            )
-        };
+        
+        let mut argument_evaluations = Vec::new();
+        
+        for arg in &proc.arguments {
+            argument_evaluations.push(self.expr(arg)?)
+        }
 
         let callable = self.venv.lookup_function(proc.ident.clone(), proc.token.clone())?;
 
@@ -702,9 +689,9 @@ impl Interpreter {
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: node.token.span,
-                    message: "Internal Bug".to_string(),
+                    message: "Incomparable Values".to_string(),
                     help: "".to_string(),
-                    label: "Invalid operands in binary op not equal".to_string()
+                    label: "Cannot compare these two values".to_string()
                 }
             ),
         }
