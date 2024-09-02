@@ -45,42 +45,32 @@ impl Modules {
 
 fn std_core(env: &mut Env) {
     std_function!(env.functions => fn DISPLAY(value: Value) {
-        println!("{}", value.0);
+        println!("{}", value);
 
         return Ok(Value::Null)
     });
     
-    std_function!(env.functions => fn INSERT(list: Value, i: Value, value: Value) {
-        unwrap_arg_type!(list => Value::List);
-        unwrap_arg_type!(i => Value::Number);
-        
+    std_function!(env.functions => fn INSERT(list: Value::List, i: Value::Number, value: Value) {
         // subtract one because indexed at one
-        list.borrow_mut().insert(i as usize - 1, value.0.clone());
+        list.borrow_mut().insert(i as usize - 1, value.clone());
 
         return Ok(Value::Null)
     });
     
-    std_function!(env.functions => fn APPEND(list: Value, value: Value) {
-        unwrap_arg_type!(list => Value::List);
-        
-        list.borrow_mut().push(value.0.clone());
+    std_function!(env.functions => fn APPEND(list: Value::List, value: Value) {
+        list.borrow_mut().push(value.clone());
         
         return Ok(Value::Null)
     });
     
-    std_function!(env.functions => fn REMOVE(list: Value, i: Value) {
-        unwrap_arg_type!(list => Value::List);
-        unwrap_arg_type!(i => Value::Number);
-
+    std_function!(env.functions => fn REMOVE(list: Value::List, i: Value::Number) {
         // todo instead of panic with default hook make this return a nice error
         let poped = list.borrow_mut().remove(i as usize - 1);
 
         return Ok(poped);
     });
     
-     std_function!(env.functions => fn LENGTH(list: Value) {
-        unwrap_arg_type!(list => Value::List);
-
+     std_function!(env.functions => fn LENGTH(list: Value::List) {
         let len = list.borrow().len() as f64;
 
         return Ok(Value::Number(len))
