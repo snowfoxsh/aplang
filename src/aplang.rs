@@ -32,7 +32,7 @@ impl ApLang {
     pub fn new(source_code: impl Into<Arc<str>>, file_name: String) -> Self {
         ApLang {
             source_code: source_code.into(),
-            file_name: file_name.into(),
+            file_name,
             tokens: None,
             ast: None,
             values: None,
