@@ -40,6 +40,11 @@ pub struct CommandLine {
     #[arg(long, conflicts_with_all=&["file", "eval"])]
     pub eval_stdin: bool,
 
+
+    /// Disallows execution of non .ap files
+    #[arg(long, default_value="true")]
+    pub enforce_file_extension: bool,
+
     /// Specify the internal debug mode
     #[arg(short='d', long, value_name="MODE", value_enum, default_value="none",
     help_heading = "Advanced Options")]

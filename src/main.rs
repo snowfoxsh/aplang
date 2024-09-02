@@ -35,10 +35,20 @@ fn run(args: CommandLine) -> Result<()> {
     // note: consider adding debug logs here
     // load the source code
     let source_code: Arc<str> = if let Some(file_path) = &args.file {
+        if args.enforce_file_extension {
+            let ext = file_path.extension()
+                .ok_or(miette!("could not read file extension from file"))
+                .map(|os_str| os_str.to_string_lossy().into_owned())?;
+
+            if ext.eq_ignore_ascii_case(".ap") {
+                return Err(miette!("file extension is not '.ap' instead found .{}", ext))
+            }
+        }
+
         file_name = file_path.file_name()
             .map(|os_str| os_str.to_string_lossy().into_owned())
             .ok_or(miette!("failed to read file name from file"))?;
-        
+
         fs::read_to_string(file_path).map_err(|error| miette!(
            "failed to open file {:?}\n{}", file_path.as_path(), error
         ))?.into()
