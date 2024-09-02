@@ -1,17 +1,13 @@
-use std::rc::Rc;
-use crate::errors::RuntimeError;
-use crate::interpreter::{Env, Interpreter, NativeProcedure, Value};
-use std::sync::Arc;
-
 #[macro_export]
 macro_rules! std_function {
     ($location:expr => fn $name:ident ($($arg:ident: Value),*) {$($body:tt)*}) => {
         $location.insert(
             String::from(stringify!($name)),
-            (Rc::new(NativeProcedure {
+            (std::rc::Rc::new(NativeProcedure {
                 name: String::from(stringify!($name)),
                 arity: arity!($($arg)*),
                 callable: |_interpreter: &mut Interpreter,  args: &[Value]| {
+                    #[allow(unused_mut, unused_variables)]
                     let mut iter = args.into_iter();
                     $( let $arg = iter.next().unwrap();)*
 

@@ -141,7 +141,7 @@ pub struct Env {
     //                |        |                                                  If None: it is native function
     //                |        |> Pointer to the function
     //                |> Function name (symbol)
-    pub venv: Vec<Context>,
+    venv: Vec<Context>,
 }
 
 #[derive(Default, Clone, Debug)]
@@ -175,7 +175,7 @@ impl Env {
     }
 
     /// pops of the current layer of the venv
-    pub fn scrape(&mut self) -> Context {
+    fn scrape(&mut self) -> Context {
         self.venv
             .pop()
             .expect("attempted to remove context but failed")
@@ -364,8 +364,8 @@ impl Interpreter {
                 Ok(())
             }
             Stmt::ForEach(for_each) => {
-                let mut values = match self.expr(&for_each.list)? {
-                    Value::List(mut list) => list,
+                let values = match self.expr(&for_each.list)? {
+                    Value::List(list) => list,
                     Value::String(string) => Rc::new(RefCell::new(string
                         .chars()
                         .map(|ch| Value::String(ch.to_string()))
@@ -640,7 +640,7 @@ impl Interpreter {
             )
         };
 
-        if let Some(mut target) = list.borrow_mut().get_mut((idx - 1.0) as usize) {
+        if let Some(target) = list.borrow_mut().get_mut((idx - 1.0) as usize) {
             *target = value.clone();
         }
 

@@ -2,7 +2,6 @@ use std::fmt::{Debug, Display};
 use miette::{Diagnostic, LabeledSpan, Report, SourceCode, SourceSpan};
 use thiserror::Error;
 use std::fmt;
-use std::sync::Arc;
 
 #[derive(Error, Debug)]
 #[error("error{} occurred", if reports.len() > 1 {"s"} else {""})]

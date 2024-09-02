@@ -4,7 +4,7 @@ use crate::token::TokenType::{Eof, LeftParen, RightParen};
 use crate::token::{Token, TokenType};
 use crate::ast::Return as ReturnValue;
 use crate::ast::Import as ImportStatement;
-use miette::{miette, Diagnostic, LabeledSpan, NamedSource, Report};
+use miette::{miette, LabeledSpan, NamedSource, Report};
 use std::sync::Arc;
 
 // something like
@@ -304,7 +304,7 @@ impl Parser2 {
         };
 
         if maybe_value.is_some() {
-            self.consume(&SoftSemi, |token| miette!{
+            self.consume(&SoftSemi, |_token| miette!{
                 "todo: expected semicolon after return statement"
             })?;
         }
@@ -1263,9 +1263,7 @@ impl Parser2 {
 
 pub(super) mod warning {
     use crate::parser::Parser2;
-    use crate::token::TokenType::Identifier;
-    use crate::token::{get_keywords_hashmap, Token};
-    use miette::{miette, Report, Severity};
+    use miette::{Report};
 
     impl Parser2 {
         pub(super) fn warning(&mut self, report: Report) {

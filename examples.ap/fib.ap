@@ -10,4 +10,4 @@ PROCEDURE fib(n) {
     }
 }
 
-DISPLAY(fib(15))
+DISPLAY(fib(30))

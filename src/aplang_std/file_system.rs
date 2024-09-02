@@ -1,12 +1,10 @@
 use std::fs;
 use std::fs::{File, OpenOptions};
 use std::path::Path;
-use std::rc::Rc;
 use std::io::Write;
 use crate::errors::RuntimeError;
 use crate::interpreter::{Env, Value, NativeProcedure, Interpreter};
 use crate::{std_function, arity, unwrap_arg_type};
-use std::sync::Arc;
 
 
 pub(super) fn file_system(env: &mut Env) {
@@ -53,7 +51,7 @@ pub(super) fn file_system(env: &mut Env) {
             return Ok(Value::Bool(false))
         };
 
-        if let Err(e) = write!(file, "{}" , contents) {
+        if let Err(_e) = write!(file, "{}" , contents) {
             return Ok(Value::Bool(false))
         };
 
@@ -68,7 +66,7 @@ pub(super) fn file_system(env: &mut Env) {
             return Ok(Value::Bool(false))
         };
 
-        if let Err(e) = write!(file, "{}", contents){
+        if let Err(_e) = write!(file, "{}", contents){
             return Ok(Value::Bool(false))
         };
 

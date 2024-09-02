@@ -396,7 +396,7 @@ pub enum LiteralValue {
 }
 
 impl TryInto<f64> for LiteralValue {
-    type Error = (String);
+    type Error = String;
 
     fn try_into(self) -> Result<f64, Self::Error> {
         let Self::Number(num) = self else {
@@ -410,7 +410,7 @@ impl TryInto<f64> for LiteralValue {
 }
 
 impl TryInto<String> for LiteralValue {
-    type Error = (String);
+    type Error = String;
 
     fn try_into(self) -> Result<String, Self::Error> {
         let Self::String(string) = self else {

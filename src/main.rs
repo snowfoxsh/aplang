@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_variables)]
 
 use std::{fs, io};
 use std::io::Read;
