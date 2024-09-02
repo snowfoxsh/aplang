@@ -1,5 +1,5 @@
 use std::hash::{Hash, Hasher};
-use crate::token::{Token, TokenType};
+use crate::token::{Token};
 use std::ops::Deref;
 use std::sync::Arc;
 use miette::SourceSpan;

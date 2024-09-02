@@ -9,8 +9,9 @@ macro_rules! std_function {
                 callable: |_interpreter: &mut Interpreter,  args: &[Value], args_toks: &[SourceSpan]| {
                     #[allow(unused_mut, unused_variables)]
                     let mut iter = args.into_iter();
+                    #[allow(unused_mut)]
                     let mut iter_toks = iter.zip(args_toks.into_iter());
-                    
+
                     $(let $arg = iter_toks.next().unwrap();)*
 
                     $($body)*
