@@ -39,11 +39,12 @@ impl From<Vec<Report>> for Reports {
 }
 
 #[derive(Debug, Error, Diagnostic)]
-#[error("message {src}")]
+// #[error("message {src}")]
+#[error("{message}")]
 #[diagnostic()]
 #[diagnostic(code(aplang::runtime))]
 pub struct RuntimeError {
-    #[source_code] pub src: Arc<str>,
+    // #[source_code] pub src: Arc<str>,
     #[label("{label}")] pub span: SourceSpan,
     pub message: String,
     pub help: String,

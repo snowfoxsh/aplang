@@ -40,7 +40,7 @@ macro_rules! unwrap_arg_type {
             // todo make this a better message
             _ => return Err(
                 RuntimeError {
-                    src: Arc::from("... code here".to_string()),
+                    // src: Arc::from("... code here".to_string()),
                     span: (0..2).into(),
                     message: "Bad Argument Here".to_string(),
                     help: "Argument cannot be cast into null".to_string(),
@@ -53,7 +53,7 @@ macro_rules! unwrap_arg_type {
         let Value::Number($value) = $value.clone() else {
             return Err(
                 RuntimeError {
-                    src: Arc::from("... code here".to_string()),
+                    // src: Arc::from("... code here".to_string()),
                     span: (0..2).into(),
                     message: "Bad Argument Here".to_string(),
                     help: format!("Argument Value ({}) is not of type Number", stringify!($value)),
@@ -66,7 +66,7 @@ macro_rules! unwrap_arg_type {
         let Value::Number(mut $value) = $value.clone() else {
             return Err(
                 RuntimeError {
-                    src: Arc::from("... code here".to_string()),
+                    // src: Arc::from("... code here".to_string()),
                     span: (0..2).into(),
                     message: "Bad Argument Here".to_string(),
                     help: format!("Argument Value ({}) is not of type Number", stringify!($value)),
@@ -79,7 +79,7 @@ macro_rules! unwrap_arg_type {
         let Value::String($value) = $value.clone() else {
             return Err(
                 RuntimeError {
-                    src: Arc::from("... code here".to_string()),
+                    // src: Arc::from("... code here".to_string()),
                     span: (0..2).into(),
                     message: "Bad Argument Here".to_string(),
                     help: format!("Argument Value ({}) is not of type String", stringify!($value)),
@@ -92,7 +92,7 @@ macro_rules! unwrap_arg_type {
         let Value::String(mut $value) = $value.clone() else {
             return Err(
                 RuntimeError {
-                    src: Arc::from("... code here".to_string()),
+                    // src: Arc::from("... code here".to_string()),
                     span: (0..2).into(),
                     message: "Bad Argument Here".to_string(),
                     help: format!("Argument Value ({}) is not of type String", stringify!($value)),
@@ -105,7 +105,7 @@ macro_rules! unwrap_arg_type {
         let Value::Bool($value) = $value.clone() else {
             return Err(
                 RuntimeError {
-                    src: Arc::from("... code here".to_string()),
+                    // src: Arc::from("... code here".to_string()),
                     span: (0..2).into(),
                     message: "Bad Argument Here".to_string(),
                     help: format!("Argument Value ({}) is not of type Bool", stringify!($value)),
@@ -118,7 +118,7 @@ macro_rules! unwrap_arg_type {
         let Value::Bool(mut $value) = $value.clone() else {
             return Err(
                 RuntimeError {
-                    src: Arc::from("... code here".to_string()),
+                    // src: Arc::from("... code here".to_string()),
                     span: (0..2).into(),
                     message: "Bad Argument Here".to_string(),
                     help: format!("Argument Value ({}) is not of type Bool", stringify!($value)),
@@ -131,7 +131,7 @@ macro_rules! unwrap_arg_type {
         let Value::List($value) = $value.clone() else {
             return Err(
                 RuntimeError {
-                    src: Arc::from("... code here".to_string()),
+                    // src: Arc::from("... code here".to_string()),
                     span: (0..2).into(),
                     message: "Bad Argument Here".to_string(),
                     help: format!("Argument Value ({}) is not of type List<Value>", stringify!($value)),
@@ -144,7 +144,7 @@ macro_rules! unwrap_arg_type {
         let Value::List(mut $value) = $value.clone() else {
             return Err(
                 RuntimeError {
-                    src: Arc::from("... code here".to_string()),
+                    // src: Arc::from("... code here".to_string()),
                     span: (0..2).into(),
                     message: "Bad Argument Here".to_string(),
                     help: format!("Argument Value ({}) is not of type List<Value>", stringify!($value)),

@@ -408,6 +408,8 @@ impl Parser2 {
 
         // expected expression
         let count = self.expression()?;
+        
+        let count_token = self.previous().clone();
 
         let times_token = self.consume(&Times, |token| {
             // todo improve this message
@@ -432,6 +434,7 @@ impl Parser2 {
                 body,
                 repeat_token,
                 times_token,
+                count_token,
             }
             .into(),
         ))
@@ -572,6 +575,8 @@ impl Parser2 {
 
         let list = self.expression()?;
 
+        let list_token = self.previous().clone();
+
         let body = self.statement()?.into();
 
         Ok(Stmt::ForEach(
@@ -583,6 +588,7 @@ impl Parser2 {
                 for_token,
                 each_token,
                 in_token,
+                list_token
             }
             .into(),
         ))
@@ -665,6 +671,7 @@ impl Parser2 {
                         target: Expr::Access(
                             Access {
                                 list: access.list.clone(),
+                                list_token: access.list_token.clone(),
                                 key: access.key.clone(),
                                 brackets: access.brackets.clone(),
                             }
@@ -673,6 +680,8 @@ impl Parser2 {
                         list: access.list.clone(),
                         idx: access.key.clone(),
                         value: value,
+                        list_token: access.list_token.clone(),
+                        brackets: access.brackets.clone(),
                         arrow_token,
                     }
                     .into(),
@@ -859,6 +868,7 @@ impl Parser2 {
 
     fn access(&mut self) -> miette::Result<Expr> {
         let mut expr = self.primary()?;
+        let expr_token = self.previous().clone();
 
         loop {
             if self.match_token(&LeftBracket) {
@@ -882,6 +892,7 @@ impl Parser2 {
 
                 expr = Expr::Access(Arc::new(Access {
                     list: expr,
+                    list_token: expr_token.clone(),
                     key: index,
                     brackets: (lb_token, rb_token),
                 }));

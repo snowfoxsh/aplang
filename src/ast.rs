@@ -51,6 +51,7 @@ pub struct RepeatTimes {
 
     pub repeat_token: Token,
     pub times_token: Token,
+    pub count_token: Token,
 }
 #[derive(Debug, Clone)]
 pub struct RepeatUntil {
@@ -70,6 +71,7 @@ pub struct ForEach {
     pub for_token: Token,
     pub each_token: Token,
     pub in_token: Token,
+    pub list_token: Token,
 }
 #[derive(Debug, Clone)]
 pub struct ProcDeclaration {
@@ -162,6 +164,7 @@ pub struct ProcCall {
 #[derive(Debug, Clone)]
 pub struct Access {
     pub list: Expr,
+    pub list_token: Token,
     pub key: Expr,
     pub brackets: (Token, Token),
 }
@@ -206,6 +209,8 @@ pub struct Set {
     pub list: Expr,
     pub idx: Expr,
 
+    pub list_token: Token,
+    pub brackets: (Token, Token),
     pub arrow_token: Token,
 }
 
