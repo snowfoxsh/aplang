@@ -6,10 +6,12 @@ macro_rules! std_function {
             (std::rc::Rc::new(NativeProcedure {
                 name: String::from(stringify!($name)),
                 arity: arity!($($arg)*),
-                callable: |_interpreter: &mut Interpreter,  args: &[Value]| {
+                callable: |_interpreter: &mut Interpreter,  args: &[Value], args_toks: &[SourceSpan]| {
                     #[allow(unused_mut, unused_variables)]
                     let mut iter = args.into_iter();
-                    $( let $arg = iter.next().unwrap();)*
+                    let mut iter_toks = iter.zip(args_toks.into_iter());
+                    
+                    $(let $arg = iter_toks.next().unwrap();)*
 
                     $($body)*
                 }
@@ -31,13 +33,13 @@ macro_rules! arity {
 #[macro_export]
 macro_rules! unwrap_arg_type {
     ($value:ident => Value::Null) => {
-        let $value = match $value {
+        let $value = match $value.0 {
             Value::Null => Value::Null,
             // todo make this a better message
             _ => return Err(
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
-                    span: (0..2).into(),
+                    span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
                     help: "".to_string(),
                     label: "Argument cannot be cast into null".to_string(),
@@ -46,11 +48,11 @@ macro_rules! unwrap_arg_type {
         }
     };
     ($value:ident => Value::Number) => {
-        let Value::Number($value) = $value.clone() else {
+        let Value::Number($value) = $value.0.clone() else {
             return Err(
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
-                    span: (0..2).into(),
+                    span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
                     help: "".to_string(),
                     label: format!("Argument Value ({}) is not of type Number", stringify!($value)),
@@ -59,11 +61,11 @@ macro_rules! unwrap_arg_type {
        };
     };
     (mut $value:ident => Value::Number) => {
-        let Value::Number(mut $value) = $value.clone() else {
+        let Value::Number(mut $value) = $value.0.clone() else {
             return Err(
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
-                    span: (0..2).into(),
+                    span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
                     help: "".to_string(),
                     label: format!("Argument Value ({}) is not of type Number", stringify!($value)),
@@ -72,11 +74,11 @@ macro_rules! unwrap_arg_type {
        };
     };
     ($value:ident => Value::String) => {
-        let Value::String($value) = $value.clone() else {
+        let Value::String($value) = $value.0.clone() else {
             return Err(
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
-                    span: (0..2).into(),
+                    span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
                     help: "".to_string(),
                     label: format!("Argument Value ({}) is not of type String", stringify!($value)),
@@ -85,11 +87,11 @@ macro_rules! unwrap_arg_type {
         };
     };
     (mut $value:ident => Value::String) => {
-        let Value::String(mut $value) = $value.clone() else {
+        let Value::String(mut $value) = $value.0.clone() else {
             return Err(
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
-                    span: (0..2).into(),
+                    span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
                     help: "".to_string(),
                     label: format!("Argument Value ({}) is not of type String", stringify!($value)),
@@ -98,11 +100,11 @@ macro_rules! unwrap_arg_type {
         };
     };
     ($value:ident => Value::Bool) => {
-        let Value::Bool($value) = $value.clone() else {
+        let Value::Bool($value) = $value.0.clone() else {
             return Err(
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
-                    span: (0..2).into(),
+                    span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
                     help: "".to_string(),
                     label: format!("Argument Value ({}) is not of type Bool", stringify!($value)),
@@ -111,11 +113,11 @@ macro_rules! unwrap_arg_type {
         };
     };
     (mod $value:ident => Value::Bool) => {
-        let Value::Bool(mut $value) = $value.clone() else {
+        let Value::Bool(mut $value) = $value.0.clone() else {
             return Err(
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
-                    span: (0..2).into(),
+                    span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
                     help: "".to_string(),
                     label: format!("Argument Value ({}) is not of type Bool", stringify!($value)),
@@ -124,11 +126,11 @@ macro_rules! unwrap_arg_type {
         };
     };
     ($value:ident => Value::List) => {
-        let Value::List($value) = $value.clone() else {
+        let Value::List($value) = $value.0.clone() else {
             return Err(
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
-                    span: (0..2).into(),
+                    span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
                     help: "".to_string(),
                     label: format!("Argument Value ({}) is not of type List<Value>", stringify!($value)),
@@ -137,11 +139,11 @@ macro_rules! unwrap_arg_type {
         };
     };
     (mut $value:ident => Value::List) => {
-        let Value::List(mut $value) = $value.clone() else {
+        let Value::List(mut $value) = $value.0.clone() else {
             return Err(
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
-                    span: (0..2).into(),
+                    span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
                     help: "".to_string(),
                     label: format!("Argument Value ({}) is not of type List<Value>", stringify!($value)),

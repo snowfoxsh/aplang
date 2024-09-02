@@ -1,8 +1,8 @@
 use std::hash::{Hash, Hasher};
-use crate::token::Token;
+use crate::token::{Token, TokenType};
 use std::ops::Deref;
 use std::sync::Arc;
-
+use miette::SourceSpan;
 // To facilitate better error handling down the line,
 // we are going to store the tokens that the thing came from
 // so we can report back to them later
@@ -157,6 +157,7 @@ pub struct Grouping {
 pub struct ProcCall {
     pub ident: String,
     pub arguments: Vec<Expr>,
+    pub arguments_spans: Vec<SourceSpan>,
 
     pub token: Token,
     pub parens: (Token, Token),

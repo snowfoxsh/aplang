@@ -4,6 +4,7 @@ use std::path::Path;
 use std::io::Write;
 use crate::errors::RuntimeError;
 use crate::interpreter::{Env, Value, NativeProcedure, Interpreter};
+use miette::SourceSpan;
 use crate::{std_function, arity, unwrap_arg_type};
 
 
@@ -51,7 +52,7 @@ pub(super) fn file_system(env: &mut Env) {
             return Ok(Value::Bool(false))
         };
 
-        if let Err(_e) = write!(file, "{}" , contents) {
+        if let Err(_e) = write!(file, "{}" , contents.0) {
             return Ok(Value::Bool(false))
         };
 
@@ -66,7 +67,7 @@ pub(super) fn file_system(env: &mut Env) {
             return Ok(Value::Bool(false))
         };
 
-        if let Err(_e) = write!(file, "{}", contents){
+        if let Err(_e) = write!(file, "{}", contents.0){
             return Ok(Value::Bool(false))
         };
 

@@ -6,6 +6,7 @@ use std::mem;
 use std::ops::Deref;
 use std::rc::Rc;
 use std::sync::Arc;
+use miette::SourceSpan;
 use crate::errors::RuntimeError;
 use crate::aplang_std::Modules;
 use crate::lexer::LiteralValue;
@@ -57,7 +58,7 @@ impl Display for Value {
 }
 
 pub trait Callable {
-    fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> Result<Value, RuntimeError>;
+    fn call(&self, interpreter: &mut Interpreter, args: &[Value], args_toks: &[SourceSpan]) -> Result<Value, RuntimeError>;
     fn arity(&self) -> u8;
 }
 
@@ -68,7 +69,7 @@ pub struct Procedure {
 }
 
 impl Callable for Procedure {
-    fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> Result<Value, RuntimeError> {
+    fn call(&self, interpreter: &mut Interpreter, args: &[Value], args_toks: &[SourceSpan]) -> Result<Value, RuntimeError> {
         // save the retval
         let cached_retval = interpreter.ret_val.clone();
 
@@ -107,7 +108,7 @@ impl Callable for Procedure {
 pub struct NativeProcedure {
     pub name: String,
     pub arity: u8,
-    pub callable: fn(&mut Interpreter, &[Value]) -> Result<Value, RuntimeError>
+    pub callable: fn(&mut Interpreter, &[Value], args_toks: &[SourceSpan]) -> Result<Value, RuntimeError>
 }
 
 impl Callable for NativeProcedure {
@@ -115,8 +116,8 @@ impl Callable for NativeProcedure {
         self.arity
     }
 
-    fn call(&self, interpreter: &mut Interpreter, args: &[Value]) -> Result<Value, RuntimeError> {
-        (self.callable)(interpreter, args)
+    fn call(&self, interpreter: &mut Interpreter, args: &[Value], args_toks: &[SourceSpan]) -> Result<Value, RuntimeError> {
+        (self.callable)(interpreter, args, args_toks)
     }
 }
 
@@ -552,14 +553,14 @@ impl Interpreter {
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: (proc.parens.0.span.offset() + proc.parens.0.span.len() .. proc.parens.1.span.offset()).into(),
-                    message: "Wrong number of arguments here".to_string(),
-                    help: "Function called with incorrect number of args".to_string(),
-                    label: "Incorrect Number Of Args".to_string()
+                    message: "Incorrect Number Of Args".to_string(),
+                    help: "".to_string(),
+                    label: format!("There should be {} arg{}; Found {}", callable.arity(), if callable.arity() == 1 {""} else {"s"}, argument_evaluations.len())
                 }
             ) // todo make this error message better -- use source proc pointer
         }
 
-        callable.call(self, argument_evaluations.as_ref())
+        callable.call(self, argument_evaluations.as_ref(), proc.arguments_spans.as_ref())
     }
 
     // help: a string can be thought of a list of chars

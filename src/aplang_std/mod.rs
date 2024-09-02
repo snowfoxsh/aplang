@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use crate::interpreter::{Env, Value, Interpreter, NativeProcedure};
+use miette::SourceSpan;
 use crate::{std_function, arity, unwrap_arg_type};
 use crate::errors::RuntimeError;
 
@@ -44,7 +45,7 @@ impl Modules {
 
 fn std_core(env: &mut Env) {
     std_function!(env.functions => fn DISPLAY(value: Value) {
-        println!("{}", value);
+        println!("{}", value.0);
 
         return Ok(Value::Null)
     });
@@ -54,7 +55,7 @@ fn std_core(env: &mut Env) {
         unwrap_arg_type!(i => Value::Number);
         
         // subtract one because indexed at one
-        list.borrow_mut().insert(i as usize - 1, value.clone());
+        list.borrow_mut().insert(i as usize - 1, value.0.clone());
 
         return Ok(Value::Null)
     });
@@ -62,7 +63,7 @@ fn std_core(env: &mut Env) {
     std_function!(env.functions => fn APPEND(list: Value, value: Value) {
         unwrap_arg_type!(list => Value::List);
         
-        list.borrow_mut().push(value.clone());
+        list.borrow_mut().push(value.0.clone());
         
         return Ok(Value::Null)
     });

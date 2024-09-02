@@ -4,7 +4,7 @@ use crate::token::TokenType::{Eof, LeftParen, RightParen};
 use crate::token::{Token, TokenType};
 use crate::ast::Return as ReturnValue;
 use crate::ast::Import as ImportStatement;
-use miette::{miette, LabeledSpan, NamedSource, Report};
+use miette::{miette, LabeledSpan, NamedSource, Report, SourceSpan};
 use std::sync::Arc;
 
 // something like
@@ -995,6 +995,7 @@ impl Parser2 {
                 let lp_token = self.previous().clone();
 
                 let mut arguments = vec![];
+                let mut arguments_tokens = vec![lp_token.clone()];
                 if !self.check(&RightParen) {
                     loop {
                         if arguments.len() >= 255 {
@@ -1009,6 +1010,7 @@ impl Parser2 {
 
                         let expr = self.expression()?;
                         arguments.push(expr);
+                        arguments_tokens.push(self.peek().clone());
 
                         // we have reached the end of arguments
                         if !self.match_token(&Comma) {
@@ -1032,10 +1034,13 @@ impl Parser2 {
                         )
                     })?
                     .clone();
-
+                
+                let arguments_spans: Vec<SourceSpan> = arguments_tokens.windows(2).map(|tok| tok[0].span_until_token(&tok[1])).collect();
+                
                 return Ok(Expr::ProcCall(Arc::new(ProcCall {
                     ident,
                     arguments,
+                    arguments_spans,
                     token,
                     parens: (lp_token, rp_token),
                 })));
