@@ -29,7 +29,7 @@ fn format(fstring: String, args: Rc<RefCell<Vec<Value>>>) -> Option<String> {
             write!(builder, "{}", args.borrow()[i]).unwrap()
         }
     }
-    
+
     Some(builder)
 }
 
@@ -48,12 +48,12 @@ pub(super) fn std_io(env: &mut Env) {
         let builder= format(fstring, args).expect("Incorrect number of format arguments. Failed to format");
         Ok(Value::String(builder))
     });
-    
+
     std_function!(env.functions => fn DISPLAYF(fstring: Value::String, args: Value::List) {
         let builder= format(fstring, args).expect("Incorrect number of format arguments. Failed to format");
         println!("{}", builder);
-        
+
         Ok(Value::Null)
     });
-    
+
 }

@@ -1,12 +1,10 @@
 use std::fs;
 use std::fs::{File, OpenOptions};
-use std::path::Path;
 use std::io::Write;
-use crate::errors::RuntimeError;
-use crate::interpreter::{Env, Value, NativeProcedure, Interpreter};
-use miette::SourceSpan;
-use crate::{std_function, arity, unwrap_arg_type};
+use std::path::Path;
 
+use crate::interpreter::{Env, Value};
+use crate::std_function;
 
 pub(super) fn file_system(env: &mut Env) {
     
