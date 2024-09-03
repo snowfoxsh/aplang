@@ -7,7 +7,7 @@ pub(super) fn std_strings(env: &mut Env) {
     std_function!(env.functions => fn NUMBER(raw: Value::String) {
         let Ok(parsed) = raw.parse::<f64>() else {
             return Ok(Value::Null)
-        }
+        };
 
         Ok(Value::Number(parsed))
     });
@@ -15,7 +15,7 @@ pub(super) fn std_strings(env: &mut Env) {
     std_function!(env.functions => fn BOOL(raw: Value::String) {
         let Ok(parsed) = raw.parse::<bool>() else {
             return Ok(Value::Null)
-        }
+        };
 
         Ok(Value::Bool(parsed))
     });
