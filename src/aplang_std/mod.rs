@@ -1,12 +1,12 @@
 use std::collections::HashMap;
-use crate::interpreter::{Env, Value, Interpreter, NativeProcedure};
-use miette::SourceSpan;
-use crate::{std_function, arity, unwrap_arg_type};
-use crate::errors::RuntimeError;
+use crate::interpreter::{Env, Value};
+use crate::{std_function};
 
 mod time;
 mod std_macros;
 mod file_system;
+mod math;
+mod input;
 
 
 #[derive(Debug, Clone, Default)]
@@ -19,8 +19,7 @@ impl Modules {
         self.register("core", std_core);
         self.register("fs", file_system::file_system);
         self.register("time", time::time);
-        // math lib, sin cos etc. rounding
-        // casting to int
+        self.register("math", math::std_math)
         // input functions
     }
     pub fn init() -> Self {
@@ -66,7 +65,6 @@ fn std_core(env: &mut Env) {
     std_function!(env.functions => fn REMOVE(list: Value::List, i: Value::Number) {
         // todo instead of panic with default hook make this return a nice error
         let poped = list.borrow_mut().remove(i as usize - 1);
-
         return Ok(poped);
     });
     
