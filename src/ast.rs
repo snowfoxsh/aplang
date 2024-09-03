@@ -78,6 +78,7 @@ pub struct ProcDeclaration {
     pub name: Ident,
     pub params: Vec<Variable>,
     pub body: Stmt,
+    pub exported: bool,
 
     pub proc_token: Token,
     pub name_token: Token,

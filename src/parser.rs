@@ -80,15 +80,37 @@ impl Parser2 {
 /// parse expression
 impl Parser2 {
     fn declaration(&mut self) -> miette::Result<Stmt> {
-        if self.match_token(&Procedure) {
-            let proc_token = self.previous().clone();
-
-            return self.procedure(proc_token);
+        // Procedure might start with export. 
+        // If it needs special treatment
+        if self.match_tokens(&[Export, Procedure]) {
+            return self.procedure();
         }
         self.statement()
     }
 
-    fn procedure(&mut self, proc_token: Token) -> miette::Result<Stmt> {
+    fn procedure(&mut self) -> miette::Result<Stmt> {
+        let export_or_procedure = self.previous().clone();
+        
+        let (proc_token, exported) = if export_or_procedure.token_type == Export {
+            let proc_token = self.consume(&Procedure, |token| {
+                let labels = vec![
+                    LabeledSpan::at(token.span(), "expected keyword 'PROCEDURE' here"),
+                    LabeledSpan::at(token.span(), "'EXPORT' cannot exist alone"),
+                ];
+                
+                miette!(
+                    labels = labels,
+                    code = "standalone_export",
+                    help = "you can only export a procedure from a module",
+                    "expected 'PROCEDURE' following 'EXPORT' found {}", token.lexeme,
+                )
+            })?.clone();
+
+            (proc_token, true)
+        } else {
+            (export_or_procedure, false)
+        };
+        
         let name_token = self
             .consume(&Identifier, |token| {
                 let labels = vec![
@@ -196,6 +218,7 @@ impl Parser2 {
             name,
             params,
             body,
+            exported,
             proc_token,
             name_token,
         })))
