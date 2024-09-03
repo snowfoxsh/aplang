@@ -1,11 +1,14 @@
 use std::{fmt};
+use std::collections::HashMap;
 use std::fmt::Write;
 use std::marker::PhantomData;
+use std::path::Path;
+use std::rc::Rc;
 use std::sync::Arc;
 use miette::Report;
-use crate::ast::Ast;
+use crate::ast::{Ast, ProcDeclaration};
 use crate::ast::pretty::TreePrinter;
-use crate::interpreter::{Interpreter, Value};
+use crate::interpreter::{Callable, Interpreter, Value};
 use crate::lexer::Lexer;
 use crate::parser::Parser2;
 use crate::token::Token;
@@ -16,6 +19,7 @@ pub struct Lexed;
 pub struct Parsed;
 pub struct Executed;
 pub struct ExecutedWithDebug;
+pub struct Module;
 
 pub struct ApLang<State = Initialized> {
     source_code: Arc<str>,
@@ -102,6 +106,14 @@ impl ApLang<Lexed> {
 }
 
 impl ApLang<Parsed> {
+    pub fn execute_as_module(self) -> Result<HashMap<String, (Rc<dyn Callable>, Option<Arc<ProcDeclaration>>)>, Report> {
+        Interpreter::new(unsafe { self.ast.unwrap_unchecked() })
+            .interpret_module()
+            .map_err(|err|
+                Report::from(err).with_source_code(self.source_code.clone())
+            )
+    }
+
     pub fn execute(self) -> Result<ApLang<Executed>, Report> {
         Interpreter::new(unsafe { self.ast.unwrap_unchecked() })
             .interpret()

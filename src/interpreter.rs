@@ -2,12 +2,14 @@ use std::cell::{RefCell};
 use crate::ast::{Ast, Binary, BinaryOp, Expr, Literal, LogicalOp, ProcCall, ProcDeclaration, Stmt, Unary, UnaryOp, Variable};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
-use std::mem;
+use std::{fs, mem};
 use std::ops::Deref;
+use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
 use miette::SourceSpan;
-use crate::errors::RuntimeError;
+use crate::aplang::ApLang;
+use crate::errors::{Reports, RuntimeError};
 use crate::aplang_std::Modules;
 use crate::lexer::LiteralValue;
 use crate::token::Token;
@@ -142,6 +144,9 @@ pub struct Env {
     //                |        |                                                  If None: it is native function
     //                |        |> Pointer to the function
     //                |> Function name (symbol)
+    pub exports: HashMap<String, (Rc<dyn Callable>, Option<Arc<ProcDeclaration>>)>,
+    // public functions
+
     venv: Vec<Context>,
 }
 
@@ -256,7 +261,7 @@ impl Env {
 
 impl Default for Env {
     fn default() -> Self {
-        let mut env = Self { functions: Default::default(), venv: vec![] };
+        let mut env = Self { functions: Default::default(), exports: Default::default(), venv: vec![] };
         // push the base context layer into env so we dont panic
         env.initialize_empty_scope();
         env
@@ -284,6 +289,23 @@ impl Interpreter {
         // initiate the core std functions
         interpreter.modules.lookup("core").unwrap()(&mut interpreter.venv);
         interpreter
+    }
+
+    pub fn interpret_module(mut self) -> Result<HashMap<String, (Rc<dyn Callable>, Option<Arc<ProcDeclaration>>)>, RuntimeError> {
+        // temporarily take the program to avoid borrow error
+        let program = mem::take(&mut self.ast.program);
+
+        for stmt in &program {
+            match stmt {
+                Stmt::Expr(expr) => {
+                    self.expr(expr.deref())?;
+                }
+                stmt => self.stmt(stmt)?,
+            }
+        }
+
+        self.ast.program = program; // restore program
+        Ok(self.venv.exports)
     }
     
     pub fn interpret(&mut self) -> Result<(), RuntimeError> {
@@ -407,13 +429,17 @@ impl Interpreter {
             Stmt::ProcDeclaration(proc_dec) => {
                 // create a new non-native aplang function
                 
-                let procedure = Procedure {
+                let procedure = Rc::new(Procedure {
                     name: proc_dec.name.to_string(),
                     params: proc_dec.params.clone(),
                     body: proc_dec.body.clone(),
-                };
+                });
                 
-                self.venv.functions.insert(procedure.name.clone(), (Rc::new(procedure), Some(proc_dec.clone())));
+                self.venv.functions.insert(procedure.name.clone(), (procedure.clone(), Some(proc_dec.clone())));
+
+                if proc_dec.exported {
+                    self.venv.exports.insert(procedure.name.clone(), (procedure.clone(), Some(proc_dec.clone())));
+                }
                 
                 Ok(())
             },
@@ -445,18 +471,74 @@ impl Interpreter {
                 let Some(LiteralValue::String(module_name)) = import.import_string.literal.as_ref() else {
                     unreachable!() //
                 };
+
+                // if the module is a native standard library module inject it
+                if let Some(injector) = self.modules.lookup(module_name) {
+                    injector(&mut self.venv);
+                    return Ok(())
+                }
+                // now the module is either a user module or invalid
+
+                let maybe_path = Path::new(module_name);
+
+                // check if the file has a dot ap extension.
+                // if it does then continue
+                // if not then they tried to import an invalid std
+                if maybe_path.extension().map(|os_str| os_str
+                    .to_string_lossy()
+                    .eq_ignore_ascii_case("ap"))
+                    .is_some_and(|res| res) {
+                } else {
+                    Err(RuntimeError {
+                        span: import.import_string.span,
+                        label: "invalid std module".to_string(),
+                        message: format!("std module not found {}", module_name),
+                        help: "if you meant to import a user module please enter the path to the .ap file in question".to_string() // maybe do a fuzzy module find?
+                    })?;
+                }
+
+                // we need to make sure the file is actually there!
+                if !maybe_path.is_file() {
+                    Err(RuntimeError {
+                        span: import.import_string.span,
+                        message: format!("file {} does not exist, or is a directory. could not import user module", module_name),
+                        label: "invalid file path".to_string(),
+                        help: "specify a valid path to '.ap' file to import an std module".to_string(),
+                    })?;
+                }
+
+                // TODO: BUG: Only can accept an absolute path. work on relative paths
+                // attempt to read module
+                let (Ok(module_source_code), Some(file_name)) = (fs::read_to_string(maybe_path), maybe_path.file_name()) else {
+                    Err(RuntimeError {
+                        span: import.import_string.span,
+                        message: format!("user module {} exists but could not read source", module_name),
+                        label: "failed to read".to_string(),
+                        help: "specify a valid path to '.ap' file to import an std module".to_string(),
+                    })?
+                };
+
+                // package source code
+                let module_source_code: Arc<str> = module_source_code.into();
+
+                // convert file name into regular string
+                let file_name = file_name.to_string_lossy().into_owned();
+
+
+                // init the module interpreter
+                let aplang = ApLang::new(module_source_code, file_name);
+
+                // todo: pass up the errors dont just explode right away
+
+                // lex
+                let lexed = aplang.lex().map_err(Reports::from).unwrap();
+                // parse
+                let parsed = lexed.parse().map_err(Reports::from).unwrap();
+                // execute the module, get the exports
+                let module_exports = parsed.execute_as_module().unwrap();
                 
-                // load the module into the venv / activate it
-                self.modules.lookup(module_name)
-                    .ok_or(
-                        RuntimeError {
-                            // src: Arc::from("... code here".to_string()),
-                            span: import.import_string.span,
-                            message: "Cannot find this module".to_string(),
-                            help: "Module not found (todo)".to_string(),
-                            label: "Invalid Module".to_string()
-                        }
-                    )?(&mut self.venv);
+                // inject the imported functions - bring them into scope
+                self.venv.functions.extend(module_exports);
 
                 Ok(())
             },
@@ -790,5 +872,4 @@ impl Interpreter {
             _ => true,
         }
     }
-
 }
