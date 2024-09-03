@@ -6,7 +6,7 @@ mod time;
 mod std_macros;
 mod file_system;
 mod math;
-mod input;
+mod io;
 
 
 #[derive(Debug, Clone, Default)]
@@ -19,8 +19,8 @@ impl Modules {
         self.register("core", std_core);
         self.register("fs", file_system::file_system);
         self.register("time", time::time);
-        self.register("math", math::std_math)
-        // input functions
+        self.register("math", math::std_math);
+        self.register("io", io::std_io);
     }
     pub fn init() -> Self {
         // create bland hashmap of modules
