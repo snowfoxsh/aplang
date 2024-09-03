@@ -1,12 +1,19 @@
+use std::rc::Rc;
+use crate::errors::RuntimeError;
+use crate::interpreter::{NativeProcedure, Value};
+use std::sync::Arc;
+use miette::SourceSpan;
+
+
 #[macro_export]
 macro_rules! std_function {
     ($location:expr => fn $name:ident ($($arg:ident:  Value $(:: $arg_type:ident)?),*) {$($body:tt)*}) => {
         $location.insert(
             String::from(stringify!($name)),
-            (std::rc::Rc::new(NativeProcedure {
+            (std::rc::Rc::new(crate::interpreter::NativeProcedure {
                 name: String::from(stringify!($name)),
-                arity: arity!($($arg)*),
-                callable: |_interpreter: &mut Interpreter,  args: &[Value], args_toks: &[SourceSpan]| {
+                arity: crate::arity!($($arg)*),
+                callable: |_interpreter: &mut crate::interpreter::Interpreter,  args: &[crate::interpreter::Value], args_toks: &[miette::SourceSpan]| {
                     #[allow(unused_mut, unused_variables)]
                     let mut iter = args.into_iter();
                     #[allow(unused_mut)]
@@ -14,9 +21,9 @@ macro_rules! std_function {
 
                     $(
                         let $arg = iter_toks.next().unwrap();
-                        unwrap_arg_type!($arg => Value $(::$arg_type)?);
+                        crate::unwrap_arg_type!($arg => Value $(::$arg_type)?);
                     )*
-                    
+
                     $($body)*
                 }
             }), None)
@@ -27,7 +34,7 @@ macro_rules! std_function {
 #[macro_export]
 macro_rules! arity {
     ($arg:ident $($tail:tt)*) => {
-        1u8 + arity!($($tail)*)
+        1u8 + crate::arity!($($tail)*)
     };
     () => {
         0u8
@@ -39,10 +46,10 @@ macro_rules! unwrap_arg_type {
     ($value:ident => Value::Null) => {
         #[allow(unused_mut)]
         let mut $value = match $value.0 {
-            Value::Null => Value::Null,
+            crate::interpreter::Value::Null => crate::interpreter::Value::Null,
             // todo make this a better message
             _ => return Err(
-                RuntimeError {
+                crate::errors::RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
@@ -54,9 +61,9 @@ macro_rules! unwrap_arg_type {
     };
     ($value:ident => Value::Number) => {
         #[allow(unused_mut)]
-        let Value::Number(mut $value) = $value.0.clone() else {
+        let crate::interpreter::Value::Number(mut $value) = $value.0.clone() else {
             return Err(
-                RuntimeError {
+                crate::errors::RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
@@ -68,9 +75,9 @@ macro_rules! unwrap_arg_type {
     };
     ($value:ident => Value::String) => {
         #[allow(unused_mut)]
-        let Value::String(mut $value) = $value.0.clone() else {
+        let crate::interpreter::Value::String(mut $value) = $value.0.clone() else {
             return Err(
-                RuntimeError {
+                crate::errors::RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
@@ -82,9 +89,9 @@ macro_rules! unwrap_arg_type {
     };
     ($value:ident => Value::Bool) => {
         #[allow(unused_mut)]
-        let Value::Bool(mut $value) = $value.0.clone() else {
+        let crate::interpreter::Value::Bool(mut $value) = $value.0.clone() else {
             return Err(
-                RuntimeError {
+                crate::errors::RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
@@ -96,9 +103,9 @@ macro_rules! unwrap_arg_type {
     };
     ($value:ident => Value::List) => {
         #[allow(unused_mut)]
-        let Value::List(mut $value) = $value.0.clone() else {
+        let crate::interpreter::Value::List(mut $value) = $value.0.clone() else {
             return Err(
-                RuntimeError {
+                crate::errors::RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
