@@ -2,21 +2,21 @@ use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::Path;
-
-use crate::interpreter::{Env, Value};
+use crate::interpreter::{Env, FunctionMap, Value};
 use crate::std_function;
 
-pub(super) fn file_system(env: &mut Env) {
+pub(super) fn file_system() -> FunctionMap {
+    let mut functions = FunctionMap::new();
     
     // checks if path given exists
-    std_function!(env.functions => fn PATH_EXISTS(path: Value::String) {
+    std_function!(functions => fn PATH_EXISTS(path: Value::String) {
         let exists = Path::new(&path).exists();
 
         return Ok(Value::Bool(exists))
     });
 
     // returns True if successful
-    std_function!(env.functions => fn FILE_CREATE(file_path: Value::String) {
+    std_function!(functions => fn FILE_CREATE(file_path: Value::String) {
         return match File::create_new(file_path) {
             Ok(_) => Ok(Value::Bool(true)),
             Err(_) => Ok(Value::Bool(false)),
@@ -24,7 +24,7 @@ pub(super) fn file_system(env: &mut Env) {
     });
 
     // returns File as String
-    std_function!(env.functions => fn FILE_READ(file_path: Value::String) {
+    std_function!(functions => fn FILE_READ(file_path: Value::String) {
         return match fs::read_to_string(file_path) {
             Ok(s) => {
                 Ok(Value::String(s))
@@ -37,7 +37,7 @@ pub(super) fn file_system(env: &mut Env) {
     });
 
     // Writes to end of file
-    std_function!(env.functions => fn FILE_APPEND(file_path: Value::String, contents: Value) {
+    std_function!(functions => fn FILE_APPEND(file_path: Value::String, contents: Value) {
         let Ok(mut file) = OpenOptions::new().append(true).open(file_path) else {
             return Ok(Value::Bool(false))
         };
@@ -50,7 +50,7 @@ pub(super) fn file_system(env: &mut Env) {
     });
 
     // Writes to beginning of file, overwriting in the process
-    std_function!(env.functions => fn FILE_OVERWRITE(file_path: Value::String, contents: Value) {
+    std_function!(functions => fn FILE_OVERWRITE(file_path: Value::String, contents: Value) {
         let Ok(mut file) = OpenOptions::new().write(true).truncate(true).open(file_path) else {
             return Ok(Value::Bool(false))
         };
@@ -61,4 +61,6 @@ pub(super) fn file_system(env: &mut Env) {
 
         return Ok(Value::Bool(true))
     });
+    
+    functions
 }

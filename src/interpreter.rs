@@ -11,6 +11,7 @@ use miette::SourceSpan;
 use crate::aplang::ApLang;
 use crate::errors::{Reports, RuntimeError};
 use crate::aplang_std::Modules;
+use crate::interpreter::Value::Function;
 use crate::lexer::LiteralValue;
 use crate::token::Token;
 
@@ -299,7 +300,10 @@ impl Interpreter {
         };
 
         // initiate the core std functions
-        interpreter.modules.lookup("core").unwrap()(&mut interpreter.venv);
+        interpreter.venv.functions.extend(
+            interpreter.modules.lookup("CORE").unwrap()()
+        );
+        
         interpreter
     }
 
@@ -481,77 +485,102 @@ impl Interpreter {
             Stmt::Import(import) => {
                 // get a ref to the module name to be imported / activated
                 let Some(LiteralValue::String(module_name)) = import.module_name.literal.as_ref() else {
-                    unreachable!() //
+                    unreachable!()
                 };
-
-                // if the module is a native standard library module inject it
-                if let Some(injector) = self.modules.lookup(module_name) {
-                    injector(&mut self.venv);
-                    return Ok(())
-                }
-                // now the module is either a user module or invalid
-
-                let maybe_path = Path::new(module_name);
-
-                // check if the file has a dot ap extension.
-                // if it does then continue
-                // if not then they tried to import an invalid std
-                if maybe_path.extension().map(|os_str| os_str
-                    .to_string_lossy()
-                    .eq_ignore_ascii_case("ap"))
-                    .is_some_and(|res| res) {
-                } else {
-                    Err(RuntimeError {
-                        span: import.module_name.span,
-                        label: "invalid std module".to_string(),
-                        message: format!("std module not found {}", module_name),
-                        help: "if you meant to import a user module please enter the path to the .ap file in question".to_string()
-                        // maybe do a fuzzy module find?
-                    })?;
-                }
-
-                // we need to make sure the file is actually there!
-                if !maybe_path.is_file() {
-                    Err(RuntimeError {
-                        span: import.module_name.span,
-                        message: format!("file {} does not exist, or is a directory. could not import user module", module_name),
-                        label: "invalid file path".to_string(),
-                        help: "specify a valid path to '.ap' file to import an std module".to_string(),
-                    })?;
-                }
-
-                // TODO: BUG: Only can accept an absolute path. work on relative paths
-                // attempt to read module
-                let (Ok(module_source_code), Some(file_name)) = (fs::read_to_string(maybe_path), maybe_path.file_name()) else {
-                    Err(RuntimeError {
-                        span: import.module_name.span,
-                        message: format!("user module {} exists but could not read source", module_name),
-                        label: "failed to read".to_string(),
-                        help: "specify a valid path to '.ap' file to import an std module".to_string(),
-                    })?
-                };
-
-                // package source code
-                let module_source_code: Arc<str> = module_source_code.into();
-
-                // convert file name into regular string
-                let file_name = file_name.to_string_lossy().into_owned();
-
-
-                // init the module interpreter
-                let aplang = ApLang::new(module_source_code, file_name);
-
-                // todo: pass up the errors dont just explode right away
-
-                // lex
-                let lexed = aplang.lex().map_err(Reports::from).unwrap();
-                // parse
-                let parsed = lexed.parse().map_err(Reports::from).unwrap();
-                // execute the module, get the exports
-                let module_exports = parsed.execute_as_module().unwrap();
                 
-                // inject the imported functions - bring them into scope
-                self.venv.functions.extend(module_exports);
+                let mut module = if let Some(injector) = self.modules.lookup(module_name) {
+                    // if the module is a native standard library module get it 
+                    injector()
+                } else {
+                    // the module must be a user module or invalid
+                    let maybe_path = Path::new(module_name);
+
+                    // check if the file has a dot ap extension.
+                    // if it does then continue
+                    // if not then they tried to import an invalid std
+                    if maybe_path.extension().map(|os_str| os_str
+                        .to_string_lossy()
+                        .eq_ignore_ascii_case("ap"))
+                        .is_some_and(|res| res) {
+                    } else {
+                        Err(RuntimeError {
+                            span: import.module_name.span,
+                            label: "invalid std module".to_string(),
+                            message: format!("std module not found {}", module_name),
+                            help: "if you meant to import a user module please enter the path to the .ap file in question".to_string()
+                            // maybe do a fuzzy module find?
+                        })?;
+                    }
+
+                    // we need to make sure the file is actually there!
+                    if !maybe_path.is_file() {
+                        Err(RuntimeError {
+                            span: import.module_name.span,
+                            message: format!("file {} does not exist, or is a directory. could not import user module", module_name),
+                            label: "invalid file path".to_string(),
+                            help: "specify a valid path to '.ap' file to import an std module".to_string(),
+                        })?;
+                    }
+
+                    // TODO: BUG: Only can accept an absolute path. work on relative paths
+                    // attempt to read module
+                    let (Ok(module_source_code), Some(file_name)) = (fs::read_to_string(maybe_path), maybe_path.file_name()) else {
+                        Err(RuntimeError {
+                            span: import.module_name.span,
+                            message: format!("user module {} exists but could not read source", module_name),
+                            label: "failed to read".to_string(),
+                            help: "specify a valid path to '.ap' file to import an std module".to_string(),
+                        })?
+                    };
+
+                    // package source code
+                    let module_source_code: Arc<str> = module_source_code.into();
+
+                    // convert file name into regular string
+                    let file_name = file_name.to_string_lossy().into_owned();
+
+
+                    // init the module interpreter
+                    let aplang = ApLang::new(module_source_code, file_name);
+
+                    // todo: pass up the errors dont just explode right away
+
+                    // lex
+                    let lexed = aplang.lex().map_err(Reports::from).unwrap();
+                    // parse
+                    let parsed = lexed.parse().map_err(Reports::from).unwrap();
+                    // execute the module, get the exports
+                    parsed.execute_as_module().unwrap()
+                };
+                
+                // before actually adding the function we might have to trim the module
+                // if we are using IMPORT "x" FROM MOD "y"
+                if let Some(functions) = import.only_functions.clone() {
+                    let mut trimmed_module = FunctionMap::new();
+                    // generated functions need to be removed
+                    // we trim the hashmap down to only specified the specified keys
+                    for function in &functions {
+                        let Some(LiteralValue::String(function_name)) = function.literal.as_ref() else {
+                            unreachable!()
+                        };
+
+                        let Some(function) = module.remove(function_name) else {
+                            return Err(RuntimeError {
+                                span: function.span,
+                                message: format!("Function {function_name} does not exist in module {module_name}"),
+                                help: "".to_string(),
+                                label: "does not exist".to_string(),
+                            });
+                        };
+
+                        trimmed_module.insert(function_name.clone(), function);
+                    }
+
+                    module = trimmed_module;
+                }
+
+                // finally add it
+                self.venv.functions.extend(module);
 
                 Ok(())
             },

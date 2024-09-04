@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::io;
 use std::io::Write;
 use std::rc::Rc;
-use crate::interpreter::{Env, Value};
+use crate::interpreter::{Env, FunctionMap, Value};
 use crate::std_function;
 
 fn input(prompt: &str) -> Option<String> {
@@ -33,27 +33,30 @@ fn format(fstring: String, args: Rc<RefCell<Vec<Value>>>) -> Option<String> {
     Some(builder)
 }
 
-pub(super) fn std_io(env: &mut Env) {
-    std_function!(env.functions => fn INPUT() {
+pub(super) fn std_io() -> FunctionMap {
+    let mut functions = FunctionMap::new();
+    
+    std_function!(functions => fn INPUT() {
         let result = input("").expect("Failed to get user input! Critical Failure");
         Ok(Value::String(result))
     });
 
-    std_function!(env.functions => fn INPUT_PROMPT(prompt: Value::String) {
+    std_function!(functions => fn INPUT_PROMPT(prompt: Value::String) {
         let result = input(prompt.as_str()).expect("Failed to get user input! Critical Failure");
         Ok(Value::String(result))
     });
 
-    std_function!(env.functions => fn FORMAT(fstring: Value::String, args: Value::List) {
+    std_function!(functions => fn FORMAT(fstring: Value::String, args: Value::List) {
         let builder= format(fstring, args).expect("Incorrect number of format arguments. Failed to format");
         Ok(Value::String(builder))
     });
 
-    std_function!(env.functions => fn DISPLAYF(fstring: Value::String, args: Value::List) {
+    std_function!(functions => fn DISPLAYF(fstring: Value::String, args: Value::List) {
         let builder= format(fstring, args).expect("Incorrect number of format arguments. Failed to format");
         println!("{}", builder);
 
         Ok(Value::Null)
     });
-
+    
+    functions
 }
