@@ -341,23 +341,83 @@ impl Parser2 {
     }
 
     fn import_statement(&mut self, import_token: Token) -> miette::Result<Stmt> {
+        // get the specific function imports
+        let only_functions = if self.match_token(&LeftBracket) {
+            // matching import ["f1", "f2", "f3"] from mod
+            let lbracket = self.previous().clone();
+
+            let mut specific_functions : Vec<Token> = vec![];
+            loop {
+                // todo: consider maing this an argument because arbitrary
+                // todo: like max param limits or something
+                // set an arbitrary limit for number of specific functions
+                const MAX_SPECIFIC_FUNCTIONS: usize = 63;
+                if specific_functions.len()  >= MAX_SPECIFIC_FUNCTIONS {
+                    let correct_span = lbracket.span_until_token(specific_functions.last().unwrap());
+                    let labels = vec![
+                        LabeledSpan::at(correct_span, "just import the entire module")
+                    ];
+                    let s = 2.0;
+
+                    return Err(miette!(
+                        labels = labels,
+                        help = "what the freak dude. are you okay?",
+                        "cannot have more than {} specific imports", MAX_SPECIFIC_FUNCTIONS
+                    ));
+                }
+
+                let specific_functions = self.consume(&StringLiteral, |found| miette!(
+                    "expected a specific function instead found {}", found
+                ))?;
+
+                // we have reached the end of the specific functions
+                if !self.match_token(&Comma) {
+                    break;
+                }
+            }
+
+            // close off the specific functions
+            let _rbracket = self.consume(&RightBracket, |found| miette! {
+                ""
+            })?;
+
+            Some(specific_functions)
+        } else if self.match_token(&StringLiteral) {
+            // matching single specific function ("string literal")
+            let one_specific_function = self.previous().clone();
+            Some(vec![one_specific_function])
+        } else {
+            None
+        };
+
+        let maybe_from_token = if only_functions.is_some() {
+            Some(self.consume(&From, |found| miette! {
+                "(todo) Expected from following specific imports, found {}", found.lexeme
+            })?.clone())
+        } else {
+            None
+        };
+
         let mod_token = self.consume(&Mod, |token| miette! {
-            "todo: expected a mod token following import" // todo make this better
+            "todo: expected a mod token following import. could also be a specific function" // todo make this better
         })?.clone();
-    
-        let import_string = self.consume(&StringLiteral, |token| miette! {
+
+        let module_name = self.consume(&StringLiteral, |token| miette! {
             "todo: expected a string literal specifing the type of import"
         })?.clone();
-    
+
         self.consume(&SoftSemi, |token| miette! {
-            "todo: expected a semicolon following "
+            "todo: expected a semicolon following import statement"
         })?;
-    
-        Ok(Stmt::Import(Arc::new(ImportStatement {
+
+        return Ok(Stmt::Import(Arc::new(ImportStatement {
             import_token,
             mod_token,
-            import_string,
-        })))
+            maybe_from_token,
+
+            only_functions,
+            module_name,
+        })));
     }
 
     fn if_statement(&mut self, if_token: Token) -> miette::Result<Stmt> {
@@ -1022,7 +1082,7 @@ impl Parser2 {
                 if !self.check(&RightParen) {
                     loop {
                         if arguments.len() >= 255 {
-                            let next_token = self.peek();
+                            // let next_token = self.peek();
                             // todo: improve this message
                             let report = miette!(
                                 // todo: finish this
@@ -1042,8 +1102,7 @@ impl Parser2 {
                     }
                 }
 
-                let rp_token = self
-                    .consume(&RightParen, |token| {
+                let rp_token = self.consume(&RightParen, |token| {
                         // todo
                         // miette!("expected ) after argument list, found {token}")
                         let labels = vec![LabeledSpan::at(token.span(), "expected a `)`")];

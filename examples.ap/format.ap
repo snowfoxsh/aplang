@@ -1,4 +1,4 @@
-IMPORT MOD "io";
+IMPORT "hello" FROM MOD "io";
 
 fstring <- FORMAT("Hello {}! {}", ["World", "I love code."])
 

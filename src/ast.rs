@@ -99,7 +99,10 @@ pub struct Return {
 pub struct Import {
     pub import_token: Token,
     pub mod_token: Token,
-    pub import_string: Token,
+    pub maybe_from_token: Option<Token>,
+
+    pub only_functions: Option<Vec<Token>> ,
+    pub module_name: Token,
 }
 
 #[derive(Debug, Clone)]
@@ -531,7 +534,7 @@ pub mod pretty {
                     None => write!(f, "return"),
                 },
                 Stmt::Import(import_stmt) => {
-                    write!(f, "import module {}", import_stmt.import_string)
+                    write!(f, "import module {}", import_stmt.module_name)
                 }
             }
         }

@@ -468,7 +468,7 @@ impl Interpreter {
             }
             Stmt::Import(import) => {
                 // get a ref to the module name to be imported / activated
-                let Some(LiteralValue::String(module_name)) = import.import_string.literal.as_ref() else {
+                let Some(LiteralValue::String(module_name)) = import.module_name.literal.as_ref() else {
                     unreachable!() //
                 };
 
@@ -490,7 +490,7 @@ impl Interpreter {
                     .is_some_and(|res| res) {
                 } else {
                     Err(RuntimeError {
-                        span: import.import_string.span,
+                        span: import.module_name.span,
                         label: "invalid std module".to_string(),
                         message: format!("std module not found {}", module_name),
                         help: "if you meant to import a user module please enter the path to the .ap file in question".to_string() // maybe do a fuzzy module find?
@@ -500,7 +500,7 @@ impl Interpreter {
                 // we need to make sure the file is actually there!
                 if !maybe_path.is_file() {
                     Err(RuntimeError {
-                        span: import.import_string.span,
+                        span: import.module_name.span,
                         message: format!("file {} does not exist, or is a directory. could not import user module", module_name),
                         label: "invalid file path".to_string(),
                         help: "specify a valid path to '.ap' file to import an std module".to_string(),
@@ -511,7 +511,7 @@ impl Interpreter {
                 // attempt to read module
                 let (Ok(module_source_code), Some(file_name)) = (fs::read_to_string(maybe_path), maybe_path.file_name()) else {
                     Err(RuntimeError {
-                        span: import.import_string.span,
+                        span: import.module_name.span,
                         message: format!("user module {} exists but could not read source", module_name),
                         label: "failed to read".to_string(),
                         help: "specify a valid path to '.ap' file to import an std module".to_string(),

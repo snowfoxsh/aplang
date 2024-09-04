@@ -62,7 +62,7 @@ pub enum TokenType {
     Null,
     
     // Modules
-    Import, Export, 
+    Import, Export, From,
 
     Eof,
 }
@@ -116,6 +116,7 @@ pub fn get_keywords_hashmap() -> HashMap<&'static str, TokenType> {
         "null" => Null, "NULL" => Null,
         "import" => Import, "IMPORT" => Import,
         "export" => Export, "EXPORT" => Export,
+        "from" => From, "FROM" => From,
     }
 }
 
