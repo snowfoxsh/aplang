@@ -107,7 +107,7 @@ pub fn get_keywords_hashmap() -> HashMap<&'static str, TokenType> {
         "in" => In, "IN" => In,
         "procedure" => Procedure, "PROCEDURE" => Procedure,
         "return" => Return, "RETURN" => Return,
-        "print" => Print, "PRINT" => Print,
+        "print" => Print, "PRINT" => Print, // todo remove this
         "not" => Not, "NOT" => Not,
         "and" => And, "AND" => And,
         "or" => Or, "OR" => Or,
