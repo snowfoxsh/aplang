@@ -13,7 +13,15 @@ use crate::errors::{Reports, RuntimeError};
 use crate::aplang_std::Modules;
 use crate::lexer::LiteralValue;
 use crate::token::Token;
-// todo convert all the boxes to 'a
+
+// we are using this weird error type because miette! slows down the execution
+// of recursive code by a HUGE ammount
+// we profiled and could not figure out how to solve the issue
+// we dont know why.
+// we would like to use miette! macro it would
+// make reports better and easier to write
+// increment this counter if you try to solve this and fail
+// COLLECTIVE TIME WASTED: 10
 
 // variable value types
 #[derive(Clone, Debug)]
@@ -125,6 +133,12 @@ impl Callable for NativeProcedure {
 
 
 
+pub type FunctionMap = HashMap<String, (Rc<dyn Callable>, Option<Arc<ProcDeclaration>>)>;
+//                            |^^^^^^  |^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^|> Maybe pointer to function def
+//                            |        |                                                  If None: it is native function
+//                            |        |> Pointer to the function
+//                            |> Function name (symbol)
+
 // context structure, contains variables
 //
 // behaviour:
@@ -139,13 +153,11 @@ impl Callable for NativeProcedure {
 // do the same for functions
 #[derive(Clone)]
 pub struct Env {
-    pub functions: HashMap<String, (Rc<dyn Callable>, Option<Arc<ProcDeclaration>>)>,
-    //                |^^^^^^  |^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^|> Maybe pointer to function def
-    //                |        |                                                  If None: it is native function
-    //                |        |> Pointer to the function
-    //                |> Function name (symbol)
-    pub exports: HashMap<String, (Rc<dyn Callable>, Option<Arc<ProcDeclaration>>)>,
-    // public functions
+    /// private functions
+    pub functions: FunctionMap,
+
+    /// public functions
+    pub exports: FunctionMap,
 
     venv: Vec<Context>,
 }
@@ -291,7 +303,7 @@ impl Interpreter {
         interpreter
     }
 
-    pub fn interpret_module(mut self) -> Result<HashMap<String, (Rc<dyn Callable>, Option<Arc<ProcDeclaration>>)>, RuntimeError> {
+    pub fn interpret_module(mut self) -> Result<FunctionMap, RuntimeError> {
         // temporarily take the program to avoid borrow error
         let program = mem::take(&mut self.ast.program);
 
@@ -493,7 +505,8 @@ impl Interpreter {
                         span: import.module_name.span,
                         label: "invalid std module".to_string(),
                         message: format!("std module not found {}", module_name),
-                        help: "if you meant to import a user module please enter the path to the .ap file in question".to_string() // maybe do a fuzzy module find?
+                        help: "if you meant to import a user module please enter the path to the .ap file in question".to_string()
+                        // maybe do a fuzzy module find?
                     })?;
                 }
 

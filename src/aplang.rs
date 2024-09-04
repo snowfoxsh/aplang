@@ -8,7 +8,7 @@ use std::sync::Arc;
 use miette::Report;
 use crate::ast::{Ast, ProcDeclaration};
 use crate::ast::pretty::TreePrinter;
-use crate::interpreter::{Callable, Interpreter, Value};
+use crate::interpreter::{Callable, FunctionMap, Interpreter, Value};
 use crate::lexer::Lexer;
 use crate::parser::Parser2;
 use crate::token::Token;
@@ -106,7 +106,7 @@ impl ApLang<Lexed> {
 }
 
 impl ApLang<Parsed> {
-    pub fn execute_as_module(self) -> Result<HashMap<String, (Rc<dyn Callable>, Option<Arc<ProcDeclaration>>)>, Report> {
+    pub fn execute_as_module(self) -> Result<FunctionMap, Report> {
         Interpreter::new(unsafe { self.ast.unwrap_unchecked() })
             .interpret_module()
             .map_err(|err|
