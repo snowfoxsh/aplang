@@ -1272,9 +1272,9 @@ impl Parser2 {
         self.advance();
 
         while !self.is_at_end() {
-            if self.previous().token_type == SoftSemi {
-                return;
-            }
+            // if self.previous().token_type == SoftSemi {
+            //     return;
+            // }
 
             // todo: dont know if this is complete but its "good enough"
             match self.peek().token_type {
