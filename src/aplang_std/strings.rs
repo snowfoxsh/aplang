@@ -6,7 +6,8 @@ use crate::std_function;
 pub(super) fn std_strings() -> FunctionMap {
     let mut functions = FunctionMap::new();
     
-    std_function!(functions => fn NUMBER(raw: Value::String) {
+    // casts String to Number, returns NULL if not possible
+    std_function!(functions => fn TO_NUMBER(raw: Value::String) {
         let Ok(parsed) = raw.parse::<f64>() else {
             return Ok(Value::Null)
         };
@@ -14,7 +15,8 @@ pub(super) fn std_strings() -> FunctionMap {
         Ok(Value::Number(parsed))
     });
 
-    std_function!(functions => fn BOOL(raw: Value::String) {
+    // casts String to Bool, returns NULL if not possible
+    std_function!(functions => fn TO_BOOL(raw: Value::String) {
         let Ok(parsed) = raw.parse::<bool>() else {
             return Ok(Value::Null)
         };
@@ -22,14 +24,21 @@ pub(super) fn std_strings() -> FunctionMap {
         Ok(Value::Bool(parsed))
     });
     
-    std_function!(functions => fn SPLIT(raw: Value::String, patern: Value::String) {
-        let split: Vec<_> = raw.split(patern.as_str()).map(|slice| Value::String(slice.to_string())).collect();
+    // splits a string into a list of strings based on a pattern string
+    std_function!(functions => fn SPLIT(raw: Value::String, pattern: Value::String) {
+        let split: Vec<_> = raw.split(pattern.as_str()).map(|slice| Value::String(slice.to_string())).collect();
 
         Ok(Value::List(Rc::new(RefCell::new(split))))
     });
     
-    std_function!(functions => fn UPPER(raw: Value::String) {
+    // String to Upper Case
+    std_function!(functions => fn TO_UPPER(raw: Value::String) {
         Ok(Value::String(raw.to_uppercase()))
+    });
+    
+    // String to Lower Case
+    std_function!(functions => fn TO_LOWER(raw: Value::String) {
+        Ok(Value::String(raw.to_lowercase()))
     });
     
     functions
