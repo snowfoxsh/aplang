@@ -28,5 +28,9 @@ pub(super) fn std_strings() -> FunctionMap {
         Ok(Value::List(Rc::new(RefCell::new(split))))
     });
     
+    std_function!(functions => fn UPPER(raw: Value::String) {
+        Ok(Value::String(raw.to_uppercase()))
+    });
+    
     functions
 }
