@@ -1,14 +1,11 @@
 use std::{fmt};
-use std::collections::HashMap;
 use std::fmt::Write;
 use std::marker::PhantomData;
-use std::path::Path;
-use std::rc::Rc;
 use std::sync::Arc;
-use miette::Report;
-use crate::ast::{Ast, ProcDeclaration};
+use miette::{NamedSource, Report};
+use crate::ast::{Ast};
 use crate::ast::pretty::TreePrinter;
-use crate::interpreter::{Callable, FunctionMap, Interpreter, Value};
+use crate::interpreter::{FunctionMap, Interpreter, Value};
 use crate::lexer::Lexer;
 use crate::parser::Parser2;
 use crate::token::Token;
@@ -110,7 +107,7 @@ impl ApLang<Parsed> {
         Interpreter::new(unsafe { self.ast.unwrap_unchecked() })
             .interpret_module()
             .map_err(|err|
-                Report::from(err).with_source_code(self.source_code.clone())
+                Report::from(err).with_source_code(NamedSource::new(self.file_name.clone(), self.source_code.clone()))
             )
     }
 
@@ -118,7 +115,7 @@ impl ApLang<Parsed> {
         Interpreter::new(unsafe { self.ast.unwrap_unchecked() })
             .interpret()
             .map_err(|err|
-                Report::from(err).with_source_code(self.source_code.clone())
+                Report::from(err).with_source_code(NamedSource::new(self.file_name.clone(), self.source_code.clone()))
             )?;
 
         Ok(ApLang {
@@ -138,7 +135,7 @@ impl ApLang<Parsed> {
         let values = interpreter
             .interpret_debug()
             .map_err(|err|
-                Report::from(err).with_source_code(self.source_code.clone())
+                Report::from(err).with_source_code(NamedSource::new(self.file_name.clone(), self.source_code.clone()))
             )?;
 
         Ok(ApLang {

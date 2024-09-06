@@ -46,8 +46,8 @@ macro_rules! unwrap_arg_type {
                     // src: Arc::from("... code here".to_string()),
                     span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
-                    help: "".to_string(),
-                    label: "Argument cannot be cast into null".to_string(),
+                    help: format!("Argument Value ({}) is not of type NULL", stringify!($value)),
+                    label: "This argument cannot be cast into null".to_string(),
                 }
             )
         }
@@ -60,8 +60,8 @@ macro_rules! unwrap_arg_type {
                     // src: Arc::from("... code here".to_string()),
                     span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
-                    help: "".to_string(),
-                    label: format!("Argument Value ({}) is not of type Number", stringify!($value)),
+                    help: format!("Argument Value ({}) is not of type NUMBER", stringify!($value)),
+                    label: "This argument cannot be cast into NUMBER".to_string(),
                 }
             );
        };
@@ -74,8 +74,8 @@ macro_rules! unwrap_arg_type {
                     // src: Arc::from("... code here".to_string()),
                     span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
-                    help: "".to_string(),
-                    label: format!("Argument Value ({}) is not of type String", stringify!($value)),
+                    help: format!("Argument Value ({}) is not of type STRING", stringify!($value)),
+                    label: "This argument cannot be cast into STRING".to_string(),
                 }
             );
         };
@@ -88,8 +88,8 @@ macro_rules! unwrap_arg_type {
                     // src: Arc::from("... code here".to_string()),
                     span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
-                    help: "".to_string(),
-                    label: format!("Argument Value ({}) is not of type Bool", stringify!($value)),
+                    help: format!("Argument Value ({}) is not of type BOOL", stringify!($value)),
+                    label: "This argument cannot be cast into BOOL".to_string(),
                 }
             );
         };
@@ -102,8 +102,8 @@ macro_rules! unwrap_arg_type {
                     // src: Arc::from("... code here".to_string()),
                     span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
-                    help: "".to_string(),
-                    label: format!("Argument Value ({}) is not of type List<Value>", stringify!($value)),
+                    help: format!("Argument Value ({}) is not of type LIST<Value>", stringify!($value)),
+                    label: "This argument cannot be cast into LIST".to_string(),
                 }
             );
         };

@@ -225,7 +225,7 @@ impl Env {
                     // src: Arc::from("... code here".to_string()),
                     span: tok.span,
                     message: "Invalid Variable".to_string(),
-                    help: "".to_string(),
+                    help: format!("Make sure to create the variable `{var}` before you use it"),
                     label: "Could not find variable".to_string()
                 }
             )
@@ -242,9 +242,9 @@ impl Env {
             RuntimeError {
                 // src: Arc::from("... code here".to_string()),
                 span: tok.span,
-                message: "Invalid Function".to_string(),
-                help: "".to_string(),
-                label: "This function doesn't exist".to_string()
+                message: "Invalid PROCEDURE".to_string(),
+                help: format!("Make sure to create the PROCEDURE `{function_name}` before you call it"),
+                label: "This PROCEDURE doesn't exist".to_string()
             }
         )?.clone();
         Ok(a)
@@ -389,9 +389,9 @@ impl Interpreter {
                         RuntimeError {
                             // src: Arc::from("... code here".to_string()),
                             span: repeat_times.count_token.span,
-                            message: format!("Cannot do count for value {value:?}"),
-                            help: format!("Cannot do count for value {value:?}"),
-                            label: "This should be a NUMBER".to_string()
+                            message: "Invalid Value for nTIMES".to_string(),
+                            help: format!("Make sure `{value:?}` is a NUMBER"),
+                            label: "Invalid Value here".to_string()
                         }
                     ),
                 }
@@ -413,8 +413,8 @@ impl Interpreter {
                         RuntimeError {
                             // src: Arc::from("... code here".to_string()),
                             span: for_each.list_token.span,
-                            message: format!("Cannot make iterator over value {value:?}"),
-                            help: format!("Cannot make iterator over value {value:?}"),
+                            message: "Invalid Iterator".to_string(),
+                            help: format!("Cannot iterate over {value:?}. This should be a LIST or a STRING"),
                             label: "Invalid Iterator Here".to_string()
                         }
                     )?,
@@ -567,9 +567,9 @@ impl Interpreter {
                         let Some(function) = module.remove(function_name) else {
                             return Err(RuntimeError {
                                 span: function.span,
-                                message: format!("Function {function_name} does not exist in module {module_name}"),
-                                help: "".to_string(),
-                                label: "does not exist".to_string(),
+                                message: "Invalid Function".to_string(),
+                                help: format!("Function {function_name} does not exist in module {module_name}"),
+                                label: "Does not exist".to_string(),
                             });
                         };
 
@@ -678,7 +678,7 @@ impl Interpreter {
                     // src: Arc::from("... code here".to_string()),
                     span: (proc.parens.0.span.offset() + proc.parens.0.span.len() .. proc.parens.1.span.offset()).into(),
                     message: "Incorrect Number Of Args".to_string(),
-                    help: "".to_string(),
+                    help: "Make sure the you are passing in the correct number of arguments to the PROCEDURE".to_string(),
                     label: format!("There should be {} arg{}; Found {}", callable.arity(), if callable.arity() == 1 {""} else {"s"}, argument_evaluations.len())
                 }
             ) // todo make this error message better -- use source proc pointer
@@ -699,40 +699,52 @@ impl Interpreter {
     fn access(&mut self, access: &crate::ast::Access) -> Result<Value, RuntimeError> {
         let list = self.expr(&access.list)?;
         let idx = self.expr(&access.key)?;
-
-        let Value::List(list) = list else {
-            return Err(
-                RuntimeError {
-                    // src: Arc::from("... code here".to_string()),
-                    span: access.list_token.span,
-                    message: "Invalid Type".to_string(),
-                    help: "".to_string(),
-                    label: "This should be a LIST".to_string()
-                }
-            )
-        };
-
+        
         let Value::Number(idx) = idx else {
             return Err(
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: (access.brackets.0.span.offset() + access.brackets.0.span.len() .. access.brackets.1.span.offset()).into(),
-                    message: "Invalid List Index".to_string(),
-                    help: "".to_string(),
-                    label: "Index must be a Number!".to_string()
+                    message: "Invalid Index".to_string(),
+                    help: format!("Make sure index {idx:?} is a NUMBER!"),
+                    label: "Index must be a NUMBER!".to_string()
                 }
             )
         };
-
-       let target = list.borrow().get((idx - 1.0) as usize).cloned().ok_or_else(||
-           RuntimeError {
-                // src: Arc::from("... code here".to_string()),
-                span: (access.brackets.0.span.offset() + access.brackets.0.span.len() .. access.brackets.1.span.offset()).into(),
-                message: "Invalid List Index".to_string(),
-                help: "".to_string(),
-                label: "Index must be less than the length of the LIST".to_string()
-           }
-       );
+        
+        let target = match &list {
+            Value::String(string) => {
+                string.chars().nth((idx - 1.0) as usize).map(|ch| Value::String(ch.to_string())).ok_or_else(||
+                    RuntimeError {
+                        span: (access.brackets.0.span.offset() + access.brackets.0.span.len() .. access.brackets.1.span.offset()).into(),
+                        message: "Invalid List Index".to_string(),
+                        help: format!("Make sure index `{idx}` is less than {}", string.len()),
+                        label: "Index must be less than the length of the STRING".to_string()
+                    }
+                )
+            }
+            Value::List(list) => {
+                list.borrow().get((idx - 1.0) as usize).cloned().ok_or_else(||
+                    RuntimeError {
+                        // src: Arc::from("... code here".to_string()),
+                        span: (access.brackets.0.span.offset() + access.brackets.0.span.len() .. access.brackets.1.span.offset()).into(),
+                        message: "Invalid List Index".to_string(),
+                        help: format!("Make sure index `{idx}` is less than {}", list.borrow().len()),
+                        label: "Index must be less than the length of the LIST".to_string()
+                    }
+                )
+            }
+            _ => Err(
+                RuntimeError {
+                    // src: Arc::from("... code here".to_string()),
+                    span: access.list_token.span,
+                    message: "Invalid Type".to_string(),
+                    help: "You can only access STRINGS and LISTS this way".to_string(),
+                    label: "This has the wrong type".to_string()
+                }
+            )
+        };
+        
         target
     }
 
@@ -747,7 +759,7 @@ impl Interpreter {
                     // src: Arc::from("... code here".to_string()),
                     span: set.list_token.span,
                     message: "Invalid Type".to_string(),
-                    help: "".to_string(),
+                    help: "You can only SET LISTS this way".to_string(),
                     label: "This should be a LIST".to_string()
                 }
             )
@@ -759,7 +771,7 @@ impl Interpreter {
                     // src: Arc::from("... code here".to_string()),
                     span: (set.brackets.0.span.offset() + set.brackets.0.span.len() .. set.brackets.1.span.offset()).into(),
                     message: "Invalid List Index".to_string(),
-                    help: "".to_string(),
+                    help: format!("Make sure index `{idx}` is less than {}", list.borrow().len()),
                     label: "Index must be a Number!".to_string()
                 }
             )
@@ -797,7 +809,7 @@ impl Interpreter {
                             // src: Arc::from("... code here".to_string()),
                             span: node.token.span,
                             message: "Division by Zero".to_string(),
-                            help: "".to_string(),
+                            help: "Remember not to divide by zero".to_string(),
                             label: "Cannot divide by zero".to_string()
                         }
                     )
@@ -815,7 +827,7 @@ impl Interpreter {
                     // src: Arc::from("... code here".to_string()),
                     span: node.token.span,
                     message: "Incomparable Values".to_string(),
-                    help: "".to_string(),
+                    help: format!("Cannot compare {:?} and {:?}", &lhs, &rhs),
                     label: "Cannot compare these two values".to_string()
                 }
             ),
@@ -843,8 +855,8 @@ impl Interpreter {
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: node.token.span,
-                    message: format!("Invalid application of unary op {op} to String type"),
-                    help: "".to_string(),
+                    message: "Invalid Unary Op".to_string(),
+                    help: format!("Invalid application of unary op {op} to String type"),
                     label: "Cannot do operand here".to_string(),
                 }
             ),
@@ -852,8 +864,8 @@ impl Interpreter {
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: node.token.span,
-                    message: format!("Invalid application of unary op {op} to NativeFunction type"),
-                    help: "".to_string(),
+                    message: "Invalid Unary Op".to_string(),
+                    help: format!("Invalid application of unary op {op} to NativeFunction type"),
                     label: "Cannot do operand here".to_string(),
                 }
             ),
@@ -861,8 +873,8 @@ impl Interpreter {
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: node.token.span,
-                    message: format!("Invalid application of unary op {op} to Function type"),
-                    help: "".to_string(),
+                    message: "Invalid Unary Op".to_string(),
+                    help: format!("Invalid application of unary op {op} to Function type"),
                     label: "Cannot do operand here".to_string(),
                 }
             ),
@@ -870,8 +882,8 @@ impl Interpreter {
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: node.token.span,
-                    message: format!("Invalid application of unary op Minus to Bool type (value) {b}"),
-                    help: "".to_string(),
+                    message: "Invalid Unary Op".to_string(),
+                    help: format!("Invalid application of unary op Minus to Bool type (value) {b}"),
                     label: "Cannot do operand here".to_string(),
                 }
             ),
@@ -879,8 +891,8 @@ impl Interpreter {
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: node.token.span,
-                    message: format!("Invalid application of unary op {op} to Null type"),
-                    help: "".to_string(),
+                    message: "Invalid Unary Op".to_string(),
+                    help: format!("Invalid application of unary op {op} to Null type"),
                     label: "Cannot do operand here".to_string()
                 }
             ),
@@ -888,8 +900,8 @@ impl Interpreter {
                 RuntimeError {
                     // src: Arc::from("... code here".to_string()),
                     span: node.token.span,
-                    message: format!("Invalid application of unary op {op} to List type"),
-                    help: "".to_string(),
+                    message: "Invalid Unary Op".to_string(),
+                    help: format!("Invalid application of unary op {op} to List type"),
                     label: "Cannot do operand here".to_string()
                 }
             ),

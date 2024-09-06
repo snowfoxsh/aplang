@@ -46,6 +46,6 @@ pub struct RuntimeError {
     // #[source_code] pub src: Arc<str>,
     #[label("{label}")] pub span: SourceSpan,
     pub message: String,
-    pub help: String,
+    #[help("{help}")] pub help: String,
     pub label: String,
 }
