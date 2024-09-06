@@ -32,6 +32,10 @@ pub enum Stmt {
     Block(Arc<Block>),
 
     Return(Arc<Return>),
+    
+    Continue(Arc<Continue>),
+    
+    Break(Arc<Break>),
 
     Import(Arc<Import>),
 }
@@ -93,6 +97,16 @@ pub struct Block {
 pub struct Return {
     pub token: Token,
     pub data: Option<Expr>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Continue {
+    pub token: Token,
+}
+
+#[derive(Debug, Clone)]
+pub struct Break {
+    pub token: Token,
 }
 
 #[derive(Debug, Clone)]
@@ -369,6 +383,12 @@ pub mod pretty {
                 Stmt::Import(import_stmt) => Box::new(
                     std::iter::empty()
                 ),
+                Stmt::Continue(import_stmt) => Box::new(
+                    std::iter::empty()
+                ),
+                Stmt::Break(import_stmt) => Box::new(
+                    std::iter::empty()
+                ),
             }
         }
 
@@ -535,6 +555,12 @@ pub mod pretty {
                 },
                 Stmt::Import(import_stmt) => {
                     write!(f, "import module {}", import_stmt.module_name)
+                }
+                Stmt::Break(_) => {
+                    write!(f, "loop break")
+                }
+                Stmt::Continue(_) => {
+                    write!(f, "loop continue")
                 }
             }
         }

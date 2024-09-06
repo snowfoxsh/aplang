@@ -285,7 +285,12 @@ impl Default for Env {
 pub struct Interpreter {
     venv: Env,
     ast: Ast,
+    
     ret_val: Option<Value>,
+    in_loop_scope: bool,
+    should_loop_break: bool,
+    should_loop_continue: bool,
+    
     modules: Modules,
 }
 
@@ -295,6 +300,9 @@ impl Interpreter {
             venv: Env::default(),
             ast,
             ret_val: None,
+            in_loop_scope: false,
+            should_loop_break: false,
+            should_loop_continue: false,
             modules: Modules::init(),
         };
 
@@ -380,6 +388,18 @@ impl Interpreter {
                         // floor the value into an int so we can iterate
                         let count = count as usize;
                         for _ in 1..=count {
+                            // if the BREAK stmt was called then we need to deal with that
+                            if self.should_loop_break {
+                                self.should_loop_break = false;
+                                break;
+                            }
+
+                            // if the CONTINUE stmt was called then we need to deal with that
+                            if self.should_loop_continue {
+                                self.should_loop_continue = false;
+                                continue;
+                            }
+
                             self.stmt(&repeat_times.body)?;
                         }
                         Ok(())
@@ -397,6 +417,18 @@ impl Interpreter {
             }
             Stmt::RepeatUntil(repeat_until) => {
                 while Self::is_truthy(&self.expr(&repeat_until.condition)?) {
+                    // if the BREAK stmt was called then we need to deal with that
+                    if self.should_loop_break {
+                        self.should_loop_break = false;
+                        break;
+                    }
+
+                    // if the CONTINUE stmt was called then we need to deal with that
+                    if self.should_loop_continue {
+                        self.should_loop_continue = false;
+                        continue;
+                    }
+
                     self.stmt(&repeat_until.body)?;
                 }
                 Ok(())
@@ -429,6 +461,19 @@ impl Interpreter {
                     // inserting temporary value into env
                     self.venv.define(element.clone(), values.borrow()[i].clone());
                     // execute body
+                    // if the BREAK stmt was called then we need to deal with that
+                    if self.should_loop_break {
+                        self.should_loop_break = false;
+                        break;
+                    }
+
+                    // if the CONTINUE stmt was called then we need to deal with that
+                    if self.should_loop_continue {
+                        self.should_loop_continue = false;
+                        continue;
+                    }
+
+                    // todo possible bug: confirm that this doesnt have any weird value errors
                     self.stmt(&for_each.body)?;
                     // get temp val out and change it in vec
                     (*values.borrow_mut())[i] = self.venv.remove(element.clone()).unwrap().0;
@@ -470,10 +515,32 @@ impl Interpreter {
                 
                 Ok(())
             }
+            Stmt::Continue(cont) => {
+
+                // we should be in a loop scope here
+                // if not uh oh
+                self.should_loop_continue = true;
+
+                Ok(())
+            },
+            Stmt::Break(brk) => {
+                // we should be in a loop scope here
+                // if not uh oh
+                self.should_loop_break = true;
+
+                Ok(())
+            }
             Stmt::Block(block) => {
                 self.venv.create_nested_layer();
 
                 for stmt in block.statements.iter() {
+                    if self.should_loop_continue || self.should_loop_break {
+                        // we should be in a loop scope now
+                        // if we are not uh oh
+
+                        break;
+                    }
+
                     self.stmt(stmt)?
                 }
 

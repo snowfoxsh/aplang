@@ -4,6 +4,8 @@ use crate::token::TokenType::{Eof, LeftParen, RightParen};
 use crate::token::{Token, TokenType};
 use crate::ast::Return as ReturnValue;
 use crate::ast::Import as ImportStatement;
+use crate::ast::Continue as ContinueStatement;
+use crate::ast::Break as BreakStatement;
 use miette::{miette, LabeledSpan, NamedSource, Report, SourceSpan};
 use std::sync::Arc;
 
@@ -32,6 +34,7 @@ pub struct Parser2 {
     current: usize,
     in_function_scope: bool,
     warnings: Vec<Report>,
+    in_loop_scope: bool,
 }
 
 impl Parser2 {
@@ -40,6 +43,7 @@ impl Parser2 {
             tokens,
             source: source.clone(),
             in_function_scope: false,
+            in_loop_scope: false,
             // named_source: NamedSource::new(file_name, source),
             named_source: NamedSource::new(format!("{}", file_name), source),
             current: 0,
@@ -240,12 +244,25 @@ impl Parser2 {
         // REPEAT UNTIL (condition)
         if self.match_token(&Repeat) {
             let repeat_token = self.previous().clone();
-            // this is a repeat until block
-            if self.check(&Until) {
-                return self.repeat_until(repeat_token);
-            }
 
-            return self.repeat_times(repeat_token);
+            // we are now in a loop
+            let cache_loop_state = self.in_loop_scope;
+            self.in_loop_scope = true;
+
+            // this is a repeat until block
+            let result = if self.check(&Until) {
+                let result =  self.repeat_until(repeat_token);
+                result
+
+            } else {
+                self.repeat_times(repeat_token)
+            };
+
+            // we *might* not be in a loop anymore
+            self.in_loop_scope = cache_loop_state;
+
+            // finish
+            return result;
         }
 
         if self.match_token(&For) {
@@ -258,6 +275,16 @@ impl Parser2 {
             let lb_token = self.previous().clone();
 
             return self.block(lb_token);
+        }
+
+        if self.match_token(&Continue) {
+            let cont_token = self.previous().clone();
+            return self.continue_statement(cont_token);
+        }
+
+        if self.match_token(&Break) {
+            let brk_token = self.previous().clone();
+            return self.break_statement(brk_token);
         }
 
         if self.match_token(&Return) {
@@ -310,6 +337,32 @@ impl Parser2 {
             }
             .into(),
         ))
+    }
+
+    fn break_statement(&mut self, break_token: Token) -> miette::Result<Stmt> {
+        if !self.in_loop_scope {
+            // todo improve this message
+            return Err(miette! {
+                "BREAK can only be called in a loop"
+            });
+        }
+
+        Ok(Stmt::Break(Arc::new(BreakStatement {
+            token: break_token
+        })))
+    }
+
+    fn continue_statement(&mut self, continue_token: Token) -> miette::Result<Stmt> {
+        if !self.in_loop_scope {
+            // todo: make this error bearable
+            return Err(miette! {
+                "CONTINUE can only be called in a loop",
+            });
+        }
+
+        Ok(Stmt::Continue(Arc::new(ContinueStatement {
+            token: continue_token
+        })))
     }
 
     fn return_statement(&mut self, return_token: Token) -> miette::Result<Stmt> {
@@ -727,7 +780,7 @@ impl Parser2 {
                 Expr::Variable(ref variable) => Ok(Expr::Assign(
                     Assignment {
                         target: variable.clone(),
-                        value: value,
+                        value,
                         ident_token: variable.token.clone(),
                         arrow_token,
                     }
@@ -762,7 +815,7 @@ impl Parser2 {
                         ),
                         list: access.list.clone(),
                         idx: access.key.clone(),
-                        value: value,
+                        value,
                         list_token: access.list_token.clone(),
                         brackets: access.brackets.clone(),
                         arrow_token,
@@ -806,7 +859,7 @@ impl Parser2 {
             expr = Expr::Logical(Arc::new(Logical {
                 left: expr,
                 operator: LogicalOp::Or,
-                right: right,
+                right,
 
                 token,
             }))
@@ -827,7 +880,7 @@ impl Parser2 {
             expr = Expr::Logical(Arc::new(Logical {
                 left: expr,
                 operator: LogicalOp::Or,
-                right: right,
+                right,
 
                 token,
             }))
@@ -1219,9 +1272,9 @@ impl Parser2 {
         self.advance();
 
         while !self.is_at_end() {
-            if self.previous().token_type == SoftSemi {
-                return;
-            }
+            // if self.previous().token_type == SoftSemi {
+            //     return;
+            // }
 
             // todo: dont know if this is complete but its "good enough"
             match self.peek().token_type {
@@ -1358,8 +1411,6 @@ pub(super) mod warning {
                 .push(report.with_source_code(self.named_source.clone()))
         }
 
-        // todo: add warnings to parameters
-        // pub(super) fn ident_warning(&mut self, ident: &Token) {
         //     if ident.token_type == Identifier {
         //         panic!("Internal error trying to warn about ident but input is not ident")
         //     }
