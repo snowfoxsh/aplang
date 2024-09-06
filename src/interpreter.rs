@@ -11,7 +11,6 @@ use miette::SourceSpan;
 use crate::aplang::ApLang;
 use crate::errors::{Reports, RuntimeError};
 use crate::aplang_std::Modules;
-use crate::interpreter::Value::Function;
 use crate::lexer::LiteralValue;
 use crate::token::Token;
 

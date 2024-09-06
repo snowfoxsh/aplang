@@ -346,7 +346,7 @@ impl Parser2 {
             // matching import ["f1", "f2", "f3"] from mod
             let lbracket = self.previous().clone();
 
-            let mut specific_functions : Vec<Token> = vec![];
+            let specific_functions : Vec<Token> = vec![];
             loop {
                 // todo: consider maing this an argument because arbitrary
                 // todo: like max param limits or something

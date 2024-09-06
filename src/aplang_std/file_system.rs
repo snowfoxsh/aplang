@@ -2,7 +2,7 @@ use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::Path;
-use crate::interpreter::{Env, FunctionMap, Value};
+use crate::interpreter::{FunctionMap, Value};
 use crate::std_function;
 
 pub(super) fn file_system() -> FunctionMap {

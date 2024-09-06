@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::interpreter::{Env, FunctionMap, Value};
+use crate::interpreter::{FunctionMap, Value};
 use crate::{std_function};
 
 mod time;

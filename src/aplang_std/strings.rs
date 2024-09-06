@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use crate::interpreter::{Env, FunctionMap, Value};
+use crate::interpreter::{FunctionMap, Value};
 use crate::std_function;
 
 pub(super) fn std_strings() -> FunctionMap {

@@ -1,5 +1,5 @@
 use crate::{std_function};
-use crate::interpreter::{Env, FunctionMap, Value};
+use crate::interpreter::{FunctionMap, Value};
 
 pub(super) fn std_math() -> FunctionMap {
     let mut functions = FunctionMap::new();

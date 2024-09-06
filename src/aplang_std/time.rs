@@ -1,6 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::interpreter::{Env, FunctionMap, Value};
+use crate::interpreter::{FunctionMap, Value};
 use crate::std_function;
 
 pub(super) fn time() -> FunctionMap {

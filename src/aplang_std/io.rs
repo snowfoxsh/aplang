@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::io;
 use std::io::Write;
 use std::rc::Rc;
-use crate::interpreter::{Env, FunctionMap, Value};
+use crate::interpreter::{FunctionMap, Value};
 use crate::std_function;
 
 fn input(prompt: &str) -> Option<String> {
