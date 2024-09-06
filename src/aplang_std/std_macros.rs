@@ -40,10 +40,8 @@ macro_rules! unwrap_arg_type {
         #[allow(unused_mut)]
         let mut $value = match $value.0 {
             crate::interpreter::Value::Null => crate::interpreter::Value::Null,
-            // todo make this a better message
             _ => return Err(
                 crate::errors::RuntimeError {
-                    // src: Arc::from("... code here".to_string()),
                     span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
                     help: format!("Argument Value ({}) is not of type NULL", stringify!($value)),
@@ -57,7 +55,6 @@ macro_rules! unwrap_arg_type {
         let crate::interpreter::Value::Number(mut $value) = $value.0.clone() else {
             return Err(
                 crate::errors::RuntimeError {
-                    // src: Arc::from("... code here".to_string()),
                     span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
                     help: format!("Argument Value ({}) is not of type NUMBER", stringify!($value)),
@@ -71,7 +68,6 @@ macro_rules! unwrap_arg_type {
         let crate::interpreter::Value::String(mut $value) = $value.0.clone() else {
             return Err(
                 crate::errors::RuntimeError {
-                    // src: Arc::from("... code here".to_string()),
                     span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
                     help: format!("Argument Value ({}) is not of type STRING", stringify!($value)),
@@ -85,7 +81,6 @@ macro_rules! unwrap_arg_type {
         let crate::interpreter::Value::Bool(mut $value) = $value.0.clone() else {
             return Err(
                 crate::errors::RuntimeError {
-                    // src: Arc::from("... code here".to_string()),
                     span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
                     help: format!("Argument Value ({}) is not of type BOOL", stringify!($value)),
@@ -99,7 +94,6 @@ macro_rules! unwrap_arg_type {
         let crate::interpreter::Value::List(mut $value) = $value.0.clone() else {
             return Err(
                 crate::errors::RuntimeError {
-                    // src: Arc::from("... code here".to_string()),
                     span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
                     help: format!("Argument Value ({}) is not of type LIST<Value>", stringify!($value)),

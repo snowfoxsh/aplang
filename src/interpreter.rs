@@ -221,7 +221,6 @@ impl Env {
             .get(var)
             .ok_or(
                 RuntimeError {
-                    // src: Arc::from("... code here".to_string()),
                     span: tok.span,
                     message: "Invalid Variable".to_string(),
                     help: format!("Make sure to create the variable `{var}` before you use it"),
@@ -239,7 +238,6 @@ impl Env {
     pub fn lookup_function(&self, function_name: String, tok: Token) -> Result<Rc<dyn Callable>, RuntimeError> {
         let (a, b) = self.functions.get(&function_name).ok_or(
             RuntimeError {
-                // src: Arc::from("... code here".to_string()),
                 span: tok.span,
                 message: "Invalid PROCEDURE".to_string(),
                 help: format!("Make sure to create the PROCEDURE `{function_name}` before you call it"),
@@ -249,8 +247,6 @@ impl Env {
         Ok(a)
     }
 
-    // pub fn create_function(&mut self, function_name: String, )
-
     /// removes a variable
     pub fn remove(&mut self, variable: Arc<Variable>) -> Option<(Value, Arc<Variable>)> {
         self.activate().variables.remove(&variable.ident)
@@ -259,16 +255,6 @@ impl Env {
     pub fn contains(&mut self, variable: Arc<Variable>) -> bool {
         self.activate().variables.contains_key(&variable.ident)
     }
-
-    // pub fn edit(&mut self, var: &str, value: Value) -> Option<Arc<Variable>> {
-    //     // retrieve variable, if not found |-> None
-    //     let (found_value, location) = self.activate().variables.get_mut(var)?;
-    //
-    //     //
-    //     *found_value = value;
-    //
-    //     Some(location.clone())
-    // }
 }
 
 impl Default for Env {
@@ -406,7 +392,6 @@ impl Interpreter {
                     } // format!("cannot do count for value {value:?}")
                     value => Err(
                         RuntimeError {
-                            // src: Arc::from("... code here".to_string()),
                             span: repeat_times.count_token.span,
                             message: "Invalid Value for nTIMES".to_string(),
                             help: format!("Make sure `{value:?}` is a NUMBER"),
@@ -442,7 +427,6 @@ impl Interpreter {
                         .collect::<Vec<Value>>())),
                     value => Err(
                         RuntimeError {
-                            // src: Arc::from("... code here".to_string()),
                             span: for_each.list_token.span,
                             message: "Invalid Iterator".to_string(),
                             help: format!("Cannot iterate over {value:?}. This should be a LIST or a STRING"),
@@ -736,12 +720,9 @@ impl Interpreter {
 
         let callable = self.venv.lookup_function(proc.ident.clone(), proc.token.clone())?;
 
-        // todo make the source pointer error message better
-
         if callable.arity() as usize != argument_evaluations.len() {
             return Err(
                 RuntimeError {
-                    // src: Arc::from("... code here".to_string()),
                     span: (proc.parens.0.span.offset() + proc.parens.0.span.len() .. proc.parens.1.span.offset()).into(),
                     message: "Incorrect Number Of Args".to_string(),
                     help: "Make sure the you are passing in the correct number of arguments to the PROCEDURE".to_string(),
@@ -769,7 +750,6 @@ impl Interpreter {
         let Value::Number(idx) = idx else {
             return Err(
                 RuntimeError {
-                    // src: Arc::from("... code here".to_string()),
                     span: (access.brackets.0.span.offset() + access.brackets.0.span.len() .. access.brackets.1.span.offset()).into(),
                     message: "Invalid Index".to_string(),
                     help: format!("Make sure index {idx:?} is a NUMBER!"),
@@ -792,7 +772,6 @@ impl Interpreter {
             Value::List(list) => {
                 list.borrow().get((idx - 1.0) as usize).cloned().ok_or_else(||
                     RuntimeError {
-                        // src: Arc::from("... code here".to_string()),
                         span: (access.brackets.0.span.offset() + access.brackets.0.span.len() .. access.brackets.1.span.offset()).into(),
                         message: "Invalid List Index".to_string(),
                         help: format!("Make sure index `{idx}` is less than {}", list.borrow().len()),
@@ -802,7 +781,6 @@ impl Interpreter {
             }
             _ => Err(
                 RuntimeError {
-                    // src: Arc::from("... code here".to_string()),
                     span: access.list_token.span,
                     message: "Invalid Type".to_string(),
                     help: "You can only access STRINGS and LISTS this way".to_string(),
@@ -822,7 +800,6 @@ impl Interpreter {
         let Value::List(ref list) = list else {
             return Err(
                 RuntimeError {
-                    // src: Arc::from("... code here".to_string()),
                     span: set.list_token.span,
                     message: "Invalid Type".to_string(),
                     help: "You can only SET LISTS this way".to_string(),
@@ -834,7 +811,6 @@ impl Interpreter {
         let Value::Number(idx) = idx else {
             return Err(
                 RuntimeError {
-                    // src: Arc::from("... code here".to_string()),
                     span: (set.brackets.0.span.offset() + set.brackets.0.span.len() .. set.brackets.1.span.offset()).into(),
                     message: "Invalid List Index".to_string(),
                     help: format!("Make sure index `{idx}` is less than {}", list.borrow().len()),
@@ -872,7 +848,6 @@ impl Interpreter {
                 } else {
                     Err(
                         RuntimeError {
-                            // src: Arc::from("... code here".to_string()),
                             span: node.token.span,
                             message: "Division by Zero".to_string(),
                             help: "Remember not to divide by zero".to_string(),
@@ -890,7 +865,6 @@ impl Interpreter {
             }
             _ => Err(
                 RuntimeError {
-                    // src: Arc::from("... code here".to_string()),
                     span: node.token.span,
                     message: "Incomparable Values".to_string(),
                     help: format!("Cannot compare {:?} and {:?}", &lhs, &rhs),
@@ -919,7 +893,6 @@ impl Interpreter {
             (Not, value) => Ok(Bool(!Self::is_truthy(&value))),
             (op, String(_)) => Err(
                 RuntimeError {
-                    // src: Arc::from("... code here".to_string()),
                     span: node.token.span,
                     message: "Invalid Unary Op".to_string(),
                     help: format!("Invalid application of unary op {op} to String type"),
@@ -928,7 +901,6 @@ impl Interpreter {
             ),
             (op, NativeFunction()) => Err(
                 RuntimeError {
-                    // src: Arc::from("... code here".to_string()),
                     span: node.token.span,
                     message: "Invalid Unary Op".to_string(),
                     help: format!("Invalid application of unary op {op} to NativeFunction type"),
@@ -937,7 +909,6 @@ impl Interpreter {
             ),
             (op, Function()) => Err(
                 RuntimeError {
-                    // src: Arc::from("... code here".to_string()),
                     span: node.token.span,
                     message: "Invalid Unary Op".to_string(),
                     help: format!("Invalid application of unary op {op} to Function type"),
@@ -946,7 +917,6 @@ impl Interpreter {
             ),
             (Minus, Bool(b)) => Err(
                 RuntimeError {
-                    // src: Arc::from("... code here".to_string()),
                     span: node.token.span,
                     message: "Invalid Unary Op".to_string(),
                     help: format!("Invalid application of unary op Minus to Bool type (value) {b}"),
@@ -955,7 +925,6 @@ impl Interpreter {
             ),
             (op, Null) => Err(
                 RuntimeError {
-                    // src: Arc::from("... code here".to_string()),
                     span: node.token.span,
                     message: "Invalid Unary Op".to_string(),
                     help: format!("Invalid application of unary op {op} to Null type"),
@@ -964,7 +933,6 @@ impl Interpreter {
             ),
             (op, List(l)) => Err(
                 RuntimeError {
-                    // src: Arc::from("... code here".to_string()),
                     span: node.token.span,
                     message: "Invalid Unary Op".to_string(),
                     help: format!("Invalid application of unary op {op} to List type"),

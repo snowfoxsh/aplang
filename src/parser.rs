@@ -44,7 +44,6 @@ impl Parser2 {
             source: source.clone(),
             in_function_scope: false,
             in_loop_scope: false,
-            // named_source: NamedSource::new(file_name, source),
             named_source: NamedSource::new(format!("{}", file_name), source),
             current: 0,
             warnings: vec![],
