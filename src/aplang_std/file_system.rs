@@ -30,7 +30,7 @@ pub(super) fn file_system() -> FunctionMap {
                 Ok(Value::String(s))
             }
             Err(_) => {
-                // return NULL if the file cannot be read
+                // return NULL if the file can't be read
                 Ok(Value::Null)
             }
         }

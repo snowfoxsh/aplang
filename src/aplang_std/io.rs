@@ -24,7 +24,7 @@ fn format(fstring: String, args: Rc<RefCell<Vec<Value>>>) -> Option<String> {
     for (i, segment) in segments.iter().enumerate() {
         write!(builder, "{}", segment).unwrap();
 
-        // if we are last one there is no format arg
+        // if we're last one there is no format arg
         if i + 1 < segments.len() {
             write!(builder, "{}", args.borrow()[i]).unwrap()
         }

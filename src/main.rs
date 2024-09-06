@@ -69,7 +69,7 @@ fn run(args: CommandLine) -> Result<()> {
     // execute the lexer
     let lexed = aplang.lex().map_err(Reports::from)?; // todo implement errors here
     
-    // if the flag is enabled capture the debug info
+    // if the flag is enabled, capture the debug info
     if matches!(args.debug, DebugMode::All | DebugMode::Lexer) {
         lexed.debug_output(&mut debug_buffer).map_err(|err| {
             miette!("could not write debug info for lexer!\n{}", err)
@@ -89,7 +89,7 @@ fn run(args: CommandLine) -> Result<()> {
         })?
     }
     
-    // stop if we are only checking
+    // stop if we're only checking
     if args.check { return Ok(()) }
     
     // execute the interpreter

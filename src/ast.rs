@@ -4,7 +4,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 use miette::SourceSpan;
 // To facilitate better error handling down the line,
-// we are going to store the tokens that the thing came from
+// we're going to store the tokens that the thing came from
 // so we can report back to them later
 
 #[derive(Debug, Clone)]
@@ -454,8 +454,8 @@ pub mod pretty {
         }
     }
 
-    impl fmt::Display for Expr {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    impl Display for Expr {
+        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
             match self {
                 Expr::Literal(literal) => write!(f, "{}", literal.value),
                 Expr::Binary(binary) => {
@@ -496,8 +496,8 @@ pub mod pretty {
         }
     }
 
-    impl fmt::Display for Stmt {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    impl Display for Stmt {
+        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
             match self {
                 Stmt::Expr(expr) => write!(f, "{}", expr),
                 Stmt::IfStmt(if_stmt) => {
@@ -528,7 +528,7 @@ pub mod pretty {
                     for_each.item, for_each.list, for_each.body
                 ),
                 Stmt::ProcDeclaration(proc_decl) => {
-                    // let params = proc_decl.pjoin(", ");
+                    // let params = proc_decl.join(", ");
                     let params= proc_decl.params.iter()
                         .map(|var| var.ident.clone())
                         .collect::<Vec<_>>()
@@ -566,90 +566,14 @@ pub mod pretty {
         }
     }
 
-    impl fmt::Display for Variable {
+    impl Display for Variable {
         fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
             write!(f, "{}", self.ident)
         }
     }
-    //     use owo_colors::OwoColorize;
-    //     use std::fmt;
 
-    //     impl fmt::Display for Expr {
-    //         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    //             match self {
-    //                 Expr::Literal { value, .. } => write!(f, "Literal ({})", value),
-    //                 Expr::Binary { operator, .. } => write!(f, "Binary ({})", operator),
-    //                 Expr::Logical { operator, .. } => write!(f, "Logical ({})", operator),
-    //                 Expr::Unary { operator, .. } => write!(f, "Unary ({})", operator),
-    //                 Expr::Grouping { .. } => write!(f, "Group"),
-    //                 Expr::ProcCall { ident, .. } => write!(f, "Call ({})", ident),
-    //                 Expr::Access { list, key, .. } => write!(f, "Access {}[{}]", list, key),
-    //                 Expr::List { .. } => write!(f, "List"),
-    //                 Expr::Variable { ident, .. } => write!(f, "Variable ({})", ident),
-    //                 Expr::Assign { target, value, .. } => write!(f, "Assign ({} <- {})", target, value),
-    //                 Expr::Set { target, value, .. } => write!(f, "Set ({}[{})", target, value),
-    //             }
-    //         }
-    //     }
-
-    //     impl fmt::Display for Literal {
-    //         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    //             match self {
-    //                 Literal::Number(n) => write!(f, "{}", n),
-    //                 Literal::String(s) => write!(f, "\"{}\"", s),
-    //                 Literal::True => write!(f, "true"),
-    //                 Literal::False => write!(f, "false"),
-    //                 Literal::Null => write!(f, "null"),
-    //             }
-    //         }
-    //     }
-
-    //     impl fmt::Display for Stmt {
-    //         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    //             match self {
-    //                 Stmt::Expr { expr } => write!(f, "Expr"),
-    //                 Stmt::If {
-    //                     condition,
-    //                     then_branch: _,
-    //                     else_branch: _,
-    //                     if_token: _,
-    //                     else_token: _,
-    //                 } => write!(f, "If(Condition: {})", condition),
-    //                 Stmt::RepeatTimes {
-    //                     count,
-    //                     body: _,
-    //                     repeat_token: _,
-    //                     times_token: _,
-    //                 } => write!(f, "RepeatTimes(Count: {})", count),
-    //                 Stmt::RepeatUntil { condition, .. } => {
-    //                     write!(f, "RepeatUntil(Condition: {})", condition)
-    //                 }
-    //                 Stmt::ForEach { item, list, .. } => {
-    //                     write!(f, "ForEach(Item: {}, List: {})", item, list)
-    //                 }
-    //                 Stmt::ProcDeclaration {
-    //                     name,
-    //                     params,
-    //                     body: _,
-    //                     proc_token: _,
-    //                     name_token: _,
-    //                     params_tokens: _,
-    //                 } => write!(f, "ProcDeclaration(Name: {}, Params: {:?})", name, params),
-    //                 Stmt::Block {
-    //                     lb_token: _,
-    //                     statements: _,
-    //                     rb_token: _,
-    //                 } => write!(f, "Block"),
-    //                 Stmt::Return { token: _, data } => match data {
-    //                     Some(expr) => write!(f, "Return({})", expr),
-    //                     None => write!(f, "Return"),
-    //                 },
-    //             }
-    //         }
-    //     }
-
-    impl fmt::Display for Literal {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    impl Display for Literal {
+        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
             match self {
                 Literal::Number(num) => write!(f, "{}", num),
                 Literal::String(s) => write!(f, "\"{}\"", s), // Enclose strings in quotes
@@ -660,8 +584,8 @@ pub mod pretty {
         }
     }
 
-    impl fmt::Display for BinaryOp {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    impl Display for BinaryOp {
+        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
             let op = match self {
                 BinaryOp::EqualEqual => "==",
                 BinaryOp::NotEqual => "!=",
@@ -678,8 +602,8 @@ pub mod pretty {
         }
     }
 
-    impl fmt::Display for UnaryOp {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    impl Display for UnaryOp {
+        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
             let op = match self {
                 UnaryOp::Minus => "-",
                 UnaryOp::Not => "!",
@@ -688,8 +612,8 @@ pub mod pretty {
         }
     }
 
-    impl fmt::Display for LogicalOp {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    impl Display for LogicalOp {
+        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
             let op = match self {
                 LogicalOp::And => "and",
                 LogicalOp::Or => "or",
@@ -701,14 +625,14 @@ pub mod pretty {
 
 #[macro_export]
 macro_rules! BinaryOp [
-    [==] => [crate::ast::BinaryOp::EqualEqual];
-    [!=] => [crate::ast::BinaryOp::NotEqual];
-    [<] => [crate::ast::BinaryOp::Less];
-    [<=] => [crate::ast::BinaryOp::LessEqual];
-    [>] => [crate::ast::BinaryOp::Greater];
-    [>=] => [crate::ast::BinaryOp::GreaterEqual];
-    [+] => [crate::ast::BinaryOp::Plus];
-    [-] => [crate::ast::BinaryOp::Minus];
-    [*] => [crate::ast::BinaryOp::Star];
-    [/] => [crate::ast::BinaryOp::Slash];
+    [==] => [$crate::ast::BinaryOp::EqualEqual];
+    [!=] => [$crate::ast::BinaryOp::NotEqual];
+    [<] => [$crate::ast::BinaryOp::Less];
+    [<=] => [$crate::ast::BinaryOp::LessEqual];
+    [>] => [$crate::ast::BinaryOp::Greater];
+    [>=] => [$crate::ast::BinaryOp::GreaterEqual];
+    [+] => [$crate::ast::BinaryOp::Plus];
+    [-] => [$crate::ast::BinaryOp::Minus];
+    [*] => [$crate::ast::BinaryOp::Star];
+    [/] => [$crate::ast::BinaryOp::Slash];
 ];

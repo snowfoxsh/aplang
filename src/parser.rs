@@ -44,7 +44,7 @@ impl Parser2 {
             source: source.clone(),
             in_function_scope: false,
             in_loop_scope: false,
-            named_source: NamedSource::new(format!("{}", file_name), source),
+            named_source: NamedSource::new(file_name, source),
             current: 0,
             warnings: vec![],
         }
@@ -118,7 +118,7 @@ impl Parser2 {
             .consume(&Identifier, |token| {
                 let labels = vec![
                     LabeledSpan::at(proc_token.span(), "this procedure requires a name"),
-                    LabeledSpan::at(token.span(), format!("name goes here")),
+                    LabeledSpan::at(token.span(), "name goes here"),
                 ];
 
                 miette!(
@@ -182,18 +182,6 @@ impl Parser2 {
             }
         }
 
-        // let (params, params_tokens) = if !self.check(&RightParen) {
-        //     parse shit
-        //     todo
-            //
-            // (vec![], vec![])
-        // } else {
-        //     (vec![], vec![])
-        // };
-
-        // params
-
-
         let rp_token = self
             .consume(&RightParen, |token| {
                 let labels = vec![LabeledSpan::at(token.span(), "expected a `)`")];
@@ -208,7 +196,7 @@ impl Parser2 {
             })?
             .clone();
 
-        // cache previous function state and set to true temporarily, since we are in a 
+        // cache previous function state and set to true temporarily, since we're in a 
         let function_scope_state_cache = self.in_function_scope;
         self.in_function_scope = true;
         
@@ -244,15 +232,13 @@ impl Parser2 {
         if self.match_token(&Repeat) {
             let repeat_token = self.previous().clone();
 
-            // we are now in a loop
+            // we're now in a loop
             let cache_loop_state = self.in_loop_scope;
             self.in_loop_scope = true;
 
             // this is a repeat until block
             let result = if self.check(&Until) {
-                let result =  self.repeat_until(repeat_token);
-                result
-
+                self.repeat_until(repeat_token)
             } else {
                 self.repeat_times(repeat_token)
             };
@@ -400,7 +386,7 @@ impl Parser2 {
 
             let specific_functions : Vec<Token> = vec![];
             loop {
-                // todo: consider maing this an argument because arbitrary
+                // todo: consider making this an argument because arbitrary
                 // todo: like max param limits or something
                 // set an arbitrary limit for number of specific functions
                 const MAX_SPECIFIC_FUNCTIONS: usize = 63;
@@ -422,7 +408,7 @@ impl Parser2 {
                     "expected a specific function instead found {}", found
                 ))?;
 
-                // we have reached the end of the specific functions
+                // we've reached the end of the specific functions
                 if !self.match_token(&Comma) {
                     break;
                 }
@@ -455,21 +441,21 @@ impl Parser2 {
         })?.clone();
 
         let module_name = self.consume(&StringLiteral, |token| miette! {
-            "todo: expected a string literal specifing the type of import"
+            "todo: expected a string literal specifying the type of import"
         })?.clone();
 
         self.consume(&SoftSemi, |token| miette! {
             "todo: expected a semicolon following import statement"
         })?;
 
-        return Ok(Stmt::Import(Arc::new(ImportStatement {
+        Ok(Stmt::Import(Arc::new(ImportStatement {
             import_token,
             mod_token,
             maybe_from_token,
 
             only_functions,
             module_name,
-        })));
+        })))
     }
 
     fn if_statement(&mut self, if_token: Token) -> miette::Result<Stmt> {
@@ -509,12 +495,12 @@ impl Parser2 {
             })?
             .clone();
 
-        let then_branch = self.statement()?.into();
+        let then_branch = self.statement()?;
 
         let (else_branch, else_token) = if self.match_token(&Else) {
             // there is an ELSE branch
             let else_token = self.previous().clone();
-            let else_branch = self.statement()?.into();
+            let else_branch = self.statement()?;
 
             (Some(else_branch), Some(else_token))
         } else {
@@ -561,7 +547,7 @@ impl Parser2 {
             )
         })?.clone();
 
-        let body = self.statement()?.into();
+        let body = self.statement()?;
 
         Ok(Stmt::RepeatTimes(
             RepeatTimes {
@@ -595,7 +581,7 @@ impl Parser2 {
                 //     help = "a REPEAT block requires an `UNTIL` keyword with a condition",
                 //     "expected `UNTIL` found {}", token.lexeme
                 // )
-                // todo consider makeing this advance instad of consume
+                // todo consider making this advance instead of consume
                 // this should never error
                 miette!("how tf do i trigger this")
             })?
@@ -633,7 +619,7 @@ impl Parser2 {
             })?
             .clone();
 
-        let body = self.statement()?.into();
+        let body = self.statement()?;
 
         Ok(Stmt::RepeatUntil(
             RepeatUntil {
@@ -712,7 +698,7 @@ impl Parser2 {
 
         let list_token = self.previous().clone();
 
-        let body = self.statement()?.into();
+        let body = self.statement()?;
 
         Ok(Stmt::ForEach(
             ForEach {
@@ -867,9 +853,9 @@ impl Parser2 {
         Ok(expr)
     }
 
-    // logical_and -> equality ( "AND" equality )*
+    // logical_and → equality ( "AND" equality )*
     fn and(&mut self) -> miette::Result<Expr> {
-        let mut expr = self.equalitu()?;
+        let mut expr = self.equality()?;
 
         while self.match_token(&And) {
             // get the token for spanning
@@ -888,13 +874,13 @@ impl Parser2 {
         Ok(expr)
     }
 
-    fn equalitu(&mut self) -> miette::Result<Expr> {
+    fn equality(&mut self) -> miette::Result<Expr> {
         let mut expr = self.comparison()?;
 
         while self.match_tokens(&[BangEqual, EqualEqual]) {
             // get equality token
             let token = self.previous().clone();
-            let right = self.comparison()?.into();
+            let right = self.comparison()?;
             let operator = token.to_binary_op()?;
             let left = expr;
             expr = Expr::Binary(
@@ -915,9 +901,9 @@ impl Parser2 {
         let mut expr = self.addition()?;
 
         while self.match_tokens(&[Greater, GreaterEqual, Less, LessEqual]) {
-            // get comparision token
+            // get comparison token
             let token = self.previous().clone();
-            let right = self.addition()?.into();
+            let right = self.addition()?;
             let operator = token.to_binary_op()?;
             let left = expr;
             expr = Expr::Binary(
@@ -940,7 +926,7 @@ impl Parser2 {
         while self.match_tokens(&[Plus, Minus]) {
             // get addition token
             let token = self.previous().clone();
-            let right = self.multiplication()?.into();
+            let right = self.multiplication()?;
             let operator = token.to_binary_op()?;
             let left = expr;
             expr = Expr::Binary(
@@ -963,7 +949,7 @@ impl Parser2 {
         while self.match_tokens(&[Star, Slash]) {
             // get multiplication token
             let token = self.previous().clone();
-            let right = self.unary()?.into();
+            let right = self.unary()?;
             let operator = token.to_binary_op()?;
             let left = expr;
             expr = Expr::Binary(
@@ -983,7 +969,7 @@ impl Parser2 {
     fn unary(&mut self) -> miette::Result<Expr> {
         if self.match_tokens(&[Not, Minus]) {
             let token = self.previous().clone();
-            let right = self.unary()?.into();
+            let right = self.unary()?;
             let operator = token.to_unary_op()?;
 
             let expr = Expr::Unary(
@@ -1020,7 +1006,7 @@ impl Parser2 {
                     miette!(
                         labels = labels,
                         code = "missing_rbracket",
-                        help = "when indexing an array you must have a closing `]` bracket following the expresion",
+                        help = "when indexing an array you must have a closing `]` bracket following the expression",
                         "expected ']' found {}", token.lexeme
                     )
                 })?.clone();
@@ -1147,7 +1133,7 @@ impl Parser2 {
                         arguments.push(expr);
                         arguments_tokens.push(self.peek().clone());
 
-                        // we have reached the end of arguments
+                        // we've reached the end of arguments
                         if !self.match_token(&Comma) {
                             break;
                         }
@@ -1187,7 +1173,7 @@ impl Parser2 {
         // "(" expr ")"
         if self.match_token(&LeftParen) {
             let lp_token = self.previous().clone();
-            let expr = self.expression()?.into();
+            let expr = self.expression()?;
 
             let rp_token = self.consume(&RightParen, |token| {
                 // todo: improve this message
@@ -1219,7 +1205,7 @@ impl Parser2 {
                     let expr = self.expression()?;
                     items.push(expr);
 
-                    // we have reached the end of arguments
+                    // we've reached the end of arguments
                     if !self.match_token(&Comma) {
                         break;
                     }
@@ -1409,20 +1395,6 @@ pub(super) mod warning {
             self.warnings
                 .push(report.with_source_code(self.named_source.clone()))
         }
-
-        //     if ident.token_type == Identifier {
-        //         panic!("Internal error trying to warn about ident but input is not ident")
-        //     }
-        //
-        //     if get_keywords_hashmap().contains_key(ident.lexeme.to_lowercase().as_str()) {
-        //         let lexeme = &ident.lexeme;
-        //         let report = miette!(
-        //             severity = Severity::Warning,
-        //             "it is not recommended that your identifier echos {}", lexeme
-        //         );
-        //         self.warning(report);
-        //     }
-        // }
     }
 }
 

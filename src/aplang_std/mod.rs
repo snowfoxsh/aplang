@@ -39,7 +39,7 @@ impl Modules {
 
     pub fn register(&mut self, module_name: &str, injector: fn() -> FunctionMap) {
 
-        // if a module is defined again with the same name then the prev will be discarded
+        // if a module is defined again with the same name, then the prev will be discarded
         let _ = self.modules.insert(module_name.to_string(), injector);
     }
 }

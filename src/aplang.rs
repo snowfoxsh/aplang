@@ -52,7 +52,7 @@ impl ApLang<Initialized> {
     pub fn lex(self) -> Result<ApLang<Lexed>, Vec<Report>> {
         let tokens = Lexer::scan(self.source_code.clone(), self.file_name.clone())?;
 
-        // move the data into next state struct
+        // move the data into the next state struct
         Ok(ApLang {
             source_code: self.source_code,
             file_name: self.file_name,

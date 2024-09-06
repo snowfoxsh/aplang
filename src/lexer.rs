@@ -5,6 +5,7 @@ use miette::SourceSpan;
 use miette::{miette, LabeledSpan, Report, Result};
 use owo_colors::OwoColorize;
 use std::collections::HashMap;
+use std::convert::From;
 use std::fmt::Display;
 use std::sync::Arc;
 
@@ -325,7 +326,7 @@ impl Lexer {
             let next_char = self.source.chars().nth(self.current + i);
 
             match next_char {
-                // if we are at the end then return false
+                // if we're at the end, then return false
                 None => {
                     break false;
                 }
@@ -578,7 +579,7 @@ mod tests {
     }
 
     #[test]
-    fn handle_identifer() {
+    fn handle_identifier() {
         let source = "this_is_a_3_var <- 12;";
         let mut scanner = Lexer::new(source, String::default());
         scanner.scan_tokens().unwrap();
@@ -601,7 +602,7 @@ mod tests {
             (")\n", true),          // RightParen ends with newline
             ("]\n", true),          // RightBracket ends with newline
             ("}\n", true),          // RightBrace ends with newline
-            ("+\n", false),         // Plus does not end a statement
+            ("+\n", false),         // Plus doesn't end a statement
             ("varName", false),     // No newline, no implicit semicolon
         ];
 

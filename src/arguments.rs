@@ -8,7 +8,7 @@ pub enum DebugMode {
     None,
 
     /// Displays the execution time for the program.
-    /// Does not include lexer and parser speed
+    /// Doesn't include lexer and parser speed
     Time,
 
     /// Display debug output for all modes
