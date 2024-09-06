@@ -1,4 +1,4 @@
-IMPORT MOD "time"
+IMPORT MOD "TIME"
 
 PROCEDURE fib(n) {
     IF (n == 1) {
