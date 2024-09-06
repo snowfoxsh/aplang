@@ -1,5 +1,6 @@
 # ApLang
-A programming language made to aid students who are taking AP Computer Science Principals.
+**A programming language made to aid students who are taking AP Computer Science Principals.** </br>
+Based on the AP-CSP [spec](https://apcentral.collegeboard.org/media/pdf/ap-computer-science-principles-exam-reference-sheet.pdf).
 
 # Start Here
 **To learn more about ApLang visit [aplang.org/book](https://aplang.org) .** This is where the documentation lives!
@@ -27,7 +28,7 @@ As small of a possibility as it is, consider officially recognizing this project
 I welcome contributors of all skill levels. Please see `CONTRIBUTING.md` if you are interested. 
 
 ## Contact Me
-Fell free to contact me. My information is on my profile @snowfoxsh
+Fell free to contact me. My information is on my profile [@snowfoxsh](https://github.com/snowfoxsh)
 
 ## Licence  
 This project is licensed under [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html) which is [recommended](https://creativecommons.org/about/program-areas/software/) by Creative Commons
