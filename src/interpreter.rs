@@ -14,14 +14,14 @@ use crate::aplang_std::Modules;
 use crate::lexer::LiteralValue;
 use crate::token::Token;
 
-// we are using this weird error type because miette! slows down the execution
-// of recursive code by a HUGE ammount
-// we profiled and could not figure out how to solve the issue
-// we dont know why.
+// we're using this weird error type because miette! slows down the execution
+// of recursive code by a HUGE amount
+// we profiled and couldn't figure out how to solve the issue
+// we don't know why.
 // we would like to use miette! macro it would
 // make reports better and easier to write
 // increment this counter if you try to solve this and fail
-// COLLECTIVE TIME WASTED: 10
+// COLLECTIVE HOURS WASTED: 20
 
 // variable value types
 #[derive(Clone, Debug)]
@@ -88,7 +88,7 @@ impl Callable for Procedure {
         interpreter.venv.initialize_empty_scope();
 
         // copy in the arguments
-        // assign them to their appropirate name parameter
+        // assigns them to their appropriate name parameter
         self.params.iter().zip(args.iter().cloned())
             .for_each(|(param, arg)| {
                 interpreter.venv.define(Arc::new(param.clone()), arg)
@@ -122,35 +122,36 @@ pub struct NativeProcedure {
 }
 
 impl Callable for NativeProcedure {
-    fn arity(&self) -> u8 {
-        self.arity
-    }
-
     fn call(&self, interpreter: &mut Interpreter, args: &[Value], args_toks: &[SourceSpan]) -> Result<Value, RuntimeError> {
         (self.callable)(interpreter, args, args_toks)
+    }
+    
+    fn arity(&self) -> u8 {
+        self.arity
     }
 }
 
 
 
 pub type FunctionMap = HashMap<String, (Rc<dyn Callable>, Option<Arc<ProcDeclaration>>)>;
-//                            |^^^^^^  |^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^|> Maybe pointer to function def
-//                            |        |                                                  If None: it is native function
-//                            |        |> Pointer to the function
-//                            |> Function name (symbol)
+/*                            |^^^^^^  |^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^|> Maybe pointer to function def
+                              |        |                                                  If None: it is native function
+                              |        |> Pointer to the function
+                              |> Function name (symbol)
+*/
 
 // context structure, contains variables
 //
-// behaviour:
-// declaration and assignment are the same
-// therefore values will be overwritten
+// behavior:
+// declaration and assignment are the same,
+// therefore, values will be overwritten
 // when declared multiple times
 //
 // methods:
 // - get variable
 // - update variable
 // - lookup variable
-// do the same for functions
+// does the same for functions
 #[derive(Clone)]
 pub struct Env {
     /// private functions
@@ -178,8 +179,8 @@ impl Env {
         self.venv.push(Context::default())
     }
 
-    /// crates a new block scope.
-    /// Used for something like a For Loop, or an If Stmt
+    /// creates a new block scope.
+    /// used for something like a For Loop, or an If Stmt
     pub fn create_nested_layer(&mut self) {
         let enclosing = self.activate().clone();
         self.venv.push(enclosing)
@@ -192,7 +193,7 @@ impl Env {
         *self.activate() = context;
     }
 
-    /// pops of the current layer of the venv
+    /// pops off the current layer of the venv
     fn scrape(&mut self) -> Context {
         self.venv
             .pop()
@@ -260,7 +261,7 @@ impl Env {
 impl Default for Env {
     fn default() -> Self {
         let mut env = Self { functions: Default::default(), exports: Default::default(), venv: vec![] };
-        // push the base context layer into env so we dont panic
+        // push the base context layer into env so we don't panic
         env.initialize_empty_scope();
         env
     }
@@ -488,7 +489,7 @@ impl Interpreter {
                 Ok(())
             },
             Stmt::Return(ret_val) => {
-                // deal with the return value inside the procedure...
+                // deal with the return value inside the procedure
                 
                 self.ret_val = match &ret_val.data {
                     None => Some(Value::Null),
@@ -502,14 +503,14 @@ impl Interpreter {
             Stmt::Continue(cont) => {
 
                 // we should be in a loop scope here
-                // if not uh oh
+                // if not, uh oh
                 self.should_loop_continue = true;
 
                 Ok(())
             },
             Stmt::Break(brk) => {
                 // we should be in a loop scope here
-                // if not uh oh
+                // if not, uh oh
                 self.should_loop_break = true;
 
                 Ok(())
@@ -520,7 +521,7 @@ impl Interpreter {
                 for stmt in block.statements.iter() {
                     if self.should_loop_continue || self.should_loop_break {
                         // we should be in a loop scope now
-                        // if we are not uh oh
+                        // if we aren't, uh oh
 
                         break;
                     }
@@ -533,13 +534,13 @@ impl Interpreter {
                 Ok(())
             }
             Stmt::Import(import) => {
-                // get a ref to the module name to be imported / activated
+                // get a ref to the module name to be imported/activated
                 let Some(LiteralValue::String(module_name)) = import.module_name.literal.as_ref() else {
                     unreachable!()
                 };
                 
                 let mut module = if let Some(injector) = self.modules.lookup(module_name) {
-                    // if the module is a native standard library module get it 
+                    // if the module is a native standard library module, get it 
                     injector()
                 } else {
                     // the module must be a user module or invalid
@@ -547,7 +548,7 @@ impl Interpreter {
 
                     // check if the file has a dot ap extension.
                     // if it does then continue
-                    // if not then they tried to import an invalid std
+                    // if not, then try to import an invalid std
                     if maybe_path.extension().map(|os_str| os_str
                         .to_string_lossy()
                         .eq_ignore_ascii_case("ap"))
@@ -586,7 +587,7 @@ impl Interpreter {
                     // package source code
                     let module_source_code: Arc<str> = module_source_code.into();
 
-                    // convert file name into regular string
+                    // convert filename into regular string
                     let file_name = file_name.to_string_lossy().into_owned();
 
 
@@ -603,12 +604,12 @@ impl Interpreter {
                     parsed.execute_as_module().unwrap()
                 };
                 
-                // before actually adding the function we might have to trim the module
-                // if we are using IMPORT "x" FROM MOD "y"
+                // before actually adding the function, we might have to trim the module
+                // if we're using IMPORT "x" FROM MOD "y"
                 if let Some(functions) = import.only_functions.clone() {
                     let mut trimmed_module = FunctionMap::new();
                     // generated functions need to be removed
-                    // we trim the hashmap down to only specified the specified keys
+                    // we trim the hashmap down to only specify the specified keys
                     for function in &functions {
                         let Some(LiteralValue::String(function_name)) = function.literal.as_ref() else {
                             unreachable!()
@@ -629,7 +630,7 @@ impl Interpreter {
                     module = trimmed_module;
                 }
 
-                // finally add it
+                // finally, add it
                 self.venv.functions.extend(module);
 
                 Ok(())
