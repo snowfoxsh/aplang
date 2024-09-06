@@ -7,7 +7,7 @@ use std::ops::Deref;
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
-use miette::SourceSpan;
+use miette::{Report, SourceSpan};
 use crate::aplang::ApLang;
 use crate::errors::{Reports, RuntimeError};
 use crate::aplang_std::Modules;
@@ -813,15 +813,25 @@ impl Interpreter {
             return Err(
                 RuntimeError {
                     span: (set.brackets.0.span.offset() + set.brackets.0.span.len() .. set.brackets.1.span.offset()).into(),
-                    message: "Invalid List Index".to_string(),
-                    help: format!("Make sure index `{idx}` is less than {}", list.borrow().len()),
-                    label: "Index must be a Number!".to_string()
+                    message: "Invalid Index".to_string(),
+                    help: format!("Make sure index {idx:?} is a NUMBER!"),
+                    label: "Index must be a NUMBER!".to_string()
                 }
             )
         };
-
-        if let Some(target) = list.borrow_mut().get_mut((idx - 1.0) as usize) {
+        
+        let mut list_borrowed = list.borrow_mut();
+        if let Some(target) = list_borrowed.get_mut((idx - 1.0) as usize) {
             *target = value.clone();
+        } else {
+            return Err(
+                RuntimeError {
+                    span: (set.brackets.0.span.offset() + set.brackets.0.span.len() .. set.brackets.1.span.offset()).into(),
+                    message: "Invalid List Index".to_string(),
+                    help: format!("Make sure index `{idx}` is less than {}", list_borrowed.len()),
+                    label: "Index must be less than the length of the LIST".to_string()
+                }
+            )
         }
 
         Ok(value)
