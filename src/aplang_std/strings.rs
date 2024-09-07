@@ -1,7 +1,5 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::Arc;
-use miette::NamedSource;
 use crate::interpreter::{FunctionMap, Value};
 use crate::std_function;
 
