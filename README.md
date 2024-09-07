@@ -11,10 +11,11 @@ If you are an advanced user you can install aplang with:
 cargo install aplang
 ```
 
-## Repos
-- [ApLang](https://github.com/snowfoxsh/aplang) (You are here)
-- [ApLang Book](https://github.com/snowfoxsh/aplang-book)
-- [ApLang VSCode Plugin](https://github.com/snowfoxsh/aplang-vscode-plugin)
+## Links
+- [Website](https://aplang.org)
+- [ApLang Repo](https://github.com/snowfoxsh/aplang) (You are here)
+- [ApLang Book Repo](https://github.com/snowfoxsh/aplang-book)
+- [ApLang VSCode Plugin Repo](https://github.com/snowfoxsh/aplang-vscode-plugin)
 ---
 
 # A Note
