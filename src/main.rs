@@ -1,7 +1,8 @@
 #![allow(dead_code, unused_variables)]
 
 use std::{fs, io};
-use std::io::Read;
+use std::io::{ErrorKind, Read};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 use clap::Parser;
@@ -30,44 +31,69 @@ fn main() -> Result<()> {
 fn run(args: CommandLine) -> Result<()> {
     let mut debug_buffer = String::new();
 
-    let mut file_name = "".to_string();
-
     // note: consider adding debug logs here
     // load the source code
-    let source_code: Arc<str> = if let Some(file_path) = &args.file {
-        if args.enforce_file_extension {
-            let ext = file_path.extension()
-                .ok_or(miette!("could not read file extension from file"))
-                .map(|os_str| os_str.to_string_lossy().into_owned())?;
+    // let source_code: Arc<str> = if let Some(file_path) = &args.file {
+    //     if args.enforce_file_extension {
+    //         let ext = file_path.extension()
+    //             .ok_or(miette!("could not read file extension from file"))
+    //             .map(|os_str| os_str.to_string_lossy().into_owned())?;
+    //
+    //         if ext.eq_ignore_ascii_case(".ap") {
+    //             return Err(miette!("file extension is not '.ap' instead found .{}", ext))
+    //         }
+    //     }
+    //
+    //     file_name = Some(file_path);
+    //
+    //     // file_name = file_path.file_name()
+    //     //     .map(|os_str| os_str.to_string_lossy().into_owned())
+    //     //     .ok_or(miette!("failed to read filename from file"))?;
+    //
+    //     fs::read_to_string(file_path).map_err(|error| miette!(
+    //        "failed to open file {:?}\n{}", file_path.as_path(), error
+    //     ))?.into()
+    //
+    // } else if let Some(eval) = args.eval {
+    //     eval
+    // } else if args.eval_stdin {
+    //     let mut buffer = String::new();
+    //     io::stdin().read_to_string(&mut buffer).map_err(|error| miette!(
+    //         "failed to read from stdin\n{}", error
+    //     ))?;
+    //     buffer.into()
+    // } else {
+    //     unreachable!()
+    // };
 
-            if ext.eq_ignore_ascii_case(".ap") {
-                return Err(miette!("file extension is not '.ap' instead found .{}", ext))
+    let aplang = if let Some(file_path) = args.file {
+        ApLang::new_from_file(file_path.clone()).map_err(|err| {
+            match err.kind() {
+                ErrorKind::NotFound => miette!(
+                    "Could not read file {}", file_path.display(),
+                ),
+                other_err => miette!(
+                    "Critical Failure. Could not read file! {} {err:?}", file_path.display(),
+                ),
             }
-        }
-
-        file_name = file_path.file_name()
-            .map(|os_str| os_str.to_string_lossy().into_owned())
-            .ok_or(miette!("failed to read file name from file"))?;
-
-        fs::read_to_string(file_path).map_err(|error| miette!(
-           "failed to open file {:?}\n{}", file_path.as_path(), error
-        ))?.into()
+        })
     } else if let Some(eval) = args.eval {
-        eval
+        Ok(ApLang::new_from_stdin(eval))
     } else if args.eval_stdin {
         let mut buffer = String::new();
-        io::stdin().read_to_string(&mut buffer).map_err(|error| miette!(
-            "failed to read from stdin\n{}", error
+        
+        io::stdin().read_to_string(&mut buffer).map_err(|err| miette!(
+            "failed to read from stdin\n{}", err
         ))?;
-        buffer.into()
+        Ok(ApLang::new_from_stdin(buffer))
     } else {
         unreachable!()
     };
 
-    let aplang = ApLang::new(source_code, file_name);
+    // let aplang = ApLang::new_from_stdin(source_code, file_name);
     
     // execute the lexer
-    let lexed = aplang.lex().map_err(Reports::from)?; // todo implement errors here
+    let lexed = aplang?.lex().map_err(Reports::from)?; // todo implement errors here
     
     // if the flag is enabled, capture the debug info
     if matches!(args.debug, DebugMode::All | DebugMode::Lexer) {

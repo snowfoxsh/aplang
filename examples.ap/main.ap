@@ -1,4 +1,5 @@
 // weird local path here... check this
-IMPORT MOD "./examples.ap/module.ap"
+IMPORT MOD "./module.ap"
 
 helloWorld()
+
