@@ -3,15 +3,19 @@
 Based on the AP-CSP [spec](https://apcentral.collegeboard.org/media/pdf/ap-computer-science-principles-exam-reference-sheet.pdf).
 
 # Start Here
-**To learn more about ApLang visit [aplang.org/book](https://aplang.org) .** This is where the documentation lives!
+**To learn more about ApLang visit [aplang.org/book](https://aplang.org/book) .** This is where the documentation lives!
 
 If you are an advanced user you can install aplang with:
 
-```bash
+```shell
 cargo install aplang
 ```
 
---- 
+## Repos
+- [ApLang](https://github.com/snowfoxsh/aplang) (You are here)
+- [ApLang Book](https://github.com/snowfoxsh/aplang-book)
+- [ApLang VSCode Plugin](https://github.com/snowfoxsh/aplang-vscode-plugin)
+---
 
 # A Note
 
@@ -28,7 +32,7 @@ As small of a possibility as it is, consider officially recognizing this project
 I welcome contributors of all skill levels. Please see `CONTRIBUTING.md` if you are interested. 
 
 ## Contact Me
-Fell free to contact me. My information is on my profile [@snowfoxsh](https://github.com/snowfoxsh)
+Feel free to contact me. My information is on my profile [@snowfoxsh](https://github.com/snowfoxsh)
 
 ## Licence  
 This project is licensed under [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html) which is [recommended](https://creativecommons.org/about/program-areas/software/) by Creative Commons
