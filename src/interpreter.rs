@@ -4,10 +4,10 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::{fs, mem};
 use std::ops::Deref;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
-use miette::{Report, SourceSpan};
+use miette::{NamedSource, Report, SourceSpan};
 use crate::aplang::ApLang;
 use crate::errors::{Reports, RuntimeError};
 use crate::aplang_std::Modules;
@@ -68,7 +68,7 @@ impl Display for Value {
 }
 
 pub trait Callable {
-    fn call(&self, interpreter: &mut Interpreter, args: &[Value], args_toks: &[SourceSpan]) -> Result<Value, RuntimeError>;
+    fn call(&self, interpreter: &mut Interpreter, args: &[Value], args_toks: &[SourceSpan], source: Arc<str>) -> Result<Value, RuntimeError>;
     fn arity(&self) -> u8;
 }
 
@@ -79,7 +79,7 @@ pub struct Procedure {
 }
 
 impl Callable for Procedure {
-    fn call(&self, interpreter: &mut Interpreter, args: &[Value], args_toks: &[SourceSpan]) -> Result<Value, RuntimeError> {
+    fn call(&self, interpreter: &mut Interpreter, args: &[Value], args_toks: &[SourceSpan], source: Arc<str>) -> Result<Value, RuntimeError> {
         // save the retval
         let cached_retval = interpreter.ret_val.clone();
 
@@ -118,12 +118,12 @@ impl Callable for Procedure {
 pub struct NativeProcedure {
     pub name: String,
     pub arity: u8,
-    pub callable: fn(&mut Interpreter, &[Value], args_toks: &[SourceSpan]) -> Result<Value, RuntimeError>
+    pub callable: fn(&mut Interpreter, &[Value], args_toks: &[SourceSpan], source: Arc<str>) -> Result<Value, RuntimeError>
 }
 
 impl Callable for NativeProcedure {
-    fn call(&self, interpreter: &mut Interpreter, args: &[Value], args_toks: &[SourceSpan]) -> Result<Value, RuntimeError> {
-        (self.callable)(interpreter, args, args_toks)
+    fn call(&self, interpreter: &mut Interpreter, args: &[Value], args_toks: &[SourceSpan], source: Arc<str>) -> Result<Value, RuntimeError> {
+        (self.callable)(interpreter, args, args_toks, source)
     }
     
     fn arity(&self) -> u8 {
@@ -161,6 +161,8 @@ pub struct Env {
     pub exports: FunctionMap,
 
     venv: Vec<Context>,
+    
+    file_path: PathBuf, // todo: find a better method than this
 }
 
 #[derive(Default, Clone, Debug)]
@@ -217,11 +219,13 @@ impl Env {
     
     /// look up a variable based on the symbol
     pub fn lookup_name(&mut self, var: &str, tok: Token) -> Result<&(Value, Arc<Variable>), RuntimeError> {
+        let file_path = self.get_file_path(); // todo: get file path without doing dual borrows
         self.activate()
             .variables
             .get(var)
             .ok_or(
                 RuntimeError {
+                    named_source: NamedSource::new(file_path, tok.source.clone()),
                     span: tok.span,
                     message: "Invalid Variable".to_string(),
                     help: format!("Make sure to create the variable `{var}` before you use it"),
@@ -237,8 +241,10 @@ impl Env {
     }
 
     pub fn lookup_function(&self, function_name: String, tok: Token) -> Result<Rc<dyn Callable>, RuntimeError> {
+        let file_path = self.get_file_path(); // todo: get file path without doing dual borrows
         let (a, b) = self.functions.get(&function_name).ok_or(
             RuntimeError {
+                named_source: NamedSource::new(file_path, tok.source.clone()),
                 span: tok.span,
                 message: "Invalid PROCEDURE".to_string(),
                 help: format!("Make sure to create the PROCEDURE `{function_name}` before you call it"),
@@ -256,11 +262,15 @@ impl Env {
     pub fn contains(&mut self, variable: Arc<Variable>) -> bool {
         self.activate().variables.contains_key(&variable.ident)
     }
+    
+    pub fn get_file_path(&self) -> String {
+        self.file_path.to_string_lossy().into_owned()
+    }
 }
 
 impl Default for Env {
     fn default() -> Self {
-        let mut env = Self { functions: Default::default(), exports: Default::default(), venv: vec![] };
+        let mut env = Self { functions: Default::default(), exports: Default::default(), venv: vec![], file_path: PathBuf::new() };
         // push the base context layer into env so we don't panic
         env.initialize_empty_scope();
         env
@@ -273,6 +283,8 @@ pub struct Interpreter {
     venv: Env,
     ast: Ast,
     
+    file_path: PathBuf,
+    
     ret_val: Option<Value>,
     in_loop_scope: bool,
     should_loop_break: bool,
@@ -282,10 +294,11 @@ pub struct Interpreter {
 }
 
 impl Interpreter {
-    pub fn new(ast: Ast) -> Self {
+    pub fn new(ast: Ast, file_path: PathBuf) -> Self {
         let mut interpreter = Self {
             venv: Env::default(),
             ast,
+            file_path: file_path.clone(),
             ret_val: None,
             in_loop_scope: false,
             should_loop_break: false,
@@ -298,7 +311,13 @@ impl Interpreter {
             interpreter.modules.lookup("CORE").unwrap()()
         );
         
+        interpreter.venv.file_path.clone_from(&file_path);
+        
         interpreter
+    }
+    
+    pub fn get_file_path(&self) -> String {
+        self.file_path.to_string_lossy().into_owned()
     }
 
     pub fn interpret_module(mut self) -> Result<FunctionMap, RuntimeError> {
@@ -393,6 +412,7 @@ impl Interpreter {
                     } // format!("cannot do count for value {value:?}")
                     value => Err(
                         RuntimeError {
+                            named_source: NamedSource::new(self.get_file_path(), repeat_times.count_token.source.clone()),
                             span: repeat_times.count_token.span,
                             message: "Invalid Value for nTIMES".to_string(),
                             help: format!("Make sure `{value:?}` is a NUMBER"),
@@ -428,6 +448,7 @@ impl Interpreter {
                         .collect::<Vec<Value>>())),
                     value => Err(
                         RuntimeError {
+                            named_source: NamedSource::new(self.get_file_path(), for_each.list_token.source.clone()),
                             span: for_each.list_token.span,
                             message: "Invalid Iterator".to_string(),
                             help: format!("Cannot iterate over {value:?}. This should be a LIST or a STRING"),
@@ -555,6 +576,7 @@ impl Interpreter {
                         .is_some_and(|res| res) {
                     } else {
                         Err(RuntimeError {
+                            named_source: NamedSource::new(self.get_file_path(), import.module_name.source.clone()),
                             span: import.module_name.span,
                             label: "invalid std module".to_string(),
                             message: format!("std module not found {}", module_name),
@@ -566,6 +588,7 @@ impl Interpreter {
                     // we need to make sure the file is actually there!
                     if !maybe_path.is_file() {
                         Err(RuntimeError {
+                            named_source: NamedSource::new(self.get_file_path(), import.module_name.source.clone()),
                             span: import.module_name.span,
                             message: format!("file {} does not exist, or is a directory. could not import user module", module_name),
                             label: "invalid file path".to_string(),
@@ -577,6 +600,7 @@ impl Interpreter {
                     // attempt to read module
                     let (Ok(module_source_code), Some(file_name)) = (fs::read_to_string(maybe_path), maybe_path.file_name()) else {
                         Err(RuntimeError {
+                            named_source: NamedSource::new(self.get_file_path(), import.module_name.source.clone()),
                             span: import.module_name.span,
                             message: format!("user module {} exists but could not read source", module_name),
                             label: "failed to read".to_string(),
@@ -592,7 +616,7 @@ impl Interpreter {
 
 
                     // init the module interpreter
-                    let aplang = ApLang::new(module_source_code, file_name);
+                    let aplang = ApLang::new(module_source_code.clone(), file_name.clone());
 
                     // todo: pass up the errors dont just explode right away
 
@@ -601,7 +625,7 @@ impl Interpreter {
                     // parse
                     let parsed = lexed.parse().map_err(Reports::from).unwrap();
                     // execute the module, get the exports
-                    parsed.execute_as_module().unwrap()
+                    parsed.execute_as_module(file_name.clone(), module_source_code.clone())?
                 };
                 
                 // before actually adding the function, we might have to trim the module
@@ -617,6 +641,7 @@ impl Interpreter {
 
                         let Some(function) = module.remove(function_name) else {
                             return Err(RuntimeError {
+                                named_source: NamedSource::new("", function.source.clone()),
                                 span: function.span,
                                 message: "Invalid Function".to_string(),
                                 help: format!("Function {function_name} does not exist in module {module_name}"),
@@ -724,6 +749,7 @@ impl Interpreter {
         if callable.arity() as usize != argument_evaluations.len() {
             return Err(
                 RuntimeError {
+                    named_source: NamedSource::new(self.get_file_path(), proc.token.source.clone()),
                     span: (proc.parens.0.span.offset() + proc.parens.0.span.len() .. proc.parens.1.span.offset()).into(),
                     message: "Incorrect Number Of Args".to_string(),
                     help: "Make sure the you are passing in the correct number of arguments to the PROCEDURE".to_string(),
@@ -732,7 +758,7 @@ impl Interpreter {
             ) // todo make this error message better -- use source proc pointer
         }
 
-        callable.call(self, argument_evaluations.as_ref(), proc.arguments_spans.as_ref())
+        callable.call(self, argument_evaluations.as_ref(), proc.arguments_spans.as_ref(), proc.token.source.clone())
     }
 
     // help: a string can be thought of a list of chars
@@ -751,6 +777,7 @@ impl Interpreter {
         let Value::Number(idx) = idx else {
             return Err(
                 RuntimeError {
+                    named_source: NamedSource::new(self.get_file_path(), access.list_token.source.clone()),
                     span: (access.brackets.0.span.offset() + access.brackets.0.span.len() .. access.brackets.1.span.offset()).into(),
                     message: "Invalid Index".to_string(),
                     help: format!("Make sure index {idx:?} is a NUMBER!"),
@@ -763,7 +790,8 @@ impl Interpreter {
             Value::String(string) => {
                 string.chars().nth((idx - 1.0) as usize).map(|ch| Value::String(ch.to_string())).ok_or_else(||
                     RuntimeError {
-                        span: (access.brackets.0.span.offset() + access.brackets.0.span.len() .. access.brackets.1.span.offset()).into(),
+                        named_source: NamedSource::new(self.get_file_path(), access.brackets.0.source.clone()),
+                        span: (access.brackets.0.span.offset() + access.brackets.0.span.len()..access.brackets.1.span.offset()).into(),
                         message: "Invalid List Index".to_string(),
                         help: format!("Make sure index `{idx}` is less than {}", string.len()),
                         label: "Index must be less than the length of the STRING".to_string()
@@ -771,17 +799,19 @@ impl Interpreter {
                 )
             }
             Value::List(list) => {
-                list.borrow().get((idx - 1.0) as usize).cloned().ok_or_else(||
+                list.borrow().get((idx - 1.0) as usize).cloned().ok_or_else(|| {
                     RuntimeError {
-                        span: (access.brackets.0.span.offset() + access.brackets.0.span.len() .. access.brackets.1.span.offset()).into(),
+                        named_source: NamedSource::new(self.get_file_path(), access.brackets.0.source.clone()),
+                        span: (access.brackets.0.span.offset() + access.brackets.0.span.len()..access.brackets.1.span.offset()).into(),
                         message: "Invalid List Index".to_string(),
                         help: format!("Make sure index `{idx}` is less than {}", list.borrow().len()),
                         label: "Index must be less than the length of the LIST".to_string()
                     }
-                )
+                })
             }
             _ => Err(
                 RuntimeError {
+                    named_source: NamedSource::new(self.get_file_path(), access.list_token.source.clone()),
                     span: access.list_token.span,
                     message: "Invalid Type".to_string(),
                     help: "You can only access STRINGS and LISTS this way".to_string(),
@@ -801,6 +831,7 @@ impl Interpreter {
         let Value::List(ref list) = list else {
             return Err(
                 RuntimeError {
+                    named_source: NamedSource::new(self.get_file_path(), set.list_token.source.clone()),
                     span: set.list_token.span,
                     message: "Invalid Type".to_string(),
                     help: "You can only SET LISTS this way".to_string(),
@@ -812,6 +843,7 @@ impl Interpreter {
         let Value::Number(idx) = idx else {
             return Err(
                 RuntimeError {
+                    named_source: NamedSource::new(self.get_file_path(), set.brackets.0.source.clone()),
                     span: (set.brackets.0.span.offset() + set.brackets.0.span.len() .. set.brackets.1.span.offset()).into(),
                     message: "Invalid Index".to_string(),
                     help: format!("Make sure index {idx:?} is a NUMBER!"),
@@ -826,6 +858,7 @@ impl Interpreter {
         } else {
             return Err(
                 RuntimeError {
+                    named_source: NamedSource::new(self.get_file_path(), set.brackets.0.source.clone()),
                     span: (set.brackets.0.span.offset() + set.brackets.0.span.len() .. set.brackets.1.span.offset()).into(),
                     message: "Invalid List Index".to_string(),
                     help: format!("Make sure index `{idx}` is less than {}", list_borrowed.len()),
@@ -859,6 +892,7 @@ impl Interpreter {
                 } else {
                     Err(
                         RuntimeError {
+                            named_source: NamedSource::new(self.get_file_path(), node.token.source.clone()),
                             span: node.token.span,
                             message: "Division by Zero".to_string(),
                             help: "Remember not to divide by zero".to_string(),
@@ -876,6 +910,7 @@ impl Interpreter {
             }
             _ => Err(
                 RuntimeError {
+                    named_source: NamedSource::new(self.get_file_path(), node.token.source.clone()),
                     span: node.token.span,
                     message: "Incomparable Values".to_string(),
                     help: format!("Cannot compare {:?} and {:?}", &lhs, &rhs),
@@ -904,6 +939,7 @@ impl Interpreter {
             (Not, value) => Ok(Bool(!Self::is_truthy(&value))),
             (op, String(_)) => Err(
                 RuntimeError {
+                    named_source: NamedSource::new(self.get_file_path(), node.token.source.clone()),
                     span: node.token.span,
                     message: "Invalid Unary Op".to_string(),
                     help: format!("Invalid application of unary op {op} to String type"),
@@ -912,6 +948,7 @@ impl Interpreter {
             ),
             (op, NativeFunction()) => Err(
                 RuntimeError {
+                    named_source: NamedSource::new(self.get_file_path(), node.token.source.clone()),
                     span: node.token.span,
                     message: "Invalid Unary Op".to_string(),
                     help: format!("Invalid application of unary op {op} to NativeFunction type"),
@@ -920,6 +957,7 @@ impl Interpreter {
             ),
             (op, Function()) => Err(
                 RuntimeError {
+                    named_source: NamedSource::new(self.get_file_path(), node.token.source.clone()),
                     span: node.token.span,
                     message: "Invalid Unary Op".to_string(),
                     help: format!("Invalid application of unary op {op} to Function type"),
@@ -928,6 +966,7 @@ impl Interpreter {
             ),
             (Minus, Bool(b)) => Err(
                 RuntimeError {
+                    named_source: NamedSource::new(self.get_file_path(), node.token.source.clone()),
                     span: node.token.span,
                     message: "Invalid Unary Op".to_string(),
                     help: format!("Invalid application of unary op Minus to Bool type (value) {b}"),
@@ -936,6 +975,7 @@ impl Interpreter {
             ),
             (op, Null) => Err(
                 RuntimeError {
+                    named_source: NamedSource::new(self.get_file_path(), node.token.source.clone()),
                     span: node.token.span,
                     message: "Invalid Unary Op".to_string(),
                     help: format!("Invalid application of unary op {op} to Null type"),
@@ -944,6 +984,7 @@ impl Interpreter {
             ),
             (op, List(l)) => Err(
                 RuntimeError {
+                    named_source: NamedSource::new(self.get_file_path(), node.token.source.clone()),
                     span: node.token.span,
                     message: "Invalid Unary Op".to_string(),
                     help: format!("Invalid application of unary op {op} to List type"),

@@ -2,3 +2,4 @@
 IMPORT MOD "./examples.ap/module.ap"
 
 helloWorld()
+

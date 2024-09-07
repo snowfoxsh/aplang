@@ -1,10 +1,12 @@
 use std::{fmt};
 use std::fmt::Write;
 use std::marker::PhantomData;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use miette::{NamedSource, Report};
 use crate::ast::{Ast};
 use crate::ast::pretty::TreePrinter;
+use crate::errors::RuntimeError;
 use crate::interpreter::{FunctionMap, Interpreter, Value};
 use crate::lexer::Lexer;
 use crate::parser::Parser2;
@@ -103,20 +105,21 @@ impl ApLang<Lexed> {
 }
 
 impl ApLang<Parsed> {
-    pub fn execute_as_module(self) -> Result<FunctionMap, Report> {
-        Interpreter::new(unsafe { self.ast.unwrap_unchecked() })
+    pub fn execute_as_module(self, file_name: String, source_code: Arc<str>) -> Result<FunctionMap, RuntimeError> {
+        let named_source = NamedSource::new(self.file_name.clone(), self.source_code.clone());
+        println!("Module Named Source: {:?}", named_source);
+        Interpreter::new(unsafe { self.ast.unwrap_unchecked() }, "".into())
             .interpret_module()
-            .map_err(|err|
-                Report::from(err).with_source_code(NamedSource::new(self.file_name.clone(), self.source_code.clone()))
-            )
     }
 
     pub fn execute(self) -> Result<ApLang<Executed>, Report> {
-        Interpreter::new(unsafe { self.ast.unwrap_unchecked() })
+        let named_source = NamedSource::new(self.file_name.clone(), self.source_code.clone());
+        Interpreter::new(unsafe { self.ast.unwrap_unchecked() }, "".into())
             .interpret()
-            .map_err(|err|
-                Report::from(err).with_source_code(NamedSource::new(self.file_name.clone(), self.source_code.clone()))
-            )?;
+            .map_err(|err| {
+                let named_source = err.named_source.clone();
+                Report::from(err).with_source_code(named_source)
+            })?;
 
         Ok(ApLang {
             source_code: self.source_code,
@@ -131,12 +134,13 @@ impl ApLang<Parsed> {
 
     pub fn execute_with_debug(self) -> Result<ApLang<ExecutedWithDebug>, Report> {
         let ast = unsafe { self.ast.unwrap_unchecked() };
-        let mut interpreter = Interpreter::new(ast);
+        let mut interpreter = Interpreter::new(ast, "".into());
         let values = interpreter
             .interpret_debug()
-            .map_err(|err|
-                Report::from(err).with_source_code(NamedSource::new(self.file_name.clone(), self.source_code.clone()))
-            )?;
+            .map_err(|err| {
+                let named_source = err.named_source.clone();
+                Report::from(err).with_source_code(named_source)
+            })?;
 
         Ok(ApLang {
             source_code: self.source_code,
