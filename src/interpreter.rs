@@ -7,7 +7,7 @@ use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
-use miette::{NamedSource, Report, SourceSpan};
+use miette::{miette, NamedSource, Report, SourceSpan};
 use crate::aplang::ApLang;
 use crate::errors::{Reports, RuntimeError};
 use crate::aplang_std::Modules;
@@ -161,8 +161,6 @@ pub struct Env {
     pub exports: FunctionMap,
 
     venv: Vec<Context>,
-    
-    file_path: PathBuf, // todo: find a better method than this
 }
 
 #[derive(Default, Clone, Debug)]
@@ -218,8 +216,7 @@ impl Env {
     }
     
     /// look up a variable based on the symbol
-    pub fn lookup_name(&mut self, var: &str, tok: Token) -> Result<&(Value, Arc<Variable>), RuntimeError> {
-        let file_path = self.get_file_path(); // todo: get file path without doing dual borrows
+    pub fn lookup_name(&mut self, var: &str, tok: Token, file_path: String) -> Result<&(Value, Arc<Variable>), RuntimeError> {
         self.activate()
             .variables
             .get(var)
@@ -236,12 +233,11 @@ impl Env {
 
 
     /// looks up the variable by comparing the entire variable object
-    pub fn lookup_var(&mut self, var: &Variable) -> Result<&Value, RuntimeError> {
-        Ok(&self.lookup_name(var.ident.as_str(), var.token.clone())?.0)
+    pub fn lookup_var(&mut self, var: &Variable, file_path: String) -> Result<&Value, RuntimeError> {
+        Ok(&self.lookup_name(var.ident.as_str(), var.token.clone(), file_path)?.0)
     }
 
-    pub fn lookup_function(&self, function_name: String, tok: Token) -> Result<Rc<dyn Callable>, RuntimeError> {
-        let file_path = self.get_file_path(); // todo: get file path without doing dual borrows
+    pub fn lookup_function(&self, function_name: String, tok: Token, file_path: String) -> Result<Rc<dyn Callable>, RuntimeError> {
         let (a, b) = self.functions.get(&function_name).ok_or(
             RuntimeError {
                 named_source: NamedSource::new(file_path, tok.source.clone()),
@@ -262,15 +258,11 @@ impl Env {
     pub fn contains(&mut self, variable: Arc<Variable>) -> bool {
         self.activate().variables.contains_key(&variable.ident)
     }
-    
-    pub fn get_file_path(&self) -> String {
-        self.file_path.to_string_lossy().into_owned()
-    }
 }
 
 impl Default for Env {
     fn default() -> Self {
-        let mut env = Self { functions: Default::default(), exports: Default::default(), venv: vec![], file_path: PathBuf::new() };
+        let mut env = Self { functions: Default::default(), exports: Default::default(), venv: vec![] };
         // push the base context layer into env so we don't panic
         env.initialize_empty_scope();
         env
@@ -283,7 +275,7 @@ pub struct Interpreter {
     venv: Env,
     ast: Ast,
     
-    file_path: PathBuf,
+    file_path: Option<PathBuf>,
     
     ret_val: Option<Value>,
     in_loop_scope: bool,
@@ -294,7 +286,7 @@ pub struct Interpreter {
 }
 
 impl Interpreter {
-    pub fn new(ast: Ast, file_path: PathBuf) -> Self {
+    pub fn new(ast: Ast, file_path: Option<PathBuf>) -> Self {
         let mut interpreter = Self {
             venv: Env::default(),
             ast,
@@ -311,13 +303,15 @@ impl Interpreter {
             interpreter.modules.lookup("CORE").unwrap()()
         );
         
-        interpreter.venv.file_path.clone_from(&file_path);
-        
         interpreter
     }
     
     pub fn get_file_path(&self) -> String {
-        self.file_path.to_string_lossy().into_owned()
+        if let Some(file_path) = &self.file_path {
+            file_path.to_string_lossy().into_owned()
+        } else {
+            "stdin".to_string()
+        }
     }
 
     pub fn interpret_module(mut self) -> Result<FunctionMap, RuntimeError> {
@@ -565,7 +559,22 @@ impl Interpreter {
                     injector()
                 } else {
                     // the module must be a user module or invalid
-                    let maybe_path = Path::new(module_name);
+
+                    let Some(mut current_module_path) = self.file_path.clone() else {
+                        return Err(RuntimeError {
+                            named_source: NamedSource::new(self.get_file_path(), import.module_name.source.clone()),
+                            span: import.module_name.span,
+                            message: "user modules cannot be called when evaluating from stdin".to_string(),
+                            label: "cannot use module".to_string(),
+                            help: "put your code in a file to use user modules".to_string(),
+                        })
+                    };
+
+                    // strip the filename from the path
+                    current_module_path.pop();
+                    // let maybe_path = self
+                    // let maybe_path = current_module_path.join(module_name);
+                    let maybe_path = current_module_path.join(module_name);
 
                     // check if the file has a dot ap extension.
                     // if it does then continue
@@ -597,35 +606,41 @@ impl Interpreter {
                     }
 
                     // TODO: BUG: Only can accept an absolute path. work on relative paths
-                    // attempt to read module
-                    let (Ok(module_source_code), Some(file_name)) = (fs::read_to_string(maybe_path), maybe_path.file_name()) else {
-                        Err(RuntimeError {
-                            named_source: NamedSource::new(self.get_file_path(), import.module_name.source.clone()),
-                            span: import.module_name.span,
-                            message: format!("user module {} exists but could not read source", module_name),
-                            label: "failed to read".to_string(),
-                            help: "specify a valid path to '.ap' file to import an std module".to_string(),
-                        })?
-                    };
+                    // // attempt to read module
+                    // let (Ok(module_source_code), Some(file_name)) = (fs::read_to_string(maybe_path), maybe_path.file_name()) else {
+                    //     Err(RuntimeError {
+                    //         named_source: NamedSource::new(self.get_file_path(), import.module_name.source.clone()),
+                    //         span: import.module_name.span,
+                    //         message: format!("user module {} exists but could not read source", module_name),
+                    //         label: "failed to read".to_string(),
+                    //         help: "specify a valid path to '.ap' file to import an std module".to_string(),
+                    //     })?
+                    // };
 
                     // package source code
-                    let module_source_code: Arc<str> = module_source_code.into();
+                    // let module_source_code: Arc<str> = module_source_code.into();
 
                     // convert filename into regular string
-                    let file_name = file_name.to_string_lossy().into_owned();
+                    // let file_name = file_name.to_string_lossy().into_owned();
 
 
                     // init the module interpreter
-                    let aplang = ApLang::new(module_source_code.clone(), file_name.clone());
-
-                    // todo: pass up the errors dont just explode right away
+                    let aplang = ApLang::new_from_file(maybe_path.to_path_buf()).map_err(|err| {
+                        RuntimeError {
+                            named_source: NamedSource::new(self.get_file_path(), import.module_name.source.clone()),
+                            span: import.module_name.span,
+                            message: format!("user module {} exists but could not read source", module_name),
+                            label: "failed to read module".to_string(),
+                            help: "specify a valid path to '.ap' file to import an std module".to_string(),
+                        }
+                    })?;
 
                     // lex
                     let lexed = aplang.lex().map_err(Reports::from).unwrap();
-                    // parse
+                    // parseRun
                     let parsed = lexed.parse().map_err(Reports::from).unwrap();
                     // execute the module, get the exports
-                    parsed.execute_as_module(file_name.clone(), module_source_code.clone())?
+                    parsed.execute_as_module()?
                 };
                 
                 // before actually adding the function, we might have to trim the module
@@ -694,7 +709,7 @@ impl Interpreter {
             },
             List(list) => self.list(list.as_ref()),
             Variable(v) => self.venv
-                .lookup_name(v.ident.clone().as_str(), v.token.clone())
+                .lookup_name(v.ident.clone().as_str(), v.token.clone(), self.get_file_path())
                 .cloned()
                 .map(|(value, _)| value),
             Assign(assignment) => {
@@ -702,7 +717,7 @@ impl Interpreter {
                 let result = self.expr(&assignment.value)?;
                 match &result {
                     Value::List(list) => {
-                        match self.venv.lookup_var(&assignment.target.clone()) {
+                        match self.venv.lookup_var(&assignment.target.clone(), self.get_file_path()) {
                             Ok(Value::List(target_list)) => {
                                 target_list.swap(list);
                             },
@@ -744,7 +759,7 @@ impl Interpreter {
             argument_evaluations.push(self.expr(arg)?)
         }
 
-        let callable = self.venv.lookup_function(proc.ident.clone(), proc.token.clone())?;
+        let callable = self.venv.lookup_function(proc.ident.clone(), proc.token.clone(), self.get_file_path())?;
 
         if callable.arity() as usize != argument_evaluations.len() {
             return Err(
