@@ -2,6 +2,8 @@ use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::Path;
+use std::sync::Arc;
+use miette::NamedSource;
 use crate::interpreter::{FunctionMap, Value};
 use crate::std_function;
 

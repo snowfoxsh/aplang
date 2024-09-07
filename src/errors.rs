@@ -1,5 +1,6 @@
 use std::fmt::{Debug, Display};
-use miette::{Diagnostic, LabeledSpan, Report, SourceCode, SourceSpan};
+use std::sync::Arc;
+use miette::{Diagnostic, LabeledSpan, NamedSource, Report, SourceCode, SourceSpan};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -38,9 +39,9 @@ impl From<Vec<Report>> for Reports {
 
 #[derive(Debug, Error, Diagnostic)]
 #[error("{message}")]
-#[diagnostic()]
 #[diagnostic(code(aplang::runtime))]
 pub struct RuntimeError {
+    pub named_source: NamedSource<Arc<str>>,
     #[label("{label}")] pub span: SourceSpan,
     pub message: String,
     #[help("{help}")] pub help: String,
