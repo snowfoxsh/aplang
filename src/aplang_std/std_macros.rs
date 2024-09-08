@@ -42,7 +42,7 @@ macro_rules! unwrap_arg_type {
             $crate::interpreter::Value::Null => $crate::interpreter::Value::Null,
             _ => return Err(
                 $crate::errors::RuntimeError {
-                    named_source: NamedSource::new($interpreter.get_file_path(), $source),
+                    named_source: miette::NamedSource::new($interpreter.get_file_path(), $source),
                     span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
                     help: format!("Argument Value ({}) is not of type NULL", stringify!($value)),
@@ -56,7 +56,7 @@ macro_rules! unwrap_arg_type {
         let $crate::interpreter::Value::Number(mut $value) = $value.0.clone() else {
             return Err(
                 $crate::errors::RuntimeError {
-                    named_source: NamedSource::new($interpreter.get_file_path(), $source),
+                    named_source: miette::NamedSource::new($interpreter.get_file_path(), $source),
                     span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
                     help: format!("Argument Value ({}) is not of type NUMBER", stringify!($value)),
@@ -70,7 +70,7 @@ macro_rules! unwrap_arg_type {
         let $crate::interpreter::Value::String(mut $value) = $value.0.clone() else {
             return Err(
                 $crate::errors::RuntimeError {
-                    named_source: NamedSource::new($interpreter.get_file_path(), $source),
+                    named_source: miette::NamedSource::new($interpreter.get_file_path(), $source),
                     span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
                     help: format!("Argument Value ({}) is not of type STRING", stringify!($value)),
@@ -84,7 +84,7 @@ macro_rules! unwrap_arg_type {
         let $crate::interpreter::Value::Bool(mut $value) = $value.0.clone() else {
             return Err(
                 $crate::errors::RuntimeError {
-                    named_source: NamedSource::new($interpreter.get_file_path(), $source),
+                    named_source: miette::NamedSource::new($interpreter.get_file_path(), $source),
                     span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
                     help: format!("Argument Value ({}) is not of type BOOL", stringify!($value)),
@@ -98,7 +98,7 @@ macro_rules! unwrap_arg_type {
         let $crate::interpreter::Value::List(mut $value) = $value.0.clone() else {
             return Err(
                 $crate::errors::RuntimeError {
-                    named_source: NamedSource::new($interpreter.get_file_path(), $source),
+                    named_source: miette::NamedSource::new($interpreter.get_file_path(), $source),
                     span: *$value.1,
                     message: "Invalid Argument Cast".to_string(),
                     help: format!("Argument Value ({}) is not of type LIST<Value>", stringify!($value)),

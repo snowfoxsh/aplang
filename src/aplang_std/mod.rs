@@ -1,7 +1,5 @@
 use std::collections::HashMap;
-use miette::NamedSource;
 use std::sync::Arc;
-use rand;
 use rand::Rng;
 use crate::interpreter::{FunctionMap, Value};
 use crate::{std_function};
