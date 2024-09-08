@@ -14,6 +14,12 @@ pub(super) fn time() -> FunctionMap {
         
         return Ok(Value::Number(unix_time_ms.as_millis() as f64))
     });
-    
+
+    std_function!(functions => fn SLEEP(duration: Value::Number) {
+        let duration = std::time::Duration::from_millis(duration as u64);
+        std::thread::sleep(duration);
+        Ok(Value::Null)
+    });
+
     functions
 }

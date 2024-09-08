@@ -1,8 +1,11 @@
 use std::collections::HashMap;
 use miette::NamedSource;
 use std::sync::Arc;
+use rand;
+use rand::Rng;
 use crate::interpreter::{FunctionMap, Value};
 use crate::{std_function};
+use crate::aplang_std::io::input;
 
 mod time;
 mod std_macros;
@@ -54,7 +57,12 @@ fn std_core() -> FunctionMap {
 
         return Ok(Value::Null)
     });
-    
+
+    std_function!(functions => fn INPUT() {
+        let result = input("").expect("Failed to get user input! Critical Failure");
+        Ok(Value::String(result))
+    });
+
     std_function!(functions => fn INSERT(list: Value::List, i: Value::Number, value: Value) {
         // subtract one because indexed at one
         list.borrow_mut().insert(i as usize - 1, value.clone());
@@ -79,6 +87,14 @@ fn std_core() -> FunctionMap {
 
         return Ok(Value::Number(len))
     });
-    
+
+    // return a random integer from a to b including a and b
+    std_function!(functions => fn RANDOM(a: Value::Number, b: Value::Number) {
+        let mut rng = rand::thread_rng();
+        let result = rng.gen_range(a as i64..=b as i64);
+
+        return Ok(Value::Number(result as f64))
+    });
+
     functions
 }

@@ -7,7 +7,7 @@ use miette::NamedSource;
 use crate::interpreter::{FunctionMap, Value};
 use crate::std_function;
 
-fn input(prompt: &str) -> Option<String> {
+pub(super) fn input(prompt: &str) -> Option<String> {
     print!("{}", prompt);
     io::stdout().flush().ok()?;
 
@@ -37,12 +37,6 @@ fn format(fstring: String, args: Rc<RefCell<Vec<Value>>>) -> Option<String> {
 
 pub(super) fn std_io() -> FunctionMap {
     let mut functions = FunctionMap::new();
-    
-    std_function!(functions => fn INPUT() {
-        let result = input("").expect("Failed to get user input! Critical Failure");
-        Ok(Value::String(result))
-    });
-
     std_function!(functions => fn INPUT_PROMPT(prompt: Value::String) {
         let result = input(prompt.as_str()).expect("Failed to get user input! Critical Failure");
         Ok(Value::String(result))

@@ -1,7 +1,9 @@
+use std::cell::RefCell;
 use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::Path;
+use std::rc::Rc;
 use std::sync::Arc;
 use miette::NamedSource;
 use crate::interpreter::{FunctionMap, Value};
@@ -15,6 +17,18 @@ pub(super) fn file_system() -> FunctionMap {
         let exists = Path::new(&path).exists();
 
         return Ok(Value::Bool(exists))
+    });
+
+    std_function!(functions => fn PATH_IS_FILE(path: Value::String) {
+        let path = Path::new(&path);
+
+        return Ok(Value::Bool(path.is_file()))
+    });
+
+    std_function!(functions => fn PATH_IS_DIRECTORY(path: Value::String) {
+        let path = Path::new(&path);
+
+        return Ok(Value::Bool(path.is_dir()))
     });
 
     // returns True if successful
@@ -63,6 +77,19 @@ pub(super) fn file_system() -> FunctionMap {
 
         return Ok(Value::Bool(true))
     });
-    
+
+    std_function!(functions => fn READ_DIRECTORY(path: Value::String) {
+        let paths = fs::read_dir(path).expect("Failed to read directory");
+
+        let mut dir_list = Vec::new();
+        for path in paths {
+            let path = path.unwrap().path();
+            let path = path.to_str().unwrap();
+            dir_list.push(Value::String(path.to_string()));
+        }
+
+        return Ok(Value::List(Rc::new(RefCell::new(dir_list))))
+    });
+
     functions
 }
