@@ -211,11 +211,49 @@ impl Lexer {
     }
 
     fn string(&mut self) -> Result<()> {
+        let mut result = String::new();
+
         while self.peek() != '"' && !self.is_at_end() {
             if self.peek() == '\n' {
                 self.line += 1;
             }
-            self.advance();
+
+            // escape codes
+            if self.peek() == '\\' {
+                self.advance(); // consume the backslash
+
+                match self.peek() {
+                    'n' => {
+                        result.push('\n');
+                        self.advance(); // consume 'n'
+                    }
+                    'r' => {
+                        result.push('\r');
+                        self.advance(); // consume 'r'
+                    }
+                    't' => {
+                        result.push('\t');
+                        self.advance(); // consume 't'
+                    }
+                    '\\' => {
+                        result.push('\\');
+                        self.advance(); // consume another '\'
+                    }
+                    '"' => {
+                        result.push('"');
+                        self.advance(); // consume the double quote
+                    }
+                    _ => {
+                        // invalid escape sequence
+                        return Err(miette!(
+                        "Invalid escape sequence: \\{}",
+                        self.peek()
+                    ));
+                    }
+                }
+            } else {
+                result.push(self.advance()); // add normal characters to the result
+            }
         }
 
         // reaching the end without closing the string should throw an error
@@ -228,20 +266,18 @@ impl Lexer {
             let error = miette!(
                 labels = labels,
                 code = "lexer::unterminated_string",
-                help = "a string literal must end with a matching quote",
+                help = "A string literal must end with a matching quote",
                 "{} unterminated string",
                 self.location_string()
-            )
-            .with_source_code(self.source.clone());
+            ).with_source_code(self.source.clone());
 
             return Err(error);
         }
 
-        self.advance();
+        self.advance(); // consume the closing quote
 
-        let value = &self.source[self.start + 1..self.current - 1];
-
-        self.add_token_lit(StringLiteral, Some(LiteralValue::String(value.to_string())));
+        // store the parsed string literal in the token list
+        self.add_token_lit(StringLiteral, Some(LiteralValue::String(result)));
 
         Ok(())
     }
