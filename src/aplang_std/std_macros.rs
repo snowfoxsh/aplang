@@ -6,7 +6,7 @@ macro_rules! std_function {
             (std::rc::Rc::new($crate::interpreter::NativeProcedure {
                 name: String::from(stringify!($name)),
                 arity: $crate::arity!($($arg)*),
-                callable: |_interpreter: &mut $crate::interpreter::Interpreter,  args: &[$crate::interpreter::Value], args_toks: &[miette::SourceSpan], source: Arc<str>| {
+                callable: |_interpreter: &mut $crate::interpreter::Interpreter,  args: &[$crate::interpreter::Value], args_toks: &[miette::SourceSpan], source: std::sync::Arc<str>| {
                     #[allow(unused_mut, unused_variables)]
                     let mut iter = args.into_iter();
                     #[allow(unused_mut)]

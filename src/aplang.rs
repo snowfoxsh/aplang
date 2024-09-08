@@ -1,10 +1,9 @@
 use std::{fmt, fs, io};
 use std::fmt::Write;
-use std::io::ErrorKind;
 use std::marker::PhantomData;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
-use miette::{NamedSource, Report, miette};
+use miette::Report;
 use crate::ast::{Ast};
 use crate::ast::pretty::TreePrinter;
 use crate::errors::RuntimeError;

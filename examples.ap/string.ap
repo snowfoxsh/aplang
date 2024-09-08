@@ -1,3 +1,10 @@
+IMPORT MOD "STRING"
+IMPORT MOD "COLOR"
+
 s <- "hello world"
 
-DISPLAY(s)
+
+STYLE("blue")
+DISPLAY(SUBSTRING(s, 1, 4))
+RESET_STYLE()
+DISPLAY(SUBSTRING(s, 1, 4))
