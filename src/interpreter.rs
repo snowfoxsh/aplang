@@ -416,7 +416,7 @@ impl Interpreter {
                 }
             }
             Stmt::RepeatUntil(repeat_until) => {
-                while Self::is_truthy(&self.expr(&repeat_until.condition)?) {
+                while !Self::is_truthy(&self.expr(&repeat_until.condition)?) {
                     // if the BREAK stmt was called then we need to deal with that
                     if self.should_loop_break {
                         self.should_loop_break = false;
