@@ -56,6 +56,12 @@ fn std_core() -> FunctionMap {
 
         return Ok(Value::Null)
     });
+    
+    std_function!(functions => fn DISPLAY_NOLN(value: Value) {
+        print!("{}", value);
+
+        return Ok(Value::Null)
+    });
 
     std_function!(functions => fn INPUT() {
         let result = input("").expect("Failed to get user input! Critical Failure");

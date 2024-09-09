@@ -68,7 +68,7 @@ pub(super) fn std_strings() -> FunctionMap {
     });
 
     std_function!(functions => fn SUBSTRING(raw: Value::String, start: Value::Number, length: Value::Number) {
-        let start = start as usize;
+        let start = start as usize - 1;
         let length = length as usize;
         let substring = &raw[start..std::cmp::min(start + length, raw.len())];
         Ok(Value::String(substring.to_string()))
