@@ -2,7 +2,6 @@ use std::cell::RefCell;
 use std::io;
 use std::io::Write;
 use std::rc::Rc;
-use std::sync::Arc;
 use crate::interpreter::{FunctionMap, Value};
 use crate::std_function;
 

@@ -1,10 +1,9 @@
 use std::cell::RefCell;
 use std::fs;
-use std::fs::{File, OpenOptions};
+use std::fs::{OpenOptions};
 use std::io::Write;
 use std::path::Path;
 use std::rc::Rc;
-use std::sync::Arc;
 use crate::interpreter::{FunctionMap, Value};
 use crate::std_function;
 
@@ -32,7 +31,7 @@ pub(super) fn file_system() -> FunctionMap {
 
     // returns True if successful
     std_function!(functions => fn FILE_CREATE(file_path: Value::String) {
-        return match File::create_new(file_path) {
+        return match fs::File::create_new(file_path) {
             Ok(_) => Ok(Value::Bool(true)),
             Err(_) => Ok(Value::Bool(false)),
         }

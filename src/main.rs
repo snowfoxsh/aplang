@@ -1,9 +1,7 @@
 #![allow(dead_code, unused_variables)]
 
-use std::{fs, io};
+use std::{io};
 use std::io::{ErrorKind, Read};
-use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::Instant;
 use clap::Parser;
 use miette::{miette, Result};
