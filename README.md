@@ -5,7 +5,9 @@ Based on the AP-CSP [spec](https://apcentral.collegeboard.org/media/pdf/ap-compu
 # Start Here
 **To learn more about ApLang visit [aplang.org/book](https://aplang.org/book) .** This is where the documentation lives!
 
-If you are an advanced user you can install aplang with:
+**Also install the [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=aplang.aplang)**
+
+If you are an advanced user, you can install aplang with:
 
 ```shell
 cargo install aplang
