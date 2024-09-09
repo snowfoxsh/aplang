@@ -2,4 +2,4 @@ IMPORT "FORMAT" FROM MOD "IO"
 
 fstring <- FORMAT("Hello {}! {}", ["World", "I love code."])
 
-DISPLAY(fstring)
+DISPLAY(fstring) // Hello World! I love code.

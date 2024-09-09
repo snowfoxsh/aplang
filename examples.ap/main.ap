@@ -1,5 +1,3 @@
-// weird local path here... check this
 IMPORT MOD "./module.ap"
 
 helloWorld()
-

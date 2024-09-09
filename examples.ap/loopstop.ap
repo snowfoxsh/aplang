@@ -1,16 +1,7 @@
 IMPORT "FORMAT" FROM MOD "IO"
 
 i <- 1
-REPEAT UNTIL (1 == 1) {
-    IF (i >= 5) {
-        BREAK
-    }
-    DISPLAY(FORMAT("i is: {}", [i]))
-    i <- i + 1
-}
-
-i <- 1
-REPEAT UNTIL (1 == 1) {
+REPEAT UNTIL (0 == 1) {
     IF (i >= 5) {
         BREAK
     }

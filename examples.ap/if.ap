@@ -1,21 +1,7 @@
 x <- 2
 
 IF (x == 2) {
-    DISPLAY("HELLO WORLD")
-}
-
-REPEAT n TIMES {
-    n <- n + 1
-    list[n]
-    DISPLAY(n)
-}
-
-x <- x
-
-PROCEDURE myProc() {
-    DISPLAY(a)
-}
-
-FOR EACH item IN [1, 2, 3] {
-    DISPLAY(item)
+    DISPLAY("X is 2")
+} ELSE {
+    DISPLAY("X is not 2")
 }

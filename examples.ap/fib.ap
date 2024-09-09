@@ -1,5 +1,4 @@
-IMPORT MOD "TIME"
-
+// Fibonacci number
 PROCEDURE fib(n) {
     IF (n == 1) {
         RETURN 1
@@ -10,4 +9,5 @@ PROCEDURE fib(n) {
     }
 }
 
+// Display the 30th Fibonacci number
 DISPLAY(fib(30))
