@@ -4,7 +4,7 @@ use crate::interpreter::{FunctionMap, Value};
 use crate::std_function;
 
 
-pub(super) fn std_colors() -> FunctionMap {
+pub(super) fn std_style() -> FunctionMap {
     let mut functions = FunctionMap::new();
     
     std_function!(functions => fn STYLE(style: Value::String) {
@@ -65,7 +65,9 @@ pub(super) fn std_colors() -> FunctionMap {
         return Ok(Value::Bool(true))
     });
 
-    std_function!(functions => fn RESET_STYLE() {
+    std_function!(functions => fn CLEAR_STYLE() {
+        
+        // clear all styles
         print!("\x1b[0m");
 
         return Ok(Value::Null)

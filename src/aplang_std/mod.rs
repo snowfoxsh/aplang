@@ -11,7 +11,7 @@ mod file_system;
 mod math;
 mod io;
 mod strings;
-mod colors;
+mod style;
 
 
 #[derive(Debug, Clone, Default)]
@@ -27,7 +27,7 @@ impl Modules {
         self.register("MATH", math::std_math);
         self.register("IO", io::std_io);
         self.register("STRING", strings::std_strings);
-        self.register("COLOR", colors::std_colors);
+        self.register("STYLE", style::std_style);
     }
     pub fn init() -> Self {
         // create bland hashmap of modules
