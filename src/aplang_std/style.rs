@@ -10,6 +10,7 @@ pub(super) fn std_style() -> FunctionMap {
     std_function!(functions => fn STYLE(style: Value::String) {
          let styles: HashMap<&str, &str> = map! {
             // default colors
+            "clear" => "\x1b[0m",
             "default_color" => "\x1b[39m",
             "bg_default_color" => "\x1b[49m",
             
