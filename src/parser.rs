@@ -864,7 +864,7 @@ impl Parser2 {
             let right = self.and()?;
             expr = Expr::Logical(Arc::new(Logical {
                 left: expr,
-                operator: LogicalOp::Or,
+                operator: LogicalOp::And,
                 right,
 
                 token,
@@ -1039,7 +1039,7 @@ impl Parser2 {
         if self.match_token(&False) {
             let token = self.previous().clone();
             return Ok(Expr::Literal(Arc::new(ExprLiteral {
-                value: Literal::True,
+                value: Literal::False,
                 token,
             })));
         }
@@ -1047,7 +1047,7 @@ impl Parser2 {
         if self.match_token(&Null) {
             let token = self.previous().clone();
             return Ok(Expr::Literal(Arc::new(ExprLiteral {
-                value: Literal::True,
+                value: Literal::Null,
                 token,
             })));
         }
@@ -1250,20 +1250,21 @@ impl Parser2 {
         Err(report)
     }
 }
-
-/// Helper methods
+/// Helper methods for the `Parser2` struct.
 impl Parser2 {
+    /// Synchronizes the parser by advancing tokens until it reaches a likely
+    /// starting point for a new statement or declaration.
     fn synchronize(&mut self) {
         self.advance();
 
         while !self.is_at_end() {
-            // if self.previous().token_type == SoftSemi {
-            //     return;
-            // }
 
-            // todo: dont know if this is complete but its "good enough"
+            // this is "good enough" for now
+            // sometimes it does not recover properly
+            // more robust recovery would great
+            // it is worth looking into...
             match self.peek().token_type {
-                Procedure | Repeat | For | If | Return | Continue | Break | Print => return,
+                Procedure | Repeat | For | If | Return | Continue | Break | Import | Export => return,
                 _ => (),
             }
 
@@ -1271,6 +1272,20 @@ impl Parser2 {
         }
     }
 
+    /// Consumes the next token if it matches the expected `token_type`.
+    ///
+    /// If the next token matches the expected type, it is consumed and returned.
+    /// Otherwise, it reports an error using the provided `report` function.
+    ///
+    /// # Arguments
+    ///
+    /// * `token_type` - The expected token type to consume.
+    /// * `report` - A closure that generates an error report when the token does not match.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(&Token)` - The consumed token if it matches the expected type.
+    /// * `Err(miette::Report)` - An error report if the token does not match.
     fn consume(
         &mut self,
         token_type: &TokenType,
@@ -1282,30 +1297,30 @@ impl Parser2 {
             let token = self.previous();
             Ok(token)
         } else {
-            // self.synchronize();
             Err(report(&next_token).with_source_code(self.named_source.clone()))
         }
     }
 
+    /// Consumes consecutive semicolon tokens (`SoftSemi`).
+    ///
+    /// This method advances the parser while the current token is a semicolon.
+    /// It helps in ignoring redundant semicolons in the input.
     fn take_semis(&mut self) {
-        // todo: consider differentiating between if token was added by user or by lexer
         while self.check(&SoftSemi) {
             self.advance();
         }
     }
 
-    // fn consume(&mut self, token_type: &TokenType, error_handler: Box<dyn Fn(&Token) -> Report>) -> miette::Result<&Token> {
-    //     let token = self.peek();
-    //
-    //     if token.token_type() == token_type {
-    //         self.advance();
-    //         let token = self.previous();
-    //         Ok(token)
-    //     } else {
-    //         Err(error_handler(token))
-    //     }
-    // }
-
+    /// Checks if the current token matches the given `typ` without consuming it.
+    ///
+    /// # Arguments
+    ///
+    /// * `typ` - The token type to check for.
+    ///
+    /// # Returns
+    ///
+    /// * `true` if the current token matches `typ`.
+    /// * `false` otherwise.
     fn check(&self, typ: &TokenType) -> bool {
         if self.is_at_end() {
             return false;
@@ -1314,21 +1329,44 @@ impl Parser2 {
         self.peek().token_type() == typ
     }
 
+    /// Confirms that the previous token matches the expected `typ`.
+    ///
+    /// # Arguments
+    ///
+    /// * `typ` - The expected token type of the previous token.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` if the previous token matches `typ`.
+    /// * `Err(miette::Report)` if it does not match.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error report indicating the mismatch between the expected and actual token types.
     fn confirm(&self, typ: &TokenType) -> miette::Result<()> {
         let previous = self.previous();
 
         if &previous.token_type != typ {
-            // todo: improve this msg
             return Err(miette!(
-                "attempted to look back and find {:?} buf found {}",
+                "Expected previous token to be {:?}, but found {:?}.",
                 typ,
-                previous
+                previous.token_type
             ));
         }
 
         Ok(())
     }
 
+    /// Attempts to match and consume the next token if it matches `token_type`.
+    ///
+    /// # Arguments
+    ///
+    /// * `token_type` - The token type to match and consume.
+    ///
+    /// # Returns
+    ///
+    /// * `true` if the token was matched and consumed.
+    /// * `false` otherwise.
     fn match_token(&mut self, token_type: &TokenType) -> bool {
         if self.check(token_type) {
             self.advance();
@@ -1337,6 +1375,16 @@ impl Parser2 {
         false
     }
 
+    /// Attempts to match and consume any one of the specified token types.
+    ///
+    /// # Arguments
+    ///
+    /// * `types` - A slice of token types to match and consume.
+    ///
+    /// # Returns
+    ///
+    /// * `true` if any of the token types were matched and consumed.
+    /// * `false` otherwise.
     fn match_tokens(&mut self, types: &[TokenType]) -> bool {
         for ty in types {
             if self.match_token(ty) {
@@ -1345,6 +1393,14 @@ impl Parser2 {
         }
         false
     }
+
+    /// Consumes the next token and returns it.
+    ///
+    /// Advances the parser's current position and returns the token that was just consumed.
+    ///
+    /// # Returns
+    ///
+    /// * `&Token` - The token that was consumed.
     fn advance(&mut self) -> &Token {
         if !self.is_at_end() {
             self.current += 1;
@@ -1353,38 +1409,51 @@ impl Parser2 {
         self.previous()
     }
 
+    /// Returns the current token without consuming it.
+    ///
+    /// # Returns
+    ///
+    /// * `&Token` - The current token.
+    ///
+    /// # Panics
+    ///
+    /// Panics if there is no token to peek at (should not happen if `is_at_end` is correctly used).
     fn peek(&self) -> &Token {
         self.tokens
             .get(self.current)
-            // todo: switch to miette_expect
-            .expect("internal error: attempted to peek token when there is no token to peek")
+            .expect("Internal error: attempted to peek token when there is no token to peek.")
     }
 
+    /// Returns the previously consumed token.
+    ///
+    /// # Returns
+    ///
+    /// * `&Token` - The previously consumed token.
+    ///
+    /// # Panics
+    ///
+    /// Panics if there is no previous token (i.e., if at the start of the token stream).
     fn previous(&self) -> &Token {
         if self.current == 0 {
-            // todo switch to miette! panic
-            panic!("internal error: there is no previous token");
+            panic!("Internal error: there is no previous token.");
         }
-
-        // todo: idea bug severity
-        // Severity::Bug
 
         self.tokens
             .get(self.current - 1)
-            // todo: improve this message include link to github issues (miette_expect)
-            .expect(
-                "internal error: this should never happen. \
-            if it does there is a bug in previous method",
-            )
-        // .expect_miette(false, || {
-        //     todo
-        // });
+            .expect("Internal error: failed to retrieve previous token.")
     }
 
+    /// Determines if the parser has reached the end of the token stream.
+    ///
+    /// # Returns
+    ///
+    /// * `true` if the current token is `Eof`.
+    /// * `false` otherwise.
     fn is_at_end(&self) -> bool {
         self.peek().token_type == Eof
     }
 }
+
 
 pub(super) mod warning {
     use crate::parser::Parser2;
