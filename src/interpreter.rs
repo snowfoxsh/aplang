@@ -915,6 +915,21 @@ impl Interpreter {
                         }
                     )
                 }
+            },
+            (Number(a), Modulo, Number(b)) => {
+                if *b != 0.0 {
+                    Ok(Number(a % b))
+                } else {
+                    Err(
+                        RuntimeError {
+                            named_source: NamedSource::new(self.get_file_path(), node.token.source.clone()),
+                            span: node.token.span,
+                            message: "Modulo by Zero".to_string(),
+                            help: "Remember not to take a modulo by zero".to_string(),
+                            label: "Cannot modulo by zero".to_string()
+                        }
+                    )
+                }
             }
             (String(a), Plus, String(b)) => Ok(String(format!("{a}{b}"))),
             (List(a), Plus, List(b)) => {

@@ -254,6 +254,7 @@ pub enum BinaryOp {
     Minus,
     Star,
     Slash,
+    Modulo
 }
 
 #[derive(Debug, Clone)]
@@ -597,6 +598,7 @@ pub mod pretty {
                 BinaryOp::Minus => "-",
                 BinaryOp::Star => "*",
                 BinaryOp::Slash => "/",
+                BinaryOp::Modulo => "%",
             };
             write!(f, "{}", op)
         }

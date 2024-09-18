@@ -175,6 +175,7 @@ impl Token {
             TokenType::Minus => Ok(BinaryOp::Minus),
             TokenType::Star => Ok(BinaryOp::Star),
             TokenType::Slash => Ok(BinaryOp::Slash),
+            TokenType::Mod => Ok(BinaryOp::Modulo),
             // todo: improve this message
             _ => Err(miette!(
                 "Conversion to Binary Op Error, Token is not binary Op"

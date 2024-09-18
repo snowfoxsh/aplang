@@ -946,7 +946,7 @@ impl Parser2 {
     fn multiplication(&mut self) -> miette::Result<Expr> {
         let mut expr = self.unary()?;
 
-        while self.match_tokens(&[Star, Slash]) {
+        while self.match_tokens(&[Star, Slash, Mod]) {
             // get multiplication token
             let token = self.previous().clone();
             let right = self.unary()?;
