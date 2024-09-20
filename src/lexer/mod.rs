@@ -5,4 +5,3 @@ pub use lexer::Lexer;
 
 #[cfg(test)]
 mod tests;
-

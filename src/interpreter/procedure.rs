@@ -1,10 +1,10 @@
-use miette::SourceSpan;
-use std::sync::Arc;
-use std::collections::HashMap;
-use std::rc::Rc;
-use crate::parser::ast::{ProcDeclaration, Stmt, Variable};
 use crate::interpreter::errors::RuntimeError;
 use crate::interpreter::{Interpreter, Value};
+use crate::parser::ast::{ProcDeclaration, Stmt, Variable};
+use miette::SourceSpan;
+use std::collections::HashMap;
+use std::rc::Rc;
+use std::sync::Arc;
 
 pub type FunctionMap = HashMap<String, (Rc<dyn Callable>, Option<Arc<ProcDeclaration>>)>;
 /*                            |^^^^^^  |^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^|> Maybe pointer to function def
@@ -13,9 +13,14 @@ pub type FunctionMap = HashMap<String, (Rc<dyn Callable>, Option<Arc<ProcDeclara
                               |> Function name (symbol)
 */
 
-
 pub trait Callable {
-    fn call(&self, interpreter: &mut Interpreter, args: &[Value], args_toks: &[SourceSpan], source: Arc<str>) -> Result<Value, RuntimeError>;
+    fn call(
+        &self,
+        interpreter: &mut Interpreter,
+        args: &[Value],
+        args_toks: &[SourceSpan],
+        source: Arc<str>,
+    ) -> Result<Value, RuntimeError>;
     fn arity(&self) -> u8;
 }
 
@@ -26,9 +31,15 @@ pub struct Procedure {
 }
 
 impl Callable for Procedure {
-    fn call(&self, interpreter: &mut Interpreter, args: &[Value], args_toks: &[SourceSpan], source: Arc<str>) -> Result<Value, RuntimeError> {
+    fn call(
+        &self,
+        interpreter: &mut Interpreter,
+        args: &[Value],
+        args_tokens: &[SourceSpan],
+        source: Arc<str>,
+    ) -> Result<Value, RuntimeError> {
         // save the retval
-        let cached_retval = interpreter.return_value.clone();
+        let cached_return_value = interpreter.return_value.clone();
 
         // todo: consider allowing variables to be taken into context
         // ignore the global env
@@ -36,24 +47,24 @@ impl Callable for Procedure {
 
         // copy in the arguments
         // assigns them to their appropriate name parameter
-        self.params.iter().zip(args.iter().cloned())
-            .for_each(|(param, arg)| {
-                interpreter.venv.define(Arc::new(param.clone()), arg)
-            });
+        self.params
+            .iter()
+            .zip(args.iter().cloned())
+            .for_each(|(param, arg)| interpreter.venv.define(Arc::new(param.clone()), arg));
 
         // execute the function
         interpreter.stmt(&self.body)?;
 
         let retval = interpreter.return_value.clone();
         // todo implement backtrace
-        interpreter.return_value = cached_retval;
+        interpreter.return_value = cahced_return_value;
 
         // restore the previous env
         interpreter.venv.scrape();
 
         match retval {
             None => Ok(Value::Null),
-            Some(value) =>Ok(value),
+            Some(value) => Ok(value),
         }
     }
 
@@ -65,11 +76,22 @@ impl Callable for Procedure {
 pub struct NativeProcedure {
     pub name: String,
     pub arity: u8,
-    pub callable: fn(&mut Interpreter, &[Value], args_toks: &[SourceSpan], source: Arc<str>) -> Result<Value, RuntimeError>
+    pub callable: fn(
+        &mut Interpreter,
+        &[Value],
+        args_toks: &[SourceSpan],
+        source: Arc<str>,
+    ) -> Result<Value, RuntimeError>,
 }
 
 impl Callable for NativeProcedure {
-    fn call(&self, interpreter: &mut Interpreter, args: &[Value], args_toks: &[SourceSpan], source: Arc<str>) -> Result<Value, RuntimeError> {
+    fn call(
+        &self,
+        interpreter: &mut Interpreter,
+        args: &[Value],
+        args_toks: &[SourceSpan],
+        source: Arc<str>,
+    ) -> Result<Value, RuntimeError> {
         (self.callable)(interpreter, args, args_toks, source)
     }
 

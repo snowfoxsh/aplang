@@ -1,19 +1,18 @@
+use crate::interpreter::errors::RuntimeError;
+use crate::interpreter::FunctionMap;
 use crate::interpreter::Interpreter;
-use std::{fmt, fs, io};
+use crate::interpreter::Value;
+use crate::lexer::token::Token;
+use crate::lexer::Lexer;
+use crate::parser::ast::pretty::TreePrinter;
+use crate::parser::ast::Ast;
+use crate::parser::Parser2;
+use miette::Report;
 use std::fmt::Write;
 use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::sync::Arc;
-use miette::Report;
-use crate::parser::ast::Ast;
-use crate::parser::ast::pretty::TreePrinter;
-use crate::interpreter::errors::RuntimeError;
-use crate::interpreter::FunctionMap;
-use crate::interpreter::Value;
-use crate::lexer::Lexer;
-use crate::parser::Parser2;
-use crate::lexer::token::Token;
-
+use std::{fmt, fs, io};
 
 pub struct Initialized;
 pub struct Lexed;
@@ -26,7 +25,7 @@ pub struct ApLang<State = Initialized> {
     file_path: Option<PathBuf>,
 
     tokens: Option<Vec<Token>>, // generated with the lexer
-    ast: Option<Ast>, // generated with the parser
+    ast: Option<Ast>,           // generated with the parser
     values: Option<Vec<Value>>,
 
     _state: PhantomData<State>,
@@ -36,15 +35,15 @@ impl ApLang {
     pub fn new_from_file(file_path: PathBuf) -> io::Result<Self> {
         // check if the file exists
         let source_code: Arc<str> = fs::read_to_string(file_path.clone())?.into();
-        
+
         Ok(Self {
             source_code,
             file_path: Some(file_path),
-            
+
             tokens: None,
             ast: None,
             values: None,
-            
+
             _state: PhantomData,
         })
     }
@@ -66,11 +65,11 @@ impl ApLang {
         Self {
             source_code: source_code.into(),
             file_path,
-            
+
             tokens: None,
             ast: None,
             values: None,
-            
+
             _state: PhantomData,
         }
     }
@@ -81,11 +80,17 @@ impl ApLang {
 }
 
 impl ApLang<Initialized> {
-
     /// executes the lexer to convert source code into tokens
     pub fn lex(self) -> Result<ApLang<Lexed>, Vec<Report>> {
-        let file_name = self.file_path.clone().unwrap().file_name().unwrap().to_string_lossy().into_owned();
-        
+        let file_name = self
+            .file_path
+            .clone()
+            .unwrap()
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
+
         let tokens = Lexer::scan(self.source_code.clone(), file_name)?;
 
         // move the data into the next state struct
@@ -106,13 +111,16 @@ impl ApLang<Lexed> {
         // we know that tokens exist
         let tokens = unsafe { self.tokens.unwrap_unchecked() };
 
-        let file_name = self.file_path.clone().unwrap().file_name().unwrap().to_string_lossy().into_owned();
+        let file_name = self
+            .file_path
+            .clone()
+            .unwrap()
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
 
-        let mut parser = Parser2::new(
-            tokens,
-            Arc::clone(&self.source_code),
-            file_name.as_str(),
-        );
+        let mut parser = Parser2::new(tokens, Arc::clone(&self.source_code), file_name.as_str());
 
         let ast = parser.parse()?;
 
@@ -142,17 +150,19 @@ impl ApLang<Lexed> {
 
 impl ApLang<Parsed> {
     pub fn execute_as_module(self) -> Result<FunctionMap, RuntimeError> {
-        Interpreter::new(unsafe { self.ast.unwrap_unchecked() }, self.file_path)
-            .interpret_module()
+        Interpreter::new(unsafe { self.ast.unwrap_unchecked() }, self.file_path).interpret_module()
     }
 
     pub fn execute(self) -> Result<ApLang<Executed>, Report> {
-        Interpreter::new(unsafe { self.ast.unwrap_unchecked() }, self.file_path.clone())
-            .interpret()
-            .map_err(|err| {
-                let named_source = err.named_source.clone();
-                Report::from(err).with_source_code(named_source)
-            })?;
+        Interpreter::new(
+            unsafe { self.ast.unwrap_unchecked() },
+            self.file_path.clone(),
+        )
+        .interpret()
+        .map_err(|err| {
+            let named_source = err.named_source.clone();
+            Report::from(err).with_source_code(named_source)
+        })?;
 
         Ok(ApLang {
             source_code: self.source_code,
@@ -168,12 +178,10 @@ impl ApLang<Parsed> {
     pub fn execute_with_debug(self) -> Result<ApLang<ExecutedWithDebug>, Report> {
         let ast = unsafe { self.ast.unwrap_unchecked() };
         let mut interpreter = Interpreter::new(ast, self.file_path.clone());
-        let values = interpreter
-            .interpret_debug()
-            .map_err(|err| {
-                let named_source = err.named_source.clone();
-                Report::from(err).with_source_code(named_source)
-            })?;
+        let values = interpreter.interpret_debug().map_err(|err| {
+            let named_source = err.named_source.clone();
+            Report::from(err).with_source_code(named_source)
+        })?;
 
         Ok(ApLang {
             source_code: self.source_code,
@@ -187,7 +195,7 @@ impl ApLang<Parsed> {
     }
 
     pub fn debug_output<Writer: Write>(&self, buf: &mut Writer) -> fmt::Result {
-        let ast = unsafe { self.ast.as_ref().unwrap_unchecked()};
+        let ast = unsafe { self.ast.as_ref().unwrap_unchecked() };
 
         write!(buf, "{}", ast.print_tree())
     }
@@ -196,11 +204,11 @@ impl ApLang<Parsed> {
 impl ApLang<ExecutedWithDebug> {
     pub fn debug_output<Writer: Write>(&self, buf: &mut Writer) -> fmt::Result {
         let values = unsafe { self.values.as_ref().unwrap_unchecked() };
-        
+
         for value in values {
             writeln!(buf, "EXPR OUTPUT: {}", value)?;
         }
-        
+
         Ok(())
     }
 }

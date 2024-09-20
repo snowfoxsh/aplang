@@ -1,20 +1,19 @@
-use std::collections::HashMap;
-use mapro::map;
 use crate::interpreter::FunctionMap;
 use crate::interpreter::Value;
 use crate::std_function;
-
+use mapro::map;
+use std::collections::HashMap;
 
 pub(super) fn std_style() -> FunctionMap {
     let mut functions = FunctionMap::new();
-    
+
     std_function!(functions => fn STYLE(style: Value::String) {
          let styles: HashMap<&str, &str> = map! {
             // default colors
             "clear" => "\x1b[0m",
             "default_color" => "\x1b[39m",
             "bg_default_color" => "\x1b[49m",
-            
+
             // Foreground colors
             "black" => "\x1b[30m",
             "red" => "\x1b[31m",
@@ -32,7 +31,7 @@ pub(super) fn std_style() -> FunctionMap {
             "bright_magenta" => "\x1b[95m",
             "bright_cyan" => "\x1b[96m",
             "bright_white" => "\x1b[97m",
-    
+
             // Background colors
             "bg_black" => "\x1b[40m",
             "bg_red" => "\x1b[41m",
@@ -50,25 +49,25 @@ pub(super) fn std_style() -> FunctionMap {
             "bg_bright_magenta" => "\x1b[105m",
             "bg_bright_cyan" => "\x1b[106m",
             "bg_bright_white" => "\x1b[107m",
-   
+
             // styles
             "bold" => "\x1b[1m",
             "faint" => "\x1b[2m",
             "underline" => "\x1b[4m",
             "blink" => "\x1b[5m",
         };
-        
+
         let Some(code) = styles.get(style.to_ascii_lowercase().as_str()) else {
             return Ok(Value::Bool(false))
         };
 
         print!("{}", code);
- 
+
         return Ok(Value::Bool(true))
     });
 
     std_function!(functions => fn CLEAR_STYLE() {
-        
+
         // clear all styles
         print!("\x1b[0m");
 

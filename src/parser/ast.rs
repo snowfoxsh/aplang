@@ -1,8 +1,8 @@
-use std::hash::{Hash, Hasher};
 use crate::lexer::token::Token;
+use miette::SourceSpan;
+use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::sync::Arc;
-use miette::SourceSpan;
 // To facilitate better error handling down the line,
 // we're going to store the tokens that the thing came from
 // so we can report back to them later
@@ -115,7 +115,7 @@ pub struct Import {
     pub mod_token: Token,
     pub maybe_from_token: Option<Token>,
 
-    pub only_functions: Option<Vec<Token>> ,
+    pub only_functions: Option<Vec<Token>>,
     pub module_name: Token,
 }
 
@@ -211,7 +211,6 @@ impl PartialEq for Variable {
 
 impl Eq for Variable {}
 
-
 #[derive(Debug, Clone)]
 pub struct Assignment {
     pub target: Arc<Variable>,
@@ -254,7 +253,7 @@ pub enum BinaryOp {
     Minus,
     Star,
     Slash,
-    Modulo
+    Modulo,
 }
 
 #[derive(Debug, Clone)]
@@ -353,9 +352,9 @@ pub mod pretty {
                     std::iter::once(
                         Box::new(repeat_until.condition.clone()) as Box<dyn TreePrinter>
                     )
-                        .chain(std::iter::once(
-                            Box::new(repeat_until.body.clone()) as Box<dyn TreePrinter>,
-                        )),
+                    .chain(std::iter::once(
+                        Box::new(repeat_until.body.clone()) as Box<dyn TreePrinter>,
+                    )),
                 ),
                 Stmt::ForEach(for_each) => Box::new(
                     std::iter::once(Box::new(for_each.list.clone()) as Box<dyn TreePrinter>).chain(
@@ -381,15 +380,9 @@ pub mod pretty {
                         .map(|expr| Box::new(expr.clone()) as Box<dyn TreePrinter>)
                         .into_iter(),
                 ),
-                Stmt::Import(_import_stmt) => Box::new(
-                    std::iter::empty()
-                ),
-                Stmt::Continue(_import_stmt) => Box::new(
-                    std::iter::empty()
-                ),
-                Stmt::Break(_import_stmt) => Box::new(
-                    std::iter::empty()
-                ),
+                Stmt::Import(_import_stmt) => Box::new(std::iter::empty()),
+                Stmt::Continue(_import_stmt) => Box::new(std::iter::empty()),
+                Stmt::Break(_import_stmt) => Box::new(std::iter::empty()),
             }
         }
 
@@ -530,7 +523,9 @@ pub mod pretty {
                 ),
                 Stmt::ProcDeclaration(proc_decl) => {
                     // let params = proc_decl.join(", ");
-                    let params= proc_decl.params.iter()
+                    let params = proc_decl
+                        .params
+                        .iter()
                         .map(|var| var.ident.clone())
                         .collect::<Vec<_>>()
                         .join(", ");

@@ -12,11 +12,11 @@
 //! use with care
 //! <3
 
+pub mod aplang;
+pub mod arguments;
 pub mod interpreter;
 pub mod lexer;
 pub mod parser;
 pub mod standard_library;
-pub mod arguments;
-pub mod aplang;
 
 pub use aplang::*;

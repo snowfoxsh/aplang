@@ -1,15 +1,14 @@
+use crate::interpreter::FunctionMap;
+use crate::interpreter::Value;
+use crate::std_function;
 use std::cell::RefCell;
 use std::io;
 use std::io::Write;
 use std::rc::Rc;
-use crate::interpreter::FunctionMap;
-use crate::interpreter::Value;
-use crate::std_function;
 
 pub(super) fn input(prompt: &str) -> Option<String> {
     print!("{}", prompt);
     io::stdout().flush().ok()?;
-
 
     let mut buf = String::new();
     io::stdin().read_line(&mut buf).ok()?;
@@ -52,6 +51,6 @@ pub(super) fn std_io() -> FunctionMap {
 
         Ok(Value::Null)
     });
-    
+
     functions
 }

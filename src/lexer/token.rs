@@ -59,9 +59,11 @@ pub enum TokenType {
     True,
     False,
     Null,
-    
+
     // Modules
-    Import, Export, From,
+    Import,
+    Export,
+    From,
 
     Eof,
 }
@@ -138,7 +140,7 @@ impl Token {
     pub fn span_to(&self, other: SourceSpan) -> SourceSpan {
         join_spans(self.span(), other)
     }
-    
+
     pub fn span_until(&self, other: SourceSpan) -> SourceSpan {
         span_between(self.span(), other)
     }
@@ -146,7 +148,7 @@ impl Token {
     pub fn span_to_token(&self, other: &Token) -> SourceSpan {
         self.span_to(other.span())
     }
-    
+
     pub fn span_until_token(&self, other: &Token) -> SourceSpan {
         self.span_until(other.span())
     }
@@ -158,7 +160,7 @@ pub fn join_spans(left: SourceSpan, right: SourceSpan) -> SourceSpan {
 }
 
 pub fn span_between(left: SourceSpan, right: SourceSpan) -> SourceSpan {
-    SourceSpan::from(left.offset() + left.len() .. right.offset())
+    SourceSpan::from(left.offset() + left.len()..right.offset())
 }
 
 impl Token {
@@ -204,7 +206,6 @@ impl Token {
         }
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LiteralValue {

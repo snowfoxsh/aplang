@@ -1,11 +1,11 @@
-use crate::parser::ast::*;
 use crate::lexer::token::LiteralValue;
 use crate::lexer::token::TokenType::{Eof, LeftParen, RightParen};
 use crate::lexer::token::{Token, TokenType};
-use crate::parser::ast::Return as ReturnValue;
-use crate::parser::ast::Import as ImportStatement;
-use crate::parser::ast::Continue as ContinueStatement;
 use crate::parser::ast::Break as BreakStatement;
+use crate::parser::ast::Continue as ContinueStatement;
+use crate::parser::ast::Import as ImportStatement;
+use crate::parser::ast::Return as ReturnValue;
+use crate::parser::ast::*;
 use miette::{miette, LabeledSpan, NamedSource, Report, SourceSpan};
 use std::sync::Arc;
 
@@ -79,19 +79,22 @@ impl Parser2 {
         let export_or_procedure = self.previous().clone();
 
         let (proc_token, exported) = if export_or_procedure.token_type == Export {
-            let proc_token = self.consume(&Procedure, |token| {
-                let labels = vec![
-                    LabeledSpan::at(token.span(), "expected keyword 'PROCEDURE' here"),
-                    LabeledSpan::at(token.span(), "'EXPORT' cannot exist alone"),
-                ];
+            let proc_token = self
+                .consume(&Procedure, |token| {
+                    let labels = vec![
+                        LabeledSpan::at(token.span(), "expected keyword 'PROCEDURE' here"),
+                        LabeledSpan::at(token.span(), "'EXPORT' cannot exist alone"),
+                    ];
 
-                miette!(
-                    labels = labels,
-                    code = "standalone_export",
-                    help = "you can only export a procedure from a module",
-                    "expected 'PROCEDURE' following 'EXPORT' found {}", token.lexeme,
-                )
-            })?.clone();
+                    miette!(
+                        labels = labels,
+                        code = "standalone_export",
+                        help = "you can only export a procedure from a module",
+                        "expected 'PROCEDURE' following 'EXPORT' found {}",
+                        token.lexeme,
+                    )
+                })?
+                .clone();
 
             (proc_token, true)
         } else {
@@ -138,10 +141,8 @@ impl Parser2 {
             })?
             .clone();
 
-
         let mut params = vec![];
         if !self.check(&RightParen) {
-
             loop {
                 if params.len() > 255 {
                     let _peeked = self.peek();
@@ -151,13 +152,13 @@ impl Parser2 {
                 }
 
                 // we expect there to be parameters
-                let token = self.consume(&Identifier, |_token| miette!(
-                    "hello"
-                ))?.clone();
+                let token = self
+                    .consume(&Identifier, |_token| miette!("hello"))?
+                    .clone();
 
                 params.push(Variable {
                     ident: token.lexeme.clone(),
-                    token
+                    token,
                 });
 
                 if !self.match_token(&Comma) {
@@ -304,7 +305,7 @@ impl Parser2 {
                 statements,
                 rb_token,
             }
-                .into(),
+            .into(),
         ))
     }
 
@@ -316,9 +317,7 @@ impl Parser2 {
             });
         }
 
-        Ok(Stmt::Break(Arc::new(BreakStatement {
-            token: break_token
-        })))
+        Ok(Stmt::Break(Arc::new(BreakStatement { token: break_token })))
     }
 
     fn continue_statement(&mut self, continue_token: Token) -> miette::Result<Stmt> {
@@ -330,16 +329,16 @@ impl Parser2 {
         }
 
         Ok(Stmt::Continue(Arc::new(ContinueStatement {
-            token: continue_token
+            token: continue_token,
         })))
     }
 
     fn return_statement(&mut self, return_token: Token) -> miette::Result<Stmt> {
         if !self.in_function_scope {
             // todo make this error better
-            return Err(miette!{
+            return Err(miette! {
                 "RETURN can only be called in a PROCEDURE"
-            })
+            });
         }
 
         let maybe_value = if !self.match_token(&SoftSemi) {
@@ -349,17 +348,17 @@ impl Parser2 {
         };
 
         if maybe_value.is_some() {
-            self.consume(&SoftSemi, |_token| miette!{
-                "todo: expected semicolon after return statement"
+            self.consume(&SoftSemi, |_token| {
+                miette! {
+                    "todo: expected semicolon after return statement"
+                }
             })?;
         }
 
-        Ok(Stmt::Return(
-            Arc::new(ReturnValue {
-                token: return_token,
-                data: maybe_value
-            })
-        ))
+        Ok(Stmt::Return(Arc::new(ReturnValue {
+            token: return_token,
+            data: maybe_value,
+        })))
     }
 
     fn import_statement(&mut self, import_token: Token) -> miette::Result<Stmt> {
@@ -368,29 +367,32 @@ impl Parser2 {
             // matching import ["f1", "f2", "f3"] from mod
             let lbracket = self.previous().clone();
 
-            let specific_functions : Vec<Token> = vec![];
+            let specific_functions: Vec<Token> = vec![];
             loop {
                 // todo: consider making this an argument because arbitrary
                 // todo: like max param limits or something
                 // set an arbitrary limit for number of specific functions
                 const MAX_SPECIFIC_FUNCTIONS: usize = 63;
-                if specific_functions.len()  >= MAX_SPECIFIC_FUNCTIONS {
-                    let correct_span = lbracket.span_until_token(specific_functions.last().unwrap());
-                    let labels = vec![
-                        LabeledSpan::at(correct_span, "just import the entire module")
-                    ];
+                if specific_functions.len() >= MAX_SPECIFIC_FUNCTIONS {
+                    let correct_span =
+                        lbracket.span_until_token(specific_functions.last().unwrap());
+                    let labels = vec![LabeledSpan::at(
+                        correct_span,
+                        "just import the entire module",
+                    )];
                     let _s = 2.0;
 
                     return Err(miette!(
                         labels = labels,
                         help = "what the freak dude. are you okay?",
-                        "cannot have more than {} specific imports", MAX_SPECIFIC_FUNCTIONS
+                        "cannot have more than {} specific imports",
+                        MAX_SPECIFIC_FUNCTIONS
                     ));
                 }
 
-                let _specific_functions = self.consume(&StringLiteral, |found| miette!(
-                    "expected a specific function instead found {}", found
-                ))?;
+                let _specific_functions = self.consume(&StringLiteral, |found| {
+                    miette!("expected a specific function instead found {}", found)
+                })?;
 
                 // we've reached the end of the specific functions
                 if !self.match_token(&Comma) {
@@ -399,8 +401,10 @@ impl Parser2 {
             }
 
             // close off the specific functions
-            let _rbracket = self.consume(&RightBracket, |_found| miette! {
-                ""
+            let _rbracket = self.consume(&RightBracket, |_found| {
+                miette! {
+                    ""
+                }
             })?;
 
             Some(specific_functions)
@@ -412,24 +416,35 @@ impl Parser2 {
             None
         };
 
-        let maybe_from_token = if only_functions.is_some() {
-            Some(self.consume(&From, |found| miette! {
+        let maybe_from_token =
+            if only_functions.is_some() {
+                Some(self.consume(&From, |found| miette! {
                 "(todo) Expected from following specific imports, found {}", found.lexeme
             })?.clone())
-        } else {
-            None
-        };
+            } else {
+                None
+            };
 
-        let mod_token = self.consume(&Mod, |_token| miette! {
-            "todo: expected a mod token following import. could also be a specific function" // todo make this better
-        })?.clone();
+        let mod_token = self
+            .consume(&Mod, |_token| {
+                miette! {
+                    "todo: expected a mod token following import. could also be a specific function" // todo make this better
+                }
+            })?
+            .clone();
 
-        let module_name = self.consume(&StringLiteral, |_token| miette! {
-            "todo: expected a string literal specifying the type of import"
-        })?.clone();
+        let module_name = self
+            .consume(&StringLiteral, |_token| {
+                miette! {
+                    "todo: expected a string literal specifying the type of import"
+                }
+            })?
+            .clone();
 
-        self.consume(&SoftSemi, |_token| miette! {
-            "todo: expected a semicolon following import statement"
+        self.consume(&SoftSemi, |_token| {
+            miette! {
+                "todo: expected a semicolon following import statement"
+            }
         })?;
 
         Ok(Stmt::Import(Arc::new(ImportStatement {
@@ -541,7 +556,7 @@ impl Parser2 {
                 times_token,
                 count_token,
             }
-                .into(),
+            .into(),
         ))
     }
 
@@ -612,7 +627,7 @@ impl Parser2 {
                 repeat_token,
                 until_token,
             }
-                .into(),
+            .into(),
         ))
     }
 
@@ -693,9 +708,9 @@ impl Parser2 {
                 for_token,
                 each_token,
                 in_token,
-                list_token
+                list_token,
             }
-                .into(),
+            .into(),
         ))
     }
 
@@ -753,7 +768,7 @@ impl Parser2 {
                         ident_token: variable.token.clone(),
                         arrow_token,
                     }
-                        .into(),
+                    .into(),
                 )),
 
                 // Expr::Access(Access {
@@ -780,7 +795,7 @@ impl Parser2 {
                                 key: access.key.clone(),
                                 brackets: access.brackets.clone(),
                             }
-                                .into(),
+                            .into(),
                         ),
                         list: access.list.clone(),
                         idx: access.key.clone(),
@@ -789,7 +804,7 @@ impl Parser2 {
                         brackets: access.brackets.clone(),
                         arrow_token,
                     }
-                        .into(),
+                    .into(),
                 )),
 
                 // Error for invalid assignment target
@@ -874,7 +889,7 @@ impl Parser2 {
                     right,
                     token,
                 }
-                    .into(),
+                .into(),
             )
         }
 
@@ -897,7 +912,7 @@ impl Parser2 {
                     right,
                     token,
                 }
-                    .into(),
+                .into(),
             )
         }
 
@@ -920,7 +935,7 @@ impl Parser2 {
                     right,
                     token,
                 }
-                    .into(),
+                .into(),
             )
         }
 
@@ -943,7 +958,7 @@ impl Parser2 {
                     right,
                     token,
                 }
-                    .into(),
+                .into(),
             )
         }
 
@@ -962,7 +977,7 @@ impl Parser2 {
                     right,
                     token,
                 }
-                    .into(),
+                .into(),
             );
 
             Ok(expr)
@@ -1056,7 +1071,7 @@ impl Parser2 {
                     value: Literal::String(literal),
                     token,
                 }
-                    .into(),
+                .into(),
             ));
         }
 
@@ -1081,7 +1096,7 @@ impl Parser2 {
                     value: Literal::Number(literal),
                     token,
                 }
-                    .into(),
+                .into(),
             ));
         }
         // done parsing literals
@@ -1124,22 +1139,26 @@ impl Parser2 {
                     }
                 }
 
-                let rp_token = self.consume(&RightParen, |token| {
-                    // todo
-                    // miette!("expected ) after argument list, found {token}")
-                    let labels = vec![LabeledSpan::at(token.span(), "expected a `)`")];
+                let rp_token = self
+                    .consume(&RightParen, |token| {
+                        // todo
+                        // miette!("expected ) after argument list, found {token}")
+                        let labels = vec![LabeledSpan::at(token.span(), "expected a `)`")];
 
-                    miette!(
+                        miette!(
                             labels = labels,
                             code = "missing_rp",
                             help = "mismatched `(`, it seems you missed a `)`.",
                             "expected `)`, found `{}`",
                             token.lexeme
                         )
-                })?
+                    })?
                     .clone();
 
-                let arguments_spans: Vec<SourceSpan> = arguments_tokens.windows(2).map(|tok| tok[0].span_until_token(&tok[1])).collect();
+                let arguments_spans: Vec<SourceSpan> = arguments_tokens
+                    .windows(2)
+                    .map(|tok| tok[0].span_until_token(&tok[1]))
+                    .collect();
 
                 return Ok(Expr::ProcCall(Arc::new(ProcCall {
                     ident,
@@ -1229,7 +1248,7 @@ impl Parser2 {
             "expected primary, instead found {}\n",
             self.peek()
         )
-            .with_source_code(self.named_source.clone());
+        .with_source_code(self.named_source.clone());
         // mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
         Err(report)
     }
@@ -1242,13 +1261,14 @@ impl Parser2 {
         self.advance();
 
         while !self.is_at_end() {
-
             // this is "good enough" for now
             // sometimes it does not recover properly
             // more robust recovery would great
             // it is worth looking into...
             match self.peek().token_type {
-                Procedure | Repeat | For | If | Return | Continue | Break | Import | Export => return,
+                Procedure | Repeat | For | If | Return | Continue | Break | Import | Export => {
+                    return
+                }
                 _ => (),
             }
 
@@ -1438,10 +1458,9 @@ impl Parser2 {
     }
 }
 
-
 pub(super) mod warning {
     use crate::parser::Parser2;
-    use miette::{Report};
+    use miette::Report;
 
     impl Parser2 {
         pub(super) fn warning(&mut self, report: Report) {

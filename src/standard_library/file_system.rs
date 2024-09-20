@@ -1,16 +1,16 @@
+use crate::interpreter::FunctionMap;
+use crate::interpreter::Value;
+use crate::std_function;
 use std::cell::RefCell;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
 use std::rc::Rc;
-use crate::interpreter::FunctionMap;
-use crate::interpreter::Value;
-use crate::std_function;
 
 pub(super) fn file_system() -> FunctionMap {
     let mut functions = FunctionMap::new();
-    
+
     // checks if path given exists
     std_function!(functions => fn PATH_EXISTS(path: Value::String) {
         let exists = Path::new(&path).exists();

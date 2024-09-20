@@ -1,11 +1,11 @@
-use std::sync::Arc;
-use std::collections::HashMap;
-use miette::{miette, LabeledSpan, Report, SourceSpan};
-use std::fmt::Display;
-use owo_colors::OwoColorize;
-use crate::lexer::token::{LiteralValue, TokenType};
 use crate::lexer::token::Token;
 use crate::lexer::token::TokenType::*;
+use crate::lexer::token::{LiteralValue, TokenType};
+use miette::{miette, LabeledSpan, Report, SourceSpan};
+use owo_colors::OwoColorize;
+use std::collections::HashMap;
+use std::fmt::Display;
+use std::sync::Arc;
 
 pub struct Lexer {
     file_name: String,
@@ -243,10 +243,7 @@ impl Lexer {
                     }
                     _ => {
                         // invalid escape sequence
-                        return Err(miette!(
-                        "Invalid escape sequence: \\{}",
-                        self.peek()
-                    ));
+                        return Err(miette!("Invalid escape sequence: \\{}", self.peek()));
                     }
                 }
             } else {
@@ -267,7 +264,8 @@ impl Lexer {
                 help = "A string literal must end with a matching quote",
                 "{} unterminated string",
                 self.location_string()
-            ).with_source_code(self.source.clone());
+            )
+            .with_source_code(self.source.clone());
 
             return Err(error);
         }
