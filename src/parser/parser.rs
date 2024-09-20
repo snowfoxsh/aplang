@@ -1,43 +1,27 @@
-use crate::ast::*;
-use crate::lexer::LiteralValue;
-use crate::token::TokenType::{Eof, LeftParen, RightParen};
-use crate::token::{Token, TokenType};
-use crate::ast::Return as ReturnValue;
-use crate::ast::Import as ImportStatement;
-use crate::ast::Continue as ContinueStatement;
-use crate::ast::Break as BreakStatement;
+use crate::lexer::token::LiteralValue;
+use crate::lexer::token::TokenType::{Eof, LeftParen, RightParen};
+use crate::lexer::token::{Token, TokenType};
+use crate::parser::ast::Break as BreakStatement;
+use crate::parser::ast::Continue as ContinueStatement;
+use crate::parser::ast::Import as ImportStatement;
+use crate::parser::ast::Return as ReturnValue;
+use crate::parser::ast::*;
 use miette::{miette, LabeledSpan, NamedSource, Report, SourceSpan};
 use std::sync::Arc;
 
-// something like
-// self.consume(Semicolon, "Expected ';' after expression.")?;
-// should have a diagnostic pointing to the before expression
-// let previous
+use crate::lexer::token::TokenType::*;
 
-// add functionality miette mutilate that will insert x spaces before the error
-
-// #[derive(Error, Diagnostic, Debug)]
-// struct ExpectedError {
-//     #[source_code]
-//     src: NamedSource<Arc<str>>,
-//
-//
-//     found: SourceSpan,
-// }
-
-use crate::token::TokenType::*;
-
-pub struct Parser2 {
+pub struct Parser {
     tokens: Vec<Token>,
     source: Arc<str>,
     named_source: NamedSource<Arc<str>>,
     current: usize,
     in_function_scope: bool,
-    warnings: Vec<Report>,
+    _warnings: Vec<Report>,
     in_loop_scope: bool,
 }
 
-impl Parser2 {
+impl Parser {
     pub(crate) fn new(tokens: Vec<Token>, source: Arc<str>, file_name: &str) -> Self {
         Self {
             tokens,
@@ -46,7 +30,7 @@ impl Parser2 {
             in_loop_scope: false,
             named_source: NamedSource::new(file_name, source),
             current: 0,
-            warnings: vec![],
+            _warnings: vec![],
         }
     }
 
@@ -81,9 +65,9 @@ impl Parser2 {
 }
 
 /// parse expression
-impl Parser2 {
+impl Parser {
     fn declaration(&mut self) -> miette::Result<Stmt> {
-        // Procedure might start with export. 
+        // Procedure might start with export.
         // If it needs special treatment
         if self.match_tokens(&[Export, Procedure]) {
             return self.procedure();
@@ -93,27 +77,30 @@ impl Parser2 {
 
     fn procedure(&mut self) -> miette::Result<Stmt> {
         let export_or_procedure = self.previous().clone();
-        
+
         let (proc_token, exported) = if export_or_procedure.token_type == Export {
-            let proc_token = self.consume(&Procedure, |token| {
-                let labels = vec![
-                    LabeledSpan::at(token.span(), "expected keyword 'PROCEDURE' here"),
-                    LabeledSpan::at(token.span(), "'EXPORT' cannot exist alone"),
-                ];
-                
-                miette!(
-                    labels = labels,
-                    code = "standalone_export",
-                    help = "you can only export a procedure from a module",
-                    "expected 'PROCEDURE' following 'EXPORT' found {}", token.lexeme,
-                )
-            })?.clone();
+            let proc_token = self
+                .consume(&Procedure, |token| {
+                    let labels = vec![
+                        LabeledSpan::at(token.span(), "expected keyword 'PROCEDURE' here"),
+                        LabeledSpan::at(token.span(), "'EXPORT' cannot exist alone"),
+                    ];
+
+                    miette!(
+                        labels = labels,
+                        code = "standalone_export",
+                        help = "you can only export a procedure from a module",
+                        "expected 'PROCEDURE' following 'EXPORT' found {}",
+                        token.lexeme,
+                    )
+                })?
+                .clone();
 
             (proc_token, true)
         } else {
             (export_or_procedure, false)
         };
-        
+
         let name_token = self
             .consume(&Identifier, |token| {
                 let labels = vec![
@@ -135,7 +122,7 @@ impl Parser2 {
 
         let name = name_token.lexeme.clone();
 
-        let lp_token = self
+        let _lp_token = self
             .consume(&LeftParen, |token| {
                 let labels = vec![
                     LabeledSpan::at(token.span(), "expected a `(`"),
@@ -154,26 +141,24 @@ impl Parser2 {
             })?
             .clone();
 
-
         let mut params = vec![];
         if !self.check(&RightParen) {
-
             loop {
                 if params.len() > 255 {
-                    let peeked = self.peek();
+                    let _peeked = self.peek();
                     return Err(miette! {
                         "todo: params cannot exceed 255, why the f**k do you need so many?"
                     });
                 }
 
                 // we expect there to be parameters
-                let token = self.consume(&Identifier, |token| miette!(
-                    "hello"
-                ))?.clone();
+                let token = self
+                    .consume(&Identifier, |_token| miette!("hello"))?
+                    .clone();
 
                 params.push(Variable {
                     ident: token.lexeme.clone(),
-                    token
+                    token,
                 });
 
                 if !self.match_token(&Comma) {
@@ -182,10 +167,10 @@ impl Parser2 {
             }
         }
 
-        let rp_token = self
+        let _rp_token = self
             .consume(&RightParen, |token| {
                 let labels = vec![LabeledSpan::at(token.span(), "expected a `)`")];
-                
+
                 miette!(
                     labels = labels,
                     code = "missing_rp",
@@ -196,10 +181,10 @@ impl Parser2 {
             })?
             .clone();
 
-        // cache previous function state and set to true temporarily, since we're in a 
+        // cache previous function state and set to true temporarily, since we're in a
         let function_scope_state_cache = self.in_function_scope;
         self.in_function_scope = true;
-        
+
         // parse the body of the function
         let body = self.statement()?;
         // restore the previous function scope state
@@ -298,7 +283,7 @@ impl Parser2 {
         }
 
         let rb_token = self
-            .consume(&RightBrace, |token| {
+            .consume(&RightBrace, |_token| {
                 let labels = vec![LabeledSpan::at(
                     lb_token.span(),
                     "this delimiter requires a closing `}`",
@@ -332,9 +317,7 @@ impl Parser2 {
             });
         }
 
-        Ok(Stmt::Break(Arc::new(BreakStatement {
-            token: break_token
-        })))
+        Ok(Stmt::Break(Arc::new(BreakStatement { token: break_token })))
     }
 
     fn continue_statement(&mut self, continue_token: Token) -> miette::Result<Stmt> {
@@ -346,16 +329,16 @@ impl Parser2 {
         }
 
         Ok(Stmt::Continue(Arc::new(ContinueStatement {
-            token: continue_token
+            token: continue_token,
         })))
     }
 
     fn return_statement(&mut self, return_token: Token) -> miette::Result<Stmt> {
         if !self.in_function_scope {
             // todo make this error better
-            return Err(miette!{
+            return Err(miette! {
                 "RETURN can only be called in a PROCEDURE"
-            })
+            });
         }
 
         let maybe_value = if !self.match_token(&SoftSemi) {
@@ -365,17 +348,17 @@ impl Parser2 {
         };
 
         if maybe_value.is_some() {
-            self.consume(&SoftSemi, |_token| miette!{
-                "todo: expected semicolon after return statement"
+            self.consume(&SoftSemi, |_token| {
+                miette! {
+                    "todo: expected semicolon after return statement"
+                }
             })?;
         }
 
-        Ok(Stmt::Return(
-            Arc::new(ReturnValue {
-                token: return_token,
-                data: maybe_value
-            })
-        ))
+        Ok(Stmt::Return(Arc::new(ReturnValue {
+            token: return_token,
+            data: maybe_value,
+        })))
     }
 
     fn import_statement(&mut self, import_token: Token) -> miette::Result<Stmt> {
@@ -384,29 +367,32 @@ impl Parser2 {
             // matching import ["f1", "f2", "f3"] from mod
             let lbracket = self.previous().clone();
 
-            let specific_functions : Vec<Token> = vec![];
+            let specific_functions: Vec<Token> = vec![];
             loop {
                 // todo: consider making this an argument because arbitrary
                 // todo: like max param limits or something
                 // set an arbitrary limit for number of specific functions
                 const MAX_SPECIFIC_FUNCTIONS: usize = 63;
-                if specific_functions.len()  >= MAX_SPECIFIC_FUNCTIONS {
-                    let correct_span = lbracket.span_until_token(specific_functions.last().unwrap());
-                    let labels = vec![
-                        LabeledSpan::at(correct_span, "just import the entire module")
-                    ];
-                    let s = 2.0;
+                if specific_functions.len() >= MAX_SPECIFIC_FUNCTIONS {
+                    let correct_span =
+                        lbracket.span_until_token(specific_functions.last().unwrap());
+                    let labels = vec![LabeledSpan::at(
+                        correct_span,
+                        "just import the entire module",
+                    )];
+                    let _s = 2.0;
 
                     return Err(miette!(
                         labels = labels,
                         help = "what the freak dude. are you okay?",
-                        "cannot have more than {} specific imports", MAX_SPECIFIC_FUNCTIONS
+                        "cannot have more than {} specific imports",
+                        MAX_SPECIFIC_FUNCTIONS
                     ));
                 }
 
-                let specific_functions = self.consume(&StringLiteral, |found| miette!(
-                    "expected a specific function instead found {}", found
-                ))?;
+                let _specific_functions = self.consume(&StringLiteral, |found| {
+                    miette!("expected a specific function instead found {}", found)
+                })?;
 
                 // we've reached the end of the specific functions
                 if !self.match_token(&Comma) {
@@ -415,8 +401,10 @@ impl Parser2 {
             }
 
             // close off the specific functions
-            let _rbracket = self.consume(&RightBracket, |found| miette! {
-                ""
+            let _rbracket = self.consume(&RightBracket, |_found| {
+                miette! {
+                    ""
+                }
             })?;
 
             Some(specific_functions)
@@ -428,24 +416,35 @@ impl Parser2 {
             None
         };
 
-        let maybe_from_token = if only_functions.is_some() {
-            Some(self.consume(&From, |found| miette! {
+        let maybe_from_token =
+            if only_functions.is_some() {
+                Some(self.consume(&From, |found| miette! {
                 "(todo) Expected from following specific imports, found {}", found.lexeme
             })?.clone())
-        } else {
-            None
-        };
+            } else {
+                None
+            };
 
-        let mod_token = self.consume(&Mod, |token| miette! {
-            "todo: expected a mod token following import. could also be a specific function" // todo make this better
-        })?.clone();
+        let mod_token = self
+            .consume(&Mod, |_token| {
+                miette! {
+                    "todo: expected a mod token following import. could also be a specific function" // todo make this better
+                }
+            })?
+            .clone();
 
-        let module_name = self.consume(&StringLiteral, |token| miette! {
-            "todo: expected a string literal specifying the type of import"
-        })?.clone();
+        let module_name = self
+            .consume(&StringLiteral, |_token| {
+                miette! {
+                    "todo: expected a string literal specifying the type of import"
+                }
+            })?
+            .clone();
 
-        self.consume(&SoftSemi, |token| miette! {
-            "todo: expected a semicolon following import statement"
+        self.consume(&SoftSemi, |_token| {
+            miette! {
+                "todo: expected a semicolon following import statement"
+            }
         })?;
 
         Ok(Stmt::Import(Arc::new(ImportStatement {
@@ -460,7 +459,7 @@ impl Parser2 {
 
     fn if_statement(&mut self, if_token: Token) -> miette::Result<Stmt> {
         // todo: improve this report
-        let lp_token = self
+        let _lp_token = self
             .consume(&LeftParen, |token| {
                 // miette!("expected lp_token")
                 let labels = vec![
@@ -480,7 +479,7 @@ impl Parser2 {
 
         let condition = self.expression()?;
 
-        let rp_token = self
+        let _rp_token = self
             .consume(&RightParen, |token| {
                 // miette!("Expected `)` found {}", token)
                 let labels = vec![LabeledSpan::at(token.span(), "expected a `)`")];
@@ -529,7 +528,7 @@ impl Parser2 {
 
         // expected expression
         let count = self.expression()?;
-        
+
         let count_token = self.previous().clone();
 
         let times_token = self.consume(&Times, |token| {
@@ -566,7 +565,7 @@ impl Parser2 {
         self.confirm(&Repeat)?;
 
         let until_token = self
-            .consume(&Until, |token| {
+            .consume(&Until, |_token| {
                 // todo: improve this error
                 // miette!(
                 //     "expected until token after repeat token"
@@ -587,7 +586,7 @@ impl Parser2 {
             })?
             .clone();
 
-        let lp_token = self.consume(&LeftParen, |token| {
+        let _lp_token = self.consume(&LeftParen, |token| {
             // todo: improve this error
             let labels = vec![
                 LabeledSpan::at(token.span(), "expected a `(`"),
@@ -604,7 +603,7 @@ impl Parser2 {
 
         let condition = self.expression()?;
 
-        let rp_token = self
+        let _rp_token = self
             .consume(&RightParen, |token| {
                 // todo: improve this error
                 let labels = vec![LabeledSpan::at(token.span(), "expected a `)`")];
@@ -709,7 +708,7 @@ impl Parser2 {
                 for_token,
                 each_token,
                 in_token,
-                list_token
+                list_token,
             }
             .into(),
         ))
@@ -1140,7 +1139,8 @@ impl Parser2 {
                     }
                 }
 
-                let rp_token = self.consume(&RightParen, |token| {
+                let rp_token = self
+                    .consume(&RightParen, |token| {
                         // todo
                         // miette!("expected ) after argument list, found {token}")
                         let labels = vec![LabeledSpan::at(token.span(), "expected a `)`")];
@@ -1154,9 +1154,12 @@ impl Parser2 {
                         )
                     })?
                     .clone();
-                
-                let arguments_spans: Vec<SourceSpan> = arguments_tokens.windows(2).map(|tok| tok[0].span_until_token(&tok[1])).collect();
-                
+
+                let arguments_spans: Vec<SourceSpan> = arguments_tokens
+                    .windows(2)
+                    .map(|tok| tok[0].span_until_token(&tok[1]))
+                    .collect();
+
                 return Ok(Expr::ProcCall(Arc::new(ProcCall {
                     ident,
                     arguments,
@@ -1251,20 +1254,21 @@ impl Parser2 {
     }
 }
 /// Helper methods for the `Parser2` struct.
-impl Parser2 {
+impl Parser {
     /// Synchronizes the parser by advancing tokens until it reaches a likely
     /// starting point for a new statement or declaration.
     fn synchronize(&mut self) {
         self.advance();
 
         while !self.is_at_end() {
-
             // this is "good enough" for now
             // sometimes it does not recover properly
             // more robust recovery would great
             // it is worth looking into...
             match self.peek().token_type {
-                Procedure | Repeat | For | If | Return | Continue | Break | Import | Export => return,
+                Procedure | Repeat | For | If | Return | Continue | Break | Import | Export => {
+                    return
+                }
                 _ => (),
             }
 
@@ -1454,14 +1458,13 @@ impl Parser2 {
     }
 }
 
-
 pub(super) mod warning {
-    use crate::parser::Parser2;
-    use miette::{Report};
+    use crate::parser::Parser;
+    use miette::Report;
 
-    impl Parser2 {
+    impl Parser {
         pub(super) fn warning(&mut self, report: Report) {
-            self.warnings
+            self._warnings
                 .push(report.with_source_code(self.named_source.clone()))
         }
     }
@@ -1476,7 +1479,7 @@ impl<T, E> ExpectMiette<T> for Result<T, E> {
         match self {
             Ok(t) => t,
             Err(_) => {
-                let report = report_handler();
+                let _report = report_handler();
                 panic!()
             }
         }
@@ -1488,7 +1491,7 @@ impl<T> ExpectMiette<T> for Option<T> {
         match self {
             Some(t) => t,
             None => {
-                let report = report_handler();
+                let _report = report_handler();
                 panic!()
             }
         }

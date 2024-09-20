@@ -1,5 +1,4 @@
-use crate::ast::{BinaryOp, LogicalOp, UnaryOp};
-use crate::lexer::LiteralValue;
+use crate::parser::ast::{BinaryOp, LogicalOp, UnaryOp};
 use miette::{miette, LabeledSpan, SourceSpan};
 use std::collections::HashMap;
 use std::fmt;
@@ -60,9 +59,11 @@ pub enum TokenType {
     True,
     False,
     Null,
-    
+
     // Modules
-    Import, Export, From,
+    Import,
+    Export,
+    From,
 
     Eof,
 }
@@ -139,7 +140,7 @@ impl Token {
     pub fn span_to(&self, other: SourceSpan) -> SourceSpan {
         join_spans(self.span(), other)
     }
-    
+
     pub fn span_until(&self, other: SourceSpan) -> SourceSpan {
         span_between(self.span(), other)
     }
@@ -147,7 +148,7 @@ impl Token {
     pub fn span_to_token(&self, other: &Token) -> SourceSpan {
         self.span_to(other.span())
     }
-    
+
     pub fn span_until_token(&self, other: &Token) -> SourceSpan {
         self.span_until(other.span())
     }
@@ -159,7 +160,7 @@ pub fn join_spans(left: SourceSpan, right: SourceSpan) -> SourceSpan {
 }
 
 pub fn span_between(left: SourceSpan, right: SourceSpan) -> SourceSpan {
-    SourceSpan::from(left.offset() + left.len() .. right.offset())
+    SourceSpan::from(left.offset() + left.len()..right.offset())
 }
 
 impl Token {
@@ -203,5 +204,39 @@ impl Token {
                 "Conversion to Binary Logical Error, Token is not Logical op"
             )),
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum LiteralValue {
+    Number(f64),
+    String(String),
+}
+
+impl TryInto<f64> for LiteralValue {
+    type Error = String;
+
+    fn try_into(self) -> miette::Result<f64, Self::Error> {
+        let Self::Number(num) = self else {
+            return Err(
+                "Trying to convert to number when literal is not of type number".to_string(),
+            );
+        };
+
+        Ok(num)
+    }
+}
+
+impl TryInto<String> for LiteralValue {
+    type Error = String;
+
+    fn try_into(self) -> miette::Result<String, Self::Error> {
+        let Self::String(string) = self else {
+            return Err(
+                "Trying to convert to string when literal is not of type string".to_string(),
+            );
+        };
+
+        Ok(string)
     }
 }

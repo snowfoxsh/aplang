@@ -1,21 +1,21 @@
-use std::collections::HashMap;
+use crate::interpreter::FunctionMap;
+use crate::interpreter::Value;
+use crate::standard_library::io::input;
+use crate::std_function;
 use rand::Rng;
-use crate::interpreter::{FunctionMap, Value};
-use crate::{std_function};
-use crate::aplang_std::io::input;
+use std::collections::HashMap;
 
-mod time;
-mod std_macros;
 mod file_system;
-mod math;
 mod io;
+mod math;
+mod std_macros;
 mod strings;
 mod style;
-
+mod time;
 
 #[derive(Debug, Clone, Default)]
 pub struct Modules {
-    modules: HashMap<String, fn() -> FunctionMap>
+    modules: HashMap<String, fn() -> FunctionMap>,
 }
 
 impl Modules {
@@ -42,7 +42,6 @@ impl Modules {
     }
 
     pub fn register(&mut self, module_name: &str, injector: fn() -> FunctionMap) {
-
         // if a module is defined again with the same name, then the prev will be discarded
         let _ = self.modules.insert(module_name.to_string(), injector);
     }
@@ -50,13 +49,13 @@ impl Modules {
 
 fn std_core() -> FunctionMap {
     let mut functions = FunctionMap::new();
-    
+
     std_function!(functions => fn DISPLAY(value: Value) {
         println!("{}", value);
 
         return Ok(Value::Null)
     });
-    
+
     std_function!(functions => fn DISPLAY_NOLN(value: Value) {
         print!("{}", value);
 
@@ -74,20 +73,20 @@ fn std_core() -> FunctionMap {
 
         return Ok(Value::Null)
     });
-    
+
     std_function!(functions => fn APPEND(list: Value::List, value: Value) {
         list.borrow_mut().push(value.clone());
-        
+
         return Ok(Value::Null)
     });
-    
+
     std_function!(functions => fn REMOVE(list: Value::List, i: Value::Number) {
         // todo instead of panic with default hook make this return a nice error
         let poped = list.borrow_mut().remove(i as usize - 1);
         return Ok(poped);
     });
-    
-     std_function!(functions => fn LENGTH(list: Value::List) {
+
+    std_function!(functions => fn LENGTH(list: Value::List) {
         let len = list.borrow().len() as f64;
 
         return Ok(Value::Number(len))

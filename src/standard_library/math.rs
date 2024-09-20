@@ -1,9 +1,10 @@
-use crate::{std_function};
-use crate::interpreter::{FunctionMap, Value};
+use crate::interpreter::FunctionMap;
+use crate::interpreter::Value;
+use crate::std_function;
 
 pub(super) fn std_math() -> FunctionMap {
     let mut functions = FunctionMap::new();
-    
+
     // Trigonometric Functions
     std_function!(functions => fn SIN(angle: Value::Number) {
         let result = f64::sin(angle);
@@ -130,6 +131,6 @@ pub(super) fn std_math() -> FunctionMap {
     std_function!(functions => fn TAU() {
         return Ok(Value::Number(std::f64::consts::TAU));
     });
-    
+
     functions
 }

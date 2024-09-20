@@ -1,6 +1,6 @@
+use clap::{Parser, ValueEnum};
 use std::path::PathBuf;
 use std::sync::Arc;
-use clap::{Parser, ValueEnum};
 
 #[derive(ValueEnum, Debug, Clone, Copy)]
 pub enum DebugMode {
@@ -25,7 +25,7 @@ pub enum DebugMode {
 #[clap(
     author,
     version,
-    about="A language designed for AP Computer Science Principals students"
+    about = "A language designed for AP Computer Science Principals students"
 )]
 pub struct CommandLine {
     /// The source file that will be run, pass in a file path
@@ -40,18 +40,23 @@ pub struct CommandLine {
     #[arg(long, conflicts_with_all=&["file", "eval"])]
     pub eval_stdin: bool,
 
-
     /// Disallows execution of non .ap files
-    #[arg(long, default_value="true")]
+    #[arg(long, default_value = "true")]
     pub enforce_file_extension: bool,
 
     /// Specify the internal debug mode
-    #[arg(short='d', long, value_name="MODE", value_enum, default_value="none",
-    help_heading = "Advanced Options")]
+    #[arg(
+        short = 'd',
+        long,
+        value_name = "MODE",
+        value_enum,
+        default_value = "none",
+        help_heading = "Advanced Options"
+    )]
     pub debug: DebugMode,
 
     /// Run the checker without executing the code
-    #[arg(short='c', long, conflicts_with="debug")]
+    #[arg(short = 'c', long, conflicts_with = "debug")]
     pub check: bool,
 
     // windows stack size is 1MB which is way too small for some nested recursive code

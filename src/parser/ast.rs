@@ -1,8 +1,8 @@
+use crate::lexer::token::Token;
+use miette::SourceSpan;
 use std::hash::{Hash, Hasher};
-use crate::token::{Token};
 use std::ops::Deref;
 use std::sync::Arc;
-use miette::SourceSpan;
 // To facilitate better error handling down the line,
 // we're going to store the tokens that the thing came from
 // so we can report back to them later
@@ -32,9 +32,9 @@ pub enum Stmt {
     Block(Arc<Block>),
 
     Return(Arc<Return>),
-    
+
     Continue(Arc<Continue>),
-    
+
     Break(Arc<Break>),
 
     Import(Arc<Import>),
@@ -115,7 +115,7 @@ pub struct Import {
     pub mod_token: Token,
     pub maybe_from_token: Option<Token>,
 
-    pub only_functions: Option<Vec<Token>> ,
+    pub only_functions: Option<Vec<Token>>,
     pub module_name: Token,
 }
 
@@ -211,7 +211,6 @@ impl PartialEq for Variable {
 
 impl Eq for Variable {}
 
-
 #[derive(Debug, Clone)]
 pub struct Assignment {
     pub target: Arc<Variable>,
@@ -224,7 +223,7 @@ pub struct Assignment {
 pub struct Set {
     pub target: Expr,
     pub value: Expr,
-    
+
     pub list: Expr,
     pub idx: Expr,
 
@@ -254,7 +253,7 @@ pub enum BinaryOp {
     Minus,
     Star,
     Slash,
-    Modulo
+    Modulo,
 }
 
 #[derive(Debug, Clone)]
@@ -381,15 +380,9 @@ pub mod pretty {
                         .map(|expr| Box::new(expr.clone()) as Box<dyn TreePrinter>)
                         .into_iter(),
                 ),
-                Stmt::Import(import_stmt) => Box::new(
-                    std::iter::empty()
-                ),
-                Stmt::Continue(import_stmt) => Box::new(
-                    std::iter::empty()
-                ),
-                Stmt::Break(import_stmt) => Box::new(
-                    std::iter::empty()
-                ),
+                Stmt::Import(_import_stmt) => Box::new(std::iter::empty()),
+                Stmt::Continue(_import_stmt) => Box::new(std::iter::empty()),
+                Stmt::Break(_import_stmt) => Box::new(std::iter::empty()),
             }
         }
 
@@ -530,11 +523,13 @@ pub mod pretty {
                 ),
                 Stmt::ProcDeclaration(proc_decl) => {
                     // let params = proc_decl.join(", ");
-                    let params= proc_decl.params.iter()
+                    let params = proc_decl
+                        .params
+                        .iter()
                         .map(|var| var.ident.clone())
                         .collect::<Vec<_>>()
                         .join(", ");
-                    
+
                     write!(
                         f,
                         "procedure {}({}) {}",

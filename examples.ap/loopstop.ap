@@ -1,10 +1,14 @@
 IMPORT "FORMAT" FROM MOD "IO"
 
-i <- 1
+i <- 0
 REPEAT UNTIL (0 == 1) {
+    i <- i + 1
+    IF (i == 3) {
+        CONTINUE // skip number 3
+    }
+
     IF (i >= 5) {
         BREAK
     }
     DISPLAY(FORMAT("i is: {}", [i]))
-    i <- i + 1
 }
