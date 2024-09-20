@@ -1,3 +1,3 @@
 pub mod ast;
 mod parser;
-pub use parser::Parser2;
+pub use parser::Parser;

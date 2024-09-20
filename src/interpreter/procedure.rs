@@ -18,7 +18,7 @@ pub trait Callable {
         &self,
         interpreter: &mut Interpreter,
         args: &[Value],
-        args_toks: &[SourceSpan],
+        args_tokens: &[SourceSpan],
         source: Arc<str>,
     ) -> Result<Value, RuntimeError>;
     fn arity(&self) -> u8;
@@ -38,7 +38,7 @@ impl Callable for Procedure {
         args_tokens: &[SourceSpan],
         source: Arc<str>,
     ) -> Result<Value, RuntimeError> {
-        // save the retval
+        // save the return value
         let cached_return_value = interpreter.return_value.clone();
 
         // todo: consider allowing variables to be taken into context
@@ -55,14 +55,14 @@ impl Callable for Procedure {
         // execute the function
         interpreter.stmt(&self.body)?;
 
-        let retval = interpreter.return_value.clone();
+        let return_value = interpreter.return_value.clone();
         // todo implement backtrace
-        interpreter.return_value = cahced_return_value;
+        interpreter.return_value = cached_return_value;
 
         // restore the previous env
         interpreter.venv.scrape();
 
-        match retval {
+        match return_value {
             None => Ok(Value::Null),
             Some(value) => Ok(value),
         }
@@ -79,7 +79,7 @@ pub struct NativeProcedure {
     pub callable: fn(
         &mut Interpreter,
         &[Value],
-        args_toks: &[SourceSpan],
+        args_tokens: &[SourceSpan],
         source: Arc<str>,
     ) -> Result<Value, RuntimeError>,
 }
@@ -89,10 +89,10 @@ impl Callable for NativeProcedure {
         &self,
         interpreter: &mut Interpreter,
         args: &[Value],
-        args_toks: &[SourceSpan],
+        args_tokens: &[SourceSpan],
         source: Arc<str>,
     ) -> Result<Value, RuntimeError> {
-        (self.callable)(interpreter, args, args_toks, source)
+        (self.callable)(interpreter, args, args_tokens, source)
     }
 
     fn arity(&self) -> u8 {

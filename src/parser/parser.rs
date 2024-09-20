@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use crate::lexer::token::TokenType::*;
 
-pub struct Parser2 {
+pub struct Parser {
     tokens: Vec<Token>,
     source: Arc<str>,
     named_source: NamedSource<Arc<str>>,
@@ -21,7 +21,7 @@ pub struct Parser2 {
     in_loop_scope: bool,
 }
 
-impl Parser2 {
+impl Parser {
     pub(crate) fn new(tokens: Vec<Token>, source: Arc<str>, file_name: &str) -> Self {
         Self {
             tokens,
@@ -65,7 +65,7 @@ impl Parser2 {
 }
 
 /// parse expression
-impl Parser2 {
+impl Parser {
     fn declaration(&mut self) -> miette::Result<Stmt> {
         // Procedure might start with export.
         // If it needs special treatment
@@ -1254,7 +1254,7 @@ impl Parser2 {
     }
 }
 /// Helper methods for the `Parser2` struct.
-impl Parser2 {
+impl Parser {
     /// Synchronizes the parser by advancing tokens until it reaches a likely
     /// starting point for a new statement or declaration.
     fn synchronize(&mut self) {
@@ -1459,10 +1459,10 @@ impl Parser2 {
 }
 
 pub(super) mod warning {
-    use crate::parser::Parser2;
+    use crate::parser::Parser;
     use miette::Report;
 
-    impl Parser2 {
+    impl Parser {
         pub(super) fn warning(&mut self, report: Report) {
             self._warnings
                 .push(report.with_source_code(self.named_source.clone()))

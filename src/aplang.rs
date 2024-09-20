@@ -6,7 +6,7 @@ use crate::lexer::token::Token;
 use crate::lexer::Lexer;
 use crate::parser::ast::pretty::TreePrinter;
 use crate::parser::ast::Ast;
-use crate::parser::Parser2;
+use crate::parser::Parser;
 use miette::Report;
 use std::fmt::Write;
 use std::marker::PhantomData;
@@ -120,7 +120,7 @@ impl ApLang<Lexed> {
             .to_string_lossy()
             .into_owned();
 
-        let mut parser = Parser2::new(tokens, Arc::clone(&self.source_code), file_name.as_str());
+        let mut parser = Parser::new(tokens, Arc::clone(&self.source_code), file_name.as_str());
 
         let ast = parser.parse()?;
 

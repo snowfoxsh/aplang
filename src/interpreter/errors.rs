@@ -1,5 +1,5 @@
 use miette::{Diagnostic, LabeledSpan, NamedSource, Report, SourceCode, SourceSpan};
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Debug, Display};
 use std::sync::Arc;
 use thiserror::Error;
 
