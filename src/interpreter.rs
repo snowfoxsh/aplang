@@ -93,17 +93,17 @@ impl Callable for Procedure {
             .for_each(|(param, arg)| {
                 interpreter.venv.define(Arc::new(param.clone()), arg)
             });
-        
+
         // execute the function
         interpreter.stmt(&self.body)?;
-        
+
         let retval = interpreter.ret_val.clone();
         // todo implement backtrace
         interpreter.ret_val = cached_retval;
 
         // restore the previous env
         interpreter.venv.scrape();
-        
+
         match retval {
             None => Ok(Value::Null),
             Some(value) =>Ok(value),
@@ -125,7 +125,7 @@ impl Callable for NativeProcedure {
     fn call(&self, interpreter: &mut Interpreter, args: &[Value], args_toks: &[SourceSpan], source: Arc<str>) -> Result<Value, RuntimeError> {
         (self.callable)(interpreter, args, args_toks, source)
     }
-    
+
     fn arity(&self) -> u8 {
         self.arity
     }
@@ -214,7 +214,7 @@ impl Env {
             .variables
             .insert(variable.ident.clone(), (value, variable));
     }
-    
+
     /// look up a variable based on the symbol
     pub fn lookup_name(&mut self, var: &str, tok: Token, file_path: String) -> Result<&(Value, Arc<Variable>), RuntimeError> {
         self.activate()
@@ -267,21 +267,25 @@ impl Default for Env {
         env.initialize_empty_scope();
         env
     }
-    
+
+}
+
+#[derive(Copy, Clone, Default)]
+struct LoopControl {
+    should_break: bool,
+    should_continue: bool,
 }
 
 #[derive(Clone)]
 pub struct Interpreter {
     venv: Env,
     ast: Ast,
-    
+
     file_path: Option<PathBuf>,
-    
+
     ret_val: Option<Value>,
-    in_loop_scope: bool,
-    should_loop_break: bool,
-    should_loop_continue: bool,
-    
+    loop_stack: Vec<LoopControl>,
+
     modules: Modules,
 }
 
@@ -292,20 +296,21 @@ impl Interpreter {
             ast,
             file_path: file_path.clone(),
             ret_val: None,
-            in_loop_scope: false,
-            should_loop_break: false,
-            should_loop_continue: false,
+
+            loop_stack: vec![], // *
             modules: Modules::init(),
         };
+        //* we start in no loops
+        //* if the stack is empty then we are not in a loop anymore
 
         // initiate the core std functions
         interpreter.venv.functions.extend(
             interpreter.modules.lookup("CORE").unwrap()()
         );
-        
+
         interpreter
     }
-    
+
     pub fn get_file_path(&self) -> String {
         if let Some(file_path) = &self.file_path {
             file_path.to_string_lossy().into_owned()
@@ -330,11 +335,11 @@ impl Interpreter {
         self.ast.program = program; // restore program
         Ok(self.venv.exports)
     }
-    
+
     pub fn interpret(&mut self) -> Result<(), RuntimeError> {
         // temporarily take the program to avoid borrow error
         let program = mem::take(&mut self.ast.program);
-        
+
         for stmt in &program {
             match stmt {
                 Stmt::Expr(expr) => {
@@ -343,18 +348,18 @@ impl Interpreter {
                 stmt => self.stmt(stmt)?,
             }
         }
-        
+
         self.ast.program = program; // restore program
         Ok(())
     }
-    
+
     pub fn interpret_debug(&mut self) -> Result<Vec<Value>, RuntimeError> {
         let mut values = vec![];
-    
+
         let program = mem::take(&mut self.ast.program); // Temporarily take the program
-    
+
         for stmt in &program {
-    
+
             match stmt {
                 Stmt::Expr(expr) => {
                     let value = self.expr(expr.deref())?;
@@ -363,11 +368,11 @@ impl Interpreter {
                 stmt => self.stmt(stmt)?,
             }
         }
-    
+
         self.ast.program = program; // Restore the program
         Ok(values)
     }
-    
+
     // a stmt by definition returns nothing
     fn stmt(&mut self, stmt: &Stmt) -> Result<(), RuntimeError> {
         match stmt {
@@ -385,23 +390,30 @@ impl Interpreter {
             Stmt::RepeatTimes(repeat_times) => {
                 match self.expr(&repeat_times.count)? {
                     Value::Number(count) => {
+                        // we are now in a loop so keep track of the loop_stack
+                        self.loop_stack.push(LoopControl::default());
+
                         // floor the value into an int so we can iterate
                         let count = count as usize;
                         for _ in 1..=count {
-                            // if the BREAK stmt was called then we need to deal with that
-                            if self.should_loop_break {
-                                self.should_loop_break = false;
+                            // if the BREAK stmt was called handle it
+                            if self.loop_stack.last().unwrap().should_break {
+                                self.loop_stack.last_mut().unwrap().should_break = false;
                                 break;
                             }
 
-                            // if the CONTINUE stmt was called then we need to deal with that
-                            if self.should_loop_continue {
-                                self.should_loop_continue = false;
+                            // if the CONTINUE stmt was called handle it
+                            if self.loop_stack.last().unwrap().should_continue {
+                                self.loop_stack.last_mut().unwrap().should_continue = false;
                                 continue;
                             }
 
                             self.stmt(&repeat_times.body)?;
                         }
+
+                        // exit the loop
+                        assert!(self.loop_stack.pop().is_some());
+
                         Ok(())
                     } // format!("cannot do count for value {value:?}")
                     value => Err(
@@ -416,21 +428,28 @@ impl Interpreter {
                 }
             }
             Stmt::RepeatUntil(repeat_until) => {
+                // enter a loop
+                self.loop_stack.push(LoopControl::default());
+
                 while !Self::is_truthy(&self.expr(&repeat_until.condition)?) {
-                    // if the BREAK stmt was called then we need to deal with that
-                    if self.should_loop_break {
-                        self.should_loop_break = false;
+                    // if the BREAK stmt was called handle it
+                    if self.loop_stack.last().unwrap().should_break {
+                        self.loop_stack.last_mut().unwrap().should_break = false;
                         break;
                     }
 
-                    // if the CONTINUE stmt was called then we need to deal with that
-                    if self.should_loop_continue {
-                        self.should_loop_continue = false;
+                    // if the CONTINUE stmt was called handle it
+                    if self.loop_stack.last().unwrap().should_continue {
+                        self.loop_stack.last_mut().unwrap().should_continue = false;
                         continue;
                     }
 
                     self.stmt(&repeat_until.body)?;
                 }
+
+                // exit the loop
+                assert!(self.loop_stack.pop().is_some());
+
                 Ok(())
             }
             Stmt::ForEach(for_each) => {
@@ -456,28 +475,37 @@ impl Interpreter {
                 // if the variable already exists temperately remove it so doesn't get lost
                 let maybe_cached = self.venv.remove(element.clone());
 
+                // enter into the loop
+                self.loop_stack.push(LoopControl::default());
+
                 let len = values.borrow().len();
                 for i in 0..len {
                     // inserting temporary value into env
                     self.venv.define(element.clone(), values.borrow()[i].clone());
                     // execute body
-                    // if the BREAK stmt was called then we need to deal with that
-                    if self.should_loop_break {
-                        self.should_loop_break = false;
+
+                    // handle break and continue
+
+                    // if the BREAK stmt was called handle it
+                    if self.loop_stack.last().unwrap().should_break {
+                        self.loop_stack.last_mut().unwrap().should_break = false;
                         break;
                     }
 
                     // if the CONTINUE stmt was called then we need to deal with that
-                    if self.should_loop_continue {
-                        self.should_loop_continue = false;
+                    if self.loop_stack.last().unwrap().should_continue {
+                        self.loop_stack.last_mut().unwrap().should_continue = false;
                         continue;
                     }
+
 
                     // todo possible bug: confirm that this doesnt have any weird value errors
                     self.stmt(&for_each.body)?;
                     // get temp val out and change it in vec
                     (*values.borrow_mut())[i] = self.venv.remove(element.clone()).unwrap().0;
                 }
+
+                assert!(self.loop_stack.pop().is_some());
 
                 // put it back if it was originally defined
                 if let Some((cached_value, cached_variable)) = maybe_cached {
@@ -516,17 +544,20 @@ impl Interpreter {
                 Ok(())
             }
             Stmt::Continue(cont) => {
-
                 // we should be in a loop scope here
                 // if not, uh oh
-                self.should_loop_continue = true;
-
+                // *should* be insured by the parser
+                // todo: write an actual error message instead of panicking here
+                self.loop_stack.last_mut().unwrap().should_continue = true;
+                    
                 Ok(())
             },
             Stmt::Break(brk) => {
                 // we should be in a loop scope here
                 // if not, uh oh
-                self.should_loop_break = true;
+                // *should* be insured by the parser
+                // todo: write an actual error message instead of panicking here
+                self.loop_stack.last_mut().unwrap().should_break = true;
 
                 Ok(())
             }
@@ -534,13 +565,11 @@ impl Interpreter {
                 self.venv.create_nested_layer();
 
                 for stmt in block.statements.iter() {
-                    if self.should_loop_continue || self.should_loop_break {
-                        // we should be in a loop scope now
-                        // if we aren't, uh oh
-
+                    if self.loop_stack.last().is_some_and(|lc| lc.should_break || lc.should_continue) {
+                        // if we are in a loop then we need to STOP execution
                         break;
                     }
-
+                    
                     self.stmt(stmt)?
                 }
 
@@ -931,13 +960,14 @@ impl Interpreter {
                     )
                 }
             }
-            (String(a), Plus, String(b)) => Ok(String(format!("{a}{b}"))),
+            // if we add to a string implicitly cast the other thing to a string for convenience 
+            (String(a), Plus, b) => Ok(String(format!("{a}{b}"))),
             (List(a), Plus, List(b)) => {
                 // adding two lists
                 // todo: consider using try_borrow?
                 let new_list: Vec<_> = a.borrow().iter().cloned().chain(b.borrow().iter().cloned()).collect();
                 Ok(List(RefCell::new(new_list).into()))
-            }
+            },
             _ => Err(
                 RuntimeError {
                     named_source: NamedSource::new(self.get_file_path(), node.token.source.clone()),
