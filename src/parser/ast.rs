@@ -381,13 +381,13 @@ pub mod pretty {
                         .map(|expr| Box::new(expr.clone()) as Box<dyn TreePrinter>)
                         .into_iter(),
                 ),
-                Stmt::Import(import_stmt) => Box::new(
+                Stmt::Import(_import_stmt) => Box::new(
                     std::iter::empty()
                 ),
-                Stmt::Continue(import_stmt) => Box::new(
+                Stmt::Continue(_import_stmt) => Box::new(
                     std::iter::empty()
                 ),
-                Stmt::Break(import_stmt) => Box::new(
+                Stmt::Break(_import_stmt) => Box::new(
                     std::iter::empty()
                 ),
             }

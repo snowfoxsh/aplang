@@ -6,15 +6,15 @@ macro_rules! std_function {
             (std::rc::Rc::new($crate::interpreter::NativeProcedure {
                 name: String::from(stringify!($name)),
                 arity: $crate::arity!($($arg)*),
-                callable: |_interpreter: &mut $crate::interpreter::Interpreter,  args: &[$crate::interpreter::Value], args_toks: &[miette::SourceSpan], source: std::sync::Arc<str>| {
+                callable: |_interpreter: &mut $crate::interpreter::Interpreter,  args: &[$crate::interpreter::Value], args_toks: &[miette::SourceSpan], _source: std::sync::Arc<str>| {
                     #[allow(unused_mut, unused_variables)]
                     let mut iter = args.into_iter();
                     #[allow(unused_mut)]
-                    let mut iter_toks = iter.zip(args_toks.into_iter());
+                    let mut __iter_toks = iter.zip(args_toks.into_iter());
 
                     $(
-                        let $arg = iter_toks.next().unwrap();
-                        $crate::unwrap_arg_type!($arg => Value $(::$arg_type)?, _interpreter, source);
+                        let $arg = __iter_toks.next().unwrap();
+                        $crate::unwrap_arg_type!($arg => Value $(::$arg_type)?, _interpreter, _source);
                     )*
 
                     $($body)*

@@ -294,7 +294,7 @@ impl Interpreter {
 
                 Ok(())
             }
-            Stmt::Continue(cont) => {
+            Stmt::Continue(_cont) => {
                 // we should be in a loop scope here
                 // if not, uh oh
                 // *should* be insured by the parser
@@ -303,7 +303,7 @@ impl Interpreter {
 
                 Ok(())
             },
-            Stmt::Break(brk) => {
+            Stmt::Break(_brk) => {
                 // we should be in a loop scope here
                 // if not, uh oh
                 // *should* be insured by the parser
@@ -405,7 +405,7 @@ impl Interpreter {
 
 
                     // init the module interpreter
-                    let aplang = ApLang::new_from_file(maybe_path.to_path_buf()).map_err(|err| {
+                    let aplang = ApLang::new_from_file(maybe_path.to_path_buf()).map_err(|_err| {
                         RuntimeError {
                             named_source: NamedSource::new(self.get_file_path(), import.module_name.source.clone()),
                             span: import.module_name.span,
@@ -794,7 +794,7 @@ impl Interpreter {
                     label: "Cannot do operand here".to_string()
                 }
             ),
-            (op, List(l)) => Err(
+            (op, List(_l)) => Err(
                 RuntimeError {
                     named_source: NamedSource::new(self.get_file_path(), node.token.source.clone()),
                     span: node.token.span,

@@ -20,7 +20,6 @@ pub struct Lexed;
 pub struct Parsed;
 pub struct Executed;
 pub struct ExecutedWithDebug;
-pub struct Module;
 
 pub struct ApLang<State = Initialized> {
     source_code: Arc<str>,

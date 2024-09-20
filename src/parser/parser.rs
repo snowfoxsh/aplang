@@ -1,4 +1,3 @@
-
 use crate::parser::ast::*;
 use crate::lexer::token::LiteralValue;
 use crate::lexer::token::TokenType::{Eof, LeftParen, RightParen};
@@ -18,7 +17,7 @@ pub struct Parser2 {
     named_source: NamedSource<Arc<str>>,
     current: usize,
     in_function_scope: bool,
-    warnings: Vec<Report>,
+    _warnings: Vec<Report>,
     in_loop_scope: bool,
 }
 
@@ -31,7 +30,7 @@ impl Parser2 {
             in_loop_scope: false,
             named_source: NamedSource::new(file_name, source),
             current: 0,
-            warnings: vec![],
+            _warnings: vec![],
         }
     }
 
@@ -120,7 +119,7 @@ impl Parser2 {
 
         let name = name_token.lexeme.clone();
 
-        let lp_token = self
+        let _lp_token = self
             .consume(&LeftParen, |token| {
                 let labels = vec![
                     LabeledSpan::at(token.span(), "expected a `(`"),
@@ -145,14 +144,14 @@ impl Parser2 {
 
             loop {
                 if params.len() > 255 {
-                    let peeked = self.peek();
+                    let _peeked = self.peek();
                     return Err(miette! {
                         "todo: params cannot exceed 255, why the f**k do you need so many?"
                     });
                 }
 
                 // we expect there to be parameters
-                let token = self.consume(&Identifier, |token| miette!(
+                let token = self.consume(&Identifier, |_token| miette!(
                     "hello"
                 ))?.clone();
 
@@ -167,7 +166,7 @@ impl Parser2 {
             }
         }
 
-        let rp_token = self
+        let _rp_token = self
             .consume(&RightParen, |token| {
                 let labels = vec![LabeledSpan::at(token.span(), "expected a `)`")];
 
@@ -283,7 +282,7 @@ impl Parser2 {
         }
 
         let rb_token = self
-            .consume(&RightBrace, |token| {
+            .consume(&RightBrace, |_token| {
                 let labels = vec![LabeledSpan::at(
                     lb_token.span(),
                     "this delimiter requires a closing `}`",
@@ -380,7 +379,7 @@ impl Parser2 {
                     let labels = vec![
                         LabeledSpan::at(correct_span, "just import the entire module")
                     ];
-                    let s = 2.0;
+                    let _s = 2.0;
 
                     return Err(miette!(
                         labels = labels,
@@ -389,7 +388,7 @@ impl Parser2 {
                     ));
                 }
 
-                let specific_functions = self.consume(&StringLiteral, |found| miette!(
+                let _specific_functions = self.consume(&StringLiteral, |found| miette!(
                     "expected a specific function instead found {}", found
                 ))?;
 
@@ -400,7 +399,7 @@ impl Parser2 {
             }
 
             // close off the specific functions
-            let _rbracket = self.consume(&RightBracket, |found| miette! {
+            let _rbracket = self.consume(&RightBracket, |_found| miette! {
                 ""
             })?;
 
@@ -421,15 +420,15 @@ impl Parser2 {
             None
         };
 
-        let mod_token = self.consume(&Mod, |token| miette! {
+        let mod_token = self.consume(&Mod, |_token| miette! {
             "todo: expected a mod token following import. could also be a specific function" // todo make this better
         })?.clone();
 
-        let module_name = self.consume(&StringLiteral, |token| miette! {
+        let module_name = self.consume(&StringLiteral, |_token| miette! {
             "todo: expected a string literal specifying the type of import"
         })?.clone();
 
-        self.consume(&SoftSemi, |token| miette! {
+        self.consume(&SoftSemi, |_token| miette! {
             "todo: expected a semicolon following import statement"
         })?;
 
@@ -445,7 +444,7 @@ impl Parser2 {
 
     fn if_statement(&mut self, if_token: Token) -> miette::Result<Stmt> {
         // todo: improve this report
-        let lp_token = self
+        let _lp_token = self
             .consume(&LeftParen, |token| {
                 // miette!("expected lp_token")
                 let labels = vec![
@@ -465,7 +464,7 @@ impl Parser2 {
 
         let condition = self.expression()?;
 
-        let rp_token = self
+        let _rp_token = self
             .consume(&RightParen, |token| {
                 // miette!("Expected `)` found {}", token)
                 let labels = vec![LabeledSpan::at(token.span(), "expected a `)`")];
@@ -551,7 +550,7 @@ impl Parser2 {
         self.confirm(&Repeat)?;
 
         let until_token = self
-            .consume(&Until, |token| {
+            .consume(&Until, |_token| {
                 // todo: improve this error
                 // miette!(
                 //     "expected until token after repeat token"
@@ -572,7 +571,7 @@ impl Parser2 {
             })?
             .clone();
 
-        let lp_token = self.consume(&LeftParen, |token| {
+        let _lp_token = self.consume(&LeftParen, |token| {
             // todo: improve this error
             let labels = vec![
                 LabeledSpan::at(token.span(), "expected a `(`"),
@@ -589,7 +588,7 @@ impl Parser2 {
 
         let condition = self.expression()?;
 
-        let rp_token = self
+        let _rp_token = self
             .consume(&RightParen, |token| {
                 // todo: improve this error
                 let labels = vec![LabeledSpan::at(token.span(), "expected a `)`")];
@@ -1446,7 +1445,7 @@ pub(super) mod warning {
 
     impl Parser2 {
         pub(super) fn warning(&mut self, report: Report) {
-            self.warnings
+            self._warnings
                 .push(report.with_source_code(self.named_source.clone()))
         }
     }
@@ -1461,7 +1460,7 @@ impl<T, E> ExpectMiette<T> for Result<T, E> {
         match self {
             Ok(t) => t,
             Err(_) => {
-                let report = report_handler();
+                let _report = report_handler();
                 panic!()
             }
         }
@@ -1473,7 +1472,7 @@ impl<T> ExpectMiette<T> for Option<T> {
         match self {
             Some(t) => t,
             None => {
-                let report = report_handler();
+                let _report = report_handler();
                 panic!()
             }
         }

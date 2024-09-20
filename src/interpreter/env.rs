@@ -84,7 +84,7 @@ impl Env {
     }
 
     pub fn lookup_function(&self, function_name: String, tok: Token, file_path: String) -> Result<Rc<dyn Callable>, RuntimeError> {
-        let (a, b) = self.functions.get(&function_name).ok_or(
+        let (a, _b) = self.functions.get(&function_name).ok_or(
             RuntimeError {
                 named_source: NamedSource::new(file_path, tok.source.clone()),
                 span: tok.span,
