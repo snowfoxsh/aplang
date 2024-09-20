@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use rand::Rng;
-use crate::interpreter::{FunctionMap, Value};
-use crate::{std_function};
-use crate::aplang_std::io::input;
+use crate::interpreter::FunctionMap;
+use crate::std_function;
+use crate::standard_library::io::input;
+use crate::interpreter::Value;
 
 mod time;
 mod std_macros;

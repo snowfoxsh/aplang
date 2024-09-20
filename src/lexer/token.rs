@@ -1,5 +1,4 @@
-use crate::ast::{BinaryOp, LogicalOp, UnaryOp};
-use crate::lexer::LiteralValue;
+use crate::parser::ast::{BinaryOp, LogicalOp, UnaryOp};
 use miette::{miette, LabeledSpan, SourceSpan};
 use std::collections::HashMap;
 use std::fmt;
@@ -203,5 +202,40 @@ impl Token {
                 "Conversion to Binary Logical Error, Token is not Logical op"
             )),
         }
+    }
+}
+
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum LiteralValue {
+    Number(f64),
+    String(String),
+}
+
+impl TryInto<f64> for LiteralValue {
+    type Error = String;
+
+    fn try_into(self) -> miette::Result<f64, Self::Error> {
+        let Self::Number(num) = self else {
+            return Err(
+                "Trying to convert to number when literal is not of type number".to_string(),
+            );
+        };
+
+        Ok(num)
+    }
+}
+
+impl TryInto<String> for LiteralValue {
+    type Error = String;
+
+    fn try_into(self) -> miette::Result<String, Self::Error> {
+        let Self::String(string) = self else {
+            return Err(
+                "Trying to convert to string when literal is not of type string".to_string(),
+            );
+        };
+
+        Ok(string)
     }
 }

@@ -1,16 +1,18 @@
+use crate::interpreter::Interpreter;
 use std::{fmt, fs, io};
 use std::fmt::Write;
 use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::sync::Arc;
 use miette::Report;
-use crate::ast::{Ast};
-use crate::ast::pretty::TreePrinter;
-use crate::errors::RuntimeError;
-use crate::interpreter::{FunctionMap, Interpreter, Value};
+use crate::parser::ast::Ast;
+use crate::parser::ast::pretty::TreePrinter;
+use crate::interpreter::errors::RuntimeError;
+use crate::interpreter::FunctionMap;
+use crate::interpreter::Value;
 use crate::lexer::Lexer;
 use crate::parser::Parser2;
-use crate::token::Token;
+use crate::lexer::token::Token;
 
 
 pub struct Initialized;

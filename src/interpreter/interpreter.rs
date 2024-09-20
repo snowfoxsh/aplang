@@ -1,18 +1,19 @@
-use std::cell::{RefCell};
-use crate::ast::{Ast, Binary, BinaryOp, Expr, Literal, LogicalOp, ProcCall, ProcDeclaration, Stmt, Unary, UnaryOp, Variable};
-use std::collections::HashMap;
-use std::fmt::{Display, Formatter};
-use std::{mem};
-use std::ops::Deref;
-use std::path::{PathBuf};
+use std::path::PathBuf;
+use std::mem;
+use miette::NamedSource;
 use std::rc::Rc;
+use std::cell::RefCell;
 use std::sync::Arc;
-use miette::{NamedSource, SourceSpan};
+use std::ops::Deref;
 use crate::aplang::ApLang;
-use crate::errors::{Reports, RuntimeError};
-use crate::aplang_std::Modules;
-use crate::lexer::LiteralValue;
-use crate::token::Token;
+use crate::standard_library::Modules;
+use crate::parser::ast::{Ast, Binary, Expr, Literal, ProcCall, Stmt, Unary};
+use crate::interpreter::errors::{Reports, RuntimeError};
+use crate::interpreter::procedure::FunctionMap;
+use crate::interpreter::env::{Env, LoopControl};
+use crate::interpreter::procedure::Procedure;
+use crate::interpreter::value::Value;
+use crate::lexer::token::LiteralValue;
 
 // we're using this weird error type because miette! slows down the execution
 // of recursive code by a HUGE amount
@@ -22,268 +23,14 @@ use crate::token::Token;
 // make reports better and easier to write
 // increment this counter if you try to solve this and fail
 // COLLECTIVE HOURS WASTED: 20
-
-// variable value types
-#[derive(Clone, Debug)]
-pub enum Value {
-    Null,
-    Number(f64),
-    Bool(bool),
-    String(String),
-    List(Rc<RefCell<Vec<Value>>>),
-    NativeFunction(),
-    Function(),
-}
-
-impl Display for Value {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-                Value::Null => write!(f, "NULL"),
-                Value::List(l) => {
-                    // Borrow the list to access its elements
-                    let list = l.borrow();
-
-                    // Begin the list with an opening bracket
-                    write!(f, "[")?;
-
-                    // Iterate over the elements, formatting each one
-                    for (i, item) in list.iter().enumerate() {
-                        if i > 0 {
-                            // Add a comma and space before all elements except the first
-                            write!(f, ", ")?;
-                        }
-                        // Write the current element using its Display implementation
-                        write!(f, "{}", item)?;
-                    }
-
-                    // Close the list with a closing bracket
-                    write!(f, "]")
-                }
-                Value::String(s) => write!(f, "{s}"),
-                Value::Number(v) => write!(f, "{v}"),
-                Value::Bool(b) => write!(f, "{b}", ),
-                _ => { write!(f, "FUNCTION")}
-        }
-    }
-}
-
-pub trait Callable {
-    fn call(&self, interpreter: &mut Interpreter, args: &[Value], args_toks: &[SourceSpan], source: Arc<str>) -> Result<Value, RuntimeError>;
-    fn arity(&self) -> u8;
-}
-
-pub struct Procedure {
-    pub name: String,
-    pub params: Vec<Variable>,
-    pub body: Stmt,
-}
-
-impl Callable for Procedure {
-    fn call(&self, interpreter: &mut Interpreter, args: &[Value], args_toks: &[SourceSpan], source: Arc<str>) -> Result<Value, RuntimeError> {
-        // save the retval
-        let cached_retval = interpreter.ret_val.clone();
-
-        // todo: consider allowing variables to be taken into context
-        // ignore the global env
-        interpreter.venv.initialize_empty_scope();
-
-        // copy in the arguments
-        // assigns them to their appropriate name parameter
-        self.params.iter().zip(args.iter().cloned())
-            .for_each(|(param, arg)| {
-                interpreter.venv.define(Arc::new(param.clone()), arg)
-            });
-
-        // execute the function
-        interpreter.stmt(&self.body)?;
-
-        let retval = interpreter.ret_val.clone();
-        // todo implement backtrace
-        interpreter.ret_val = cached_retval;
-
-        // restore the previous env
-        interpreter.venv.scrape();
-
-        match retval {
-            None => Ok(Value::Null),
-            Some(value) =>Ok(value),
-        }
-    }
-
-    fn arity(&self) -> u8 {
-        self.params.len().try_into().unwrap()
-    }
-}
-
-pub struct NativeProcedure {
-    pub name: String,
-    pub arity: u8,
-    pub callable: fn(&mut Interpreter, &[Value], args_toks: &[SourceSpan], source: Arc<str>) -> Result<Value, RuntimeError>
-}
-
-impl Callable for NativeProcedure {
-    fn call(&self, interpreter: &mut Interpreter, args: &[Value], args_toks: &[SourceSpan], source: Arc<str>) -> Result<Value, RuntimeError> {
-        (self.callable)(interpreter, args, args_toks, source)
-    }
-
-    fn arity(&self) -> u8 {
-        self.arity
-    }
-}
-
-
-
-pub type FunctionMap = HashMap<String, (Rc<dyn Callable>, Option<Arc<ProcDeclaration>>)>;
-/*                            |^^^^^^  |^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^|> Maybe pointer to function def
-                              |        |                                                  If None: it is native function
-                              |        |> Pointer to the function
-                              |> Function name (symbol)
-*/
-
-// context structure, contains variables
-//
-// behavior:
-// declaration and assignment are the same,
-// therefore, values will be overwritten
-// when declared multiple times
-//
-// methods:
-// - get variable
-// - update variable
-// - lookup variable
-// does the same for functions
-#[derive(Clone)]
-pub struct Env {
-    /// private functions
-    pub functions: FunctionMap,
-
-    /// public functions
-    pub exports: FunctionMap,
-
-    venv: Vec<Context>,
-}
-
-#[derive(Default, Clone, Debug)]
-struct Context {
-    variables: HashMap<String, (Value, Arc<Variable>)>,
-    //              |^^^^^   |^^^       ^^^^^^^^|> Source code pointer
-    //              |        |> Value of symbol
-    //              |> Name of symbol
-
-    // functions: HashMap<String, ~~Function~~ >
-}
-
-impl Env {
-    /// used for creating function (or the base env)
-    pub fn initialize_empty_scope(&mut self) {
-        self.venv.push(Context::default())
-    }
-
-    /// creates a new block scope.
-    /// used for something like a For Loop, or an If Stmt
-    pub fn create_nested_layer(&mut self) {
-        let enclosing = self.activate().clone();
-        self.venv.push(enclosing)
-    }
-
-    /// replace the previous layer with the current layer.
-    pub fn flatten_nested_layer(&mut self) {
-        let context = self.scrape();
-
-        *self.activate() = context;
-    }
-
-    /// pops off the current layer of the venv
-    fn scrape(&mut self) -> Context {
-        self.venv
-            .pop()
-            .expect("attempted to remove context but failed")
-    }
-
-    /// gets mutable ref to the current layer
-    fn activate(&mut self) -> &mut Context {
-        let len = self.venv.len();
-        &mut self.venv[len - 1]
-    }
-
-
-    /// creates a variable with some value
-    pub fn define(&mut self, variable: Arc<Variable>, value: Value) {
-        // add the variable into the context
-        self.activate()
-            .variables
-            .insert(variable.ident.clone(), (value, variable));
-    }
-
-    /// look up a variable based on the symbol
-    pub fn lookup_name(&mut self, var: &str, tok: Token, file_path: String) -> Result<&(Value, Arc<Variable>), RuntimeError> {
-        self.activate()
-            .variables
-            .get(var)
-            .ok_or(
-                RuntimeError {
-                    named_source: NamedSource::new(file_path, tok.source.clone()),
-                    span: tok.span,
-                    message: "Invalid Variable".to_string(),
-                    help: format!("Make sure to create the variable `{var}` before you use it"),
-                    label: "Could not find variable".to_string()
-                }
-            )
-    }
-
-
-    /// looks up the variable by comparing the entire variable object
-    pub fn lookup_var(&mut self, var: &Variable, file_path: String) -> Result<&Value, RuntimeError> {
-        Ok(&self.lookup_name(var.ident.as_str(), var.token.clone(), file_path)?.0)
-    }
-
-    pub fn lookup_function(&self, function_name: String, tok: Token, file_path: String) -> Result<Rc<dyn Callable>, RuntimeError> {
-        let (a, b) = self.functions.get(&function_name).ok_or(
-            RuntimeError {
-                named_source: NamedSource::new(file_path, tok.source.clone()),
-                span: tok.span,
-                message: "Invalid PROCEDURE".to_string(),
-                help: format!("Make sure to create the PROCEDURE `{function_name}` before you call it"),
-                label: "This PROCEDURE doesn't exist".to_string()
-            }
-        )?.clone();
-        Ok(a)
-    }
-
-    /// removes a variable
-    pub fn remove(&mut self, variable: Arc<Variable>) -> Option<(Value, Arc<Variable>)> {
-        self.activate().variables.remove(&variable.ident)
-    }
-
-    pub fn contains(&mut self, variable: Arc<Variable>) -> bool {
-        self.activate().variables.contains_key(&variable.ident)
-    }
-}
-
-impl Default for Env {
-    fn default() -> Self {
-        let mut env = Self { functions: Default::default(), exports: Default::default(), venv: vec![] };
-        // push the base context layer into env so we don't panic
-        env.initialize_empty_scope();
-        env
-    }
-
-}
-
-#[derive(Copy, Clone, Default)]
-struct LoopControl {
-    should_break: bool,
-    should_continue: bool,
-}
-
 #[derive(Clone)]
 pub struct Interpreter {
-    venv: Env,
+    pub(super) venv: Env,
     ast: Ast,
 
     file_path: Option<PathBuf>,
 
-    ret_val: Option<Value>,
+    pub(super) return_value: Option<Value>,
     loop_stack: Vec<LoopControl>,
 
     modules: Modules,
@@ -295,7 +42,7 @@ impl Interpreter {
             venv: Env::default(),
             ast,
             file_path: file_path.clone(),
-            ret_val: None,
+            return_value: None,
 
             loop_stack: vec![], // *
             modules: Modules::init(),
@@ -309,6 +56,10 @@ impl Interpreter {
         );
 
         interpreter
+    }
+
+    pub fn get_return_value(&self) -> &Option<Value> {
+        &self.return_value
     }
 
     pub fn get_file_path(&self) -> String {
@@ -374,7 +125,7 @@ impl Interpreter {
     }
 
     // a stmt by definition returns nothing
-    fn stmt(&mut self, stmt: &Stmt) -> Result<(), RuntimeError> {
+    pub(super) fn stmt(&mut self, stmt: &Stmt) -> Result<(), RuntimeError> {
         match stmt {
             Stmt::Expr(expr) => self.expr(expr.as_ref()).map(|_| ()),
             Stmt::IfStmt(if_stmt) => {
@@ -516,31 +267,31 @@ impl Interpreter {
             }
             Stmt::ProcDeclaration(proc_dec) => {
                 // create a new non-native aplang function
-                
+
                 let procedure = Rc::new(Procedure {
                     name: proc_dec.name.to_string(),
                     params: proc_dec.params.clone(),
                     body: proc_dec.body.clone(),
                 });
-                
+
                 self.venv.functions.insert(procedure.name.clone(), (procedure.clone(), Some(proc_dec.clone())));
 
                 if proc_dec.exported {
                     self.venv.exports.insert(procedure.name.clone(), (procedure.clone(), Some(proc_dec.clone())));
                 }
-                
+
                 Ok(())
             },
             Stmt::Return(ret_val) => {
                 // deal with the return value inside the procedure
-                
-                self.ret_val = match &ret_val.data {
+
+                self.return_value = match &ret_val.data {
                     None => Some(Value::Null),
                     Some(expr) => {
                         Some(self.expr(expr)?)
                     }
                 };
-                
+
                 Ok(())
             }
             Stmt::Continue(cont) => {
@@ -549,7 +300,7 @@ impl Interpreter {
                 // *should* be insured by the parser
                 // todo: write an actual error message instead of panicking here
                 self.loop_stack.last_mut().unwrap().should_continue = true;
-                    
+
                 Ok(())
             },
             Stmt::Break(brk) => {
@@ -569,7 +320,7 @@ impl Interpreter {
                         // if we are in a loop then we need to STOP execution
                         break;
                     }
-                    
+
                     self.stmt(stmt)?
                 }
 
@@ -582,9 +333,9 @@ impl Interpreter {
                 let Some(LiteralValue::String(module_name)) = import.module_name.literal.as_ref() else {
                     unreachable!()
                 };
-                
+
                 let mut module = if let Some(injector) = self.modules.lookup(module_name) {
-                    // if the module is a native standard library module, get it 
+                    // if the module is a native standard library module, get it
                     injector()
                 } else {
                     // the module must be a user module or invalid
@@ -671,7 +422,7 @@ impl Interpreter {
                     // execute the module, get the exports
                     parsed.execute_as_module()?
                 };
-                
+
                 // before actually adding the function, we might have to trim the module
                 // if we're using IMPORT "x" FROM MOD "y"
                 if let Some(functions) = import.only_functions.clone() {
@@ -724,7 +475,8 @@ impl Interpreter {
             .collect()
     }
     fn expr(&mut self, expr: &Expr) -> Result<Value, RuntimeError> {
-        use Expr::*;
+        use crate::parser::ast::Expr::*;
+        use crate::parser::ast::LogicalOp;
         let value = match expr {
             Grouping(inside) => self.expr(&inside.expr),
             Literal(lit) => Ok(Self::literal(&lit.value)),
@@ -781,9 +533,9 @@ impl Interpreter {
 
     fn call(&mut self, proc: &ProcCall) -> Result<Value, RuntimeError> {
         // todo: look into callee expr
-        
+
         let mut argument_evaluations = Vec::new();
-        
+
         for arg in &proc.arguments {
             argument_evaluations.push(self.expr(arg)?)
         }
@@ -806,7 +558,7 @@ impl Interpreter {
     }
 
     // help: a string can be thought of a list of chars
-    fn list(&mut self, list: &crate::ast::List) -> Result<Value, RuntimeError> {
+    fn list(&mut self, list: &crate::parser::ast::List) -> Result<Value, RuntimeError> {
         list.items
             .iter()
             .map(|expr: &Expr| self.expr(expr))
@@ -814,10 +566,10 @@ impl Interpreter {
             .map(|x|Value::List(RefCell::new(x).into()))
     }
 
-    fn access(&mut self, access: &crate::ast::Access) -> Result<Value, RuntimeError> {
+    fn access(&mut self, access: &crate::parser::ast::Access) -> Result<Value, RuntimeError> {
         let list = self.expr(&access.list)?;
         let idx = self.expr(&access.key)?;
-        
+
         let Value::Number(idx) = idx else {
             return Err(
                 RuntimeError {
@@ -829,7 +581,7 @@ impl Interpreter {
                 }
             )
         };
-        
+
         let target = match &list {
             Value::String(string) => {
                 string.chars().nth((idx - 1.0) as usize).map(|ch| Value::String(ch.to_string())).ok_or_else(||
@@ -863,11 +615,11 @@ impl Interpreter {
                 }
             )
         };
-        
+
         target
     }
 
-    fn set(&mut self, set: &crate::ast::Set) -> Result<Value, RuntimeError> {
+    fn set(&mut self, set: &crate::parser::ast::Set) -> Result<Value, RuntimeError> {
         let list = self.expr(&set.list)?;
         let idx = self.expr(&set.idx)?;
         let value = self.expr(&set.value)?;
@@ -895,7 +647,7 @@ impl Interpreter {
                 }
             )
         };
-        
+
         let mut list_borrowed = list.borrow_mut();
         if let Some(target) = list_borrowed.get_mut((idx - 1.0) as usize) {
             *target = value.clone();
@@ -918,8 +670,8 @@ impl Interpreter {
         let lhs = self.expr(&node.left)?;
         let rhs = self.expr(&node.right)?;
 
-        use BinaryOp::*;
-        use Value::*;
+        use crate::parser::ast::BinaryOp::*;
+        use crate::interpreter::value::Value::*;
         match (&lhs, &node.operator, &rhs) {
             (_, EqualEqual, _) => Ok(Bool(Self::equals(&lhs, &rhs))),
             (_, NotEqual, _) => Ok(Bool(!Self::equals(&lhs, &rhs))),
@@ -960,7 +712,7 @@ impl Interpreter {
                     )
                 }
             }
-            // if we add to a string implicitly cast the other thing to a string for convenience 
+            // if we add to a string implicitly cast the other thing to a string for convenience
             (String(a), Plus, b) => Ok(String(format!("{a}{b}"))),
             (List(a), Plus, List(b)) => {
                 // adding two lists
@@ -992,8 +744,8 @@ impl Interpreter {
     fn unary(&mut self, node: &Unary) -> Result<Value, RuntimeError> {
         let value = self.expr(&node.right)?;
 
-        use UnaryOp::*;
-        use Value::*;
+        use crate::parser::ast::UnaryOp::*;
+        use crate::interpreter::value::Value::*;
         match (&node.operator, value) {
             (Minus, Number(num)) => Ok(Number(-num)),
             (Not, value) => Ok(Bool(!Self::is_truthy(&value))),

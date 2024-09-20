@@ -1,5 +1,5 @@
 use std::hash::{Hash, Hasher};
-use crate::token::{Token};
+use crate::lexer::token::Token;
 use std::ops::Deref;
 use std::sync::Arc;
 use miette::SourceSpan;
@@ -32,9 +32,9 @@ pub enum Stmt {
     Block(Arc<Block>),
 
     Return(Arc<Return>),
-    
+
     Continue(Arc<Continue>),
-    
+
     Break(Arc<Break>),
 
     Import(Arc<Import>),
@@ -224,7 +224,7 @@ pub struct Assignment {
 pub struct Set {
     pub target: Expr,
     pub value: Expr,
-    
+
     pub list: Expr,
     pub idx: Expr,
 
@@ -353,9 +353,9 @@ pub mod pretty {
                     std::iter::once(
                         Box::new(repeat_until.condition.clone()) as Box<dyn TreePrinter>
                     )
-                    .chain(std::iter::once(
-                        Box::new(repeat_until.body.clone()) as Box<dyn TreePrinter>,
-                    )),
+                        .chain(std::iter::once(
+                            Box::new(repeat_until.body.clone()) as Box<dyn TreePrinter>,
+                        )),
                 ),
                 Stmt::ForEach(for_each) => Box::new(
                     std::iter::once(Box::new(for_each.list.clone()) as Box<dyn TreePrinter>).chain(
@@ -534,7 +534,7 @@ pub mod pretty {
                         .map(|var| var.ident.clone())
                         .collect::<Vec<_>>()
                         .join(", ");
-                    
+
                     write!(
                         f,
                         "procedure {}({}) {}",

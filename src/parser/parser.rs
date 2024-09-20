@@ -1,31 +1,16 @@
-use crate::ast::*;
-use crate::lexer::LiteralValue;
-use crate::token::TokenType::{Eof, LeftParen, RightParen};
-use crate::token::{Token, TokenType};
-use crate::ast::Return as ReturnValue;
-use crate::ast::Import as ImportStatement;
-use crate::ast::Continue as ContinueStatement;
-use crate::ast::Break as BreakStatement;
+
+use crate::parser::ast::*;
+use crate::lexer::token::LiteralValue;
+use crate::lexer::token::TokenType::{Eof, LeftParen, RightParen};
+use crate::lexer::token::{Token, TokenType};
+use crate::parser::ast::Return as ReturnValue;
+use crate::parser::ast::Import as ImportStatement;
+use crate::parser::ast::Continue as ContinueStatement;
+use crate::parser::ast::Break as BreakStatement;
 use miette::{miette, LabeledSpan, NamedSource, Report, SourceSpan};
 use std::sync::Arc;
 
-// something like
-// self.consume(Semicolon, "Expected ';' after expression.")?;
-// should have a diagnostic pointing to the before expression
-// let previous
-
-// add functionality miette mutilate that will insert x spaces before the error
-
-// #[derive(Error, Diagnostic, Debug)]
-// struct ExpectedError {
-//     #[source_code]
-//     src: NamedSource<Arc<str>>,
-//
-//
-//     found: SourceSpan,
-// }
-
-use crate::token::TokenType::*;
+use crate::lexer::token::TokenType::*;
 
 pub struct Parser2 {
     tokens: Vec<Token>,
@@ -83,7 +68,7 @@ impl Parser2 {
 /// parse expression
 impl Parser2 {
     fn declaration(&mut self) -> miette::Result<Stmt> {
-        // Procedure might start with export. 
+        // Procedure might start with export.
         // If it needs special treatment
         if self.match_tokens(&[Export, Procedure]) {
             return self.procedure();
@@ -93,14 +78,14 @@ impl Parser2 {
 
     fn procedure(&mut self) -> miette::Result<Stmt> {
         let export_or_procedure = self.previous().clone();
-        
+
         let (proc_token, exported) = if export_or_procedure.token_type == Export {
             let proc_token = self.consume(&Procedure, |token| {
                 let labels = vec![
                     LabeledSpan::at(token.span(), "expected keyword 'PROCEDURE' here"),
                     LabeledSpan::at(token.span(), "'EXPORT' cannot exist alone"),
                 ];
-                
+
                 miette!(
                     labels = labels,
                     code = "standalone_export",
@@ -113,7 +98,7 @@ impl Parser2 {
         } else {
             (export_or_procedure, false)
         };
-        
+
         let name_token = self
             .consume(&Identifier, |token| {
                 let labels = vec![
@@ -185,7 +170,7 @@ impl Parser2 {
         let rp_token = self
             .consume(&RightParen, |token| {
                 let labels = vec![LabeledSpan::at(token.span(), "expected a `)`")];
-                
+
                 miette!(
                     labels = labels,
                     code = "missing_rp",
@@ -196,10 +181,10 @@ impl Parser2 {
             })?
             .clone();
 
-        // cache previous function state and set to true temporarily, since we're in a 
+        // cache previous function state and set to true temporarily, since we're in a
         let function_scope_state_cache = self.in_function_scope;
         self.in_function_scope = true;
-        
+
         // parse the body of the function
         let body = self.statement()?;
         // restore the previous function scope state
@@ -320,7 +305,7 @@ impl Parser2 {
                 statements,
                 rb_token,
             }
-            .into(),
+                .into(),
         ))
     }
 
@@ -529,7 +514,7 @@ impl Parser2 {
 
         // expected expression
         let count = self.expression()?;
-        
+
         let count_token = self.previous().clone();
 
         let times_token = self.consume(&Times, |token| {
@@ -557,7 +542,7 @@ impl Parser2 {
                 times_token,
                 count_token,
             }
-            .into(),
+                .into(),
         ))
     }
 
@@ -628,7 +613,7 @@ impl Parser2 {
                 repeat_token,
                 until_token,
             }
-            .into(),
+                .into(),
         ))
     }
 
@@ -711,7 +696,7 @@ impl Parser2 {
                 in_token,
                 list_token
             }
-            .into(),
+                .into(),
         ))
     }
 
@@ -769,7 +754,7 @@ impl Parser2 {
                         ident_token: variable.token.clone(),
                         arrow_token,
                     }
-                    .into(),
+                        .into(),
                 )),
 
                 // Expr::Access(Access {
@@ -796,7 +781,7 @@ impl Parser2 {
                                 key: access.key.clone(),
                                 brackets: access.brackets.clone(),
                             }
-                            .into(),
+                                .into(),
                         ),
                         list: access.list.clone(),
                         idx: access.key.clone(),
@@ -805,7 +790,7 @@ impl Parser2 {
                         brackets: access.brackets.clone(),
                         arrow_token,
                     }
-                    .into(),
+                        .into(),
                 )),
 
                 // Error for invalid assignment target
@@ -890,7 +875,7 @@ impl Parser2 {
                     right,
                     token,
                 }
-                .into(),
+                    .into(),
             )
         }
 
@@ -913,7 +898,7 @@ impl Parser2 {
                     right,
                     token,
                 }
-                .into(),
+                    .into(),
             )
         }
 
@@ -936,7 +921,7 @@ impl Parser2 {
                     right,
                     token,
                 }
-                .into(),
+                    .into(),
             )
         }
 
@@ -959,7 +944,7 @@ impl Parser2 {
                     right,
                     token,
                 }
-                .into(),
+                    .into(),
             )
         }
 
@@ -978,7 +963,7 @@ impl Parser2 {
                     right,
                     token,
                 }
-                .into(),
+                    .into(),
             );
 
             Ok(expr)
@@ -1072,7 +1057,7 @@ impl Parser2 {
                     value: Literal::String(literal),
                     token,
                 }
-                .into(),
+                    .into(),
             ));
         }
 
@@ -1097,7 +1082,7 @@ impl Parser2 {
                     value: Literal::Number(literal),
                     token,
                 }
-                .into(),
+                    .into(),
             ));
         }
         // done parsing literals
@@ -1141,22 +1126,22 @@ impl Parser2 {
                 }
 
                 let rp_token = self.consume(&RightParen, |token| {
-                        // todo
-                        // miette!("expected ) after argument list, found {token}")
-                        let labels = vec![LabeledSpan::at(token.span(), "expected a `)`")];
+                    // todo
+                    // miette!("expected ) after argument list, found {token}")
+                    let labels = vec![LabeledSpan::at(token.span(), "expected a `)`")];
 
-                        miette!(
+                    miette!(
                             labels = labels,
                             code = "missing_rp",
                             help = "mismatched `(`, it seems you missed a `)`.",
                             "expected `)`, found `{}`",
                             token.lexeme
                         )
-                    })?
+                })?
                     .clone();
-                
+
                 let arguments_spans: Vec<SourceSpan> = arguments_tokens.windows(2).map(|tok| tok[0].span_until_token(&tok[1])).collect();
-                
+
                 return Ok(Expr::ProcCall(Arc::new(ProcCall {
                     ident,
                     arguments,
@@ -1245,7 +1230,7 @@ impl Parser2 {
             "expected primary, instead found {}\n",
             self.peek()
         )
-        .with_source_code(self.named_source.clone());
+            .with_source_code(self.named_source.clone());
         // mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
         Err(report)
     }

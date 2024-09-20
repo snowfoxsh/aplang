@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use mapro::map;
-use crate::interpreter::{FunctionMap, Value};
+use crate::interpreter::FunctionMap;
+use crate::interpreter::Value;
 use crate::std_function;
 
 
