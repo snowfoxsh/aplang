@@ -37,6 +37,11 @@ I welcome contributors of all skill levels. Please see `CONTRIBUTING.md` if you 
 ## Contact Me
 Feel free to contact me. My information is on my profile [@snowfoxsh](https://github.com/snowfoxsh)
 
+## Beta
+This software is in *beta* meaning it is subject to change at any time, across any version.
+Bugs are inevitable! If you encounter a bug please open an issue.
+
+---
 
 <details>
 <summary><h2>Legal</h2></summary>
@@ -47,7 +52,7 @@ This project is licensed under [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.h
 ### Disclaimer
 This project, ApLang, is an independent initiative and is not affiliated, associated, or endorsed by the College Board in any way. The College Board is a registered trademark, and all references to it are for descriptive purposes only. The creators, maintainers, and contributors of ApLang have no official relationship with the College Board, and this project is not intended to infringe upon any trademarks or proprietary rights.
 
-The name ApLang is not a refrence to the AP Language class. It instead represents a convention among programming languages "<name>lang".
+The name ApLang is not a reference to the AP Language class. It instead represents a convention among programming languages "<name>lang".
 
 This project is developed solely for educational and non-commercial purposes, and falls under the doctrine of Fair Use as provided for by Section 107 of the U.S. Copyright Act. Any similarities or references to the College Board or its materials are incidental and made for identification purposes, without intent to compete with or replicate official products or services.
 
