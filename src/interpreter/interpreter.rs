@@ -128,7 +128,7 @@ impl Interpreter {
     pub(super) fn stmt(&mut self, stmt: &Stmt) -> Result<(), RuntimeError> {
         match stmt {
             Stmt::Expr(expr) => self.expr(expr.as_ref()).map(|_| ()),
-            Stmt::IfStmt(if_stmt) => {
+            Stmt::If(if_stmt) => {
                 // evaluate the conditional
                 if Self::is_truthy(&self.expr(&if_stmt.condition)?) {
                     self.stmt(&if_stmt.then_branch)

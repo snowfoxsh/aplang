@@ -19,7 +19,7 @@ type Ident = String;
 pub enum Stmt {
     Expr(Arc<Expr>),
 
-    IfStmt(Arc<IfStmt>),
+    If(Arc<If>),
 
     RepeatTimes(Arc<RepeatTimes>),
 
@@ -40,7 +40,7 @@ pub enum Stmt {
     Import(Arc<Import>),
 }
 #[derive(Debug, Clone)]
-pub struct IfStmt {
+pub struct If {
     pub condition: Expr,
     pub then_branch: Stmt,
     pub else_branch: Option<Stmt>,
@@ -333,7 +333,7 @@ pub mod pretty {
                 Stmt::Expr(expr) => Box::new(std::iter::once(
                     Box::new(expr.deref().clone()) as Box<dyn TreePrinter>
                 )),
-                Stmt::IfStmt(if_stmt) => Box::new(
+                Stmt::If(if_stmt) => Box::new(
                     std::iter::once(Box::new(if_stmt.condition.clone()) as Box<dyn TreePrinter>)
                         .chain(std::iter::once(
                             Box::new(if_stmt.then_branch.clone()) as Box<dyn TreePrinter>
@@ -494,7 +494,7 @@ pub mod pretty {
         fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
             match self {
                 Stmt::Expr(expr) => write!(f, "{}", expr),
-                Stmt::IfStmt(if_stmt) => {
+                Stmt::If(if_stmt) => {
                     let else_part = if let Some(else_branch) = &if_stmt.else_branch {
                         format!(" else {}", else_branch)
                     } else {

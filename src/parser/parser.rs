@@ -10,6 +10,7 @@ use miette::{miette, LabeledSpan, NamedSource, Report, SourceSpan};
 use std::sync::Arc;
 
 use crate::lexer::token::TokenType::*;
+use crate::parser::ast::If as IfStmt;
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -506,14 +507,7 @@ impl Parser {
             (None, None)
         };
 
-        // let (else_branch, else_token) = if self.match_token(&Else) {
-        //     let else_token = self.previous().clone();
-        //     let else_branch = self.statement()?.into();
-        //
-        //     (Some(else_branch), Some(else_token))
-        // } else { (None, None) };
-
-        Ok(Stmt::IfStmt(Arc::new(IfStmt {
+        Ok(Stmt::If(Arc::new(IfStmt {
             condition,
             then_branch,
             else_branch,
@@ -754,13 +748,6 @@ impl Parser {
             let value = self.assignment()?; // Recursively parse the assignment value to handle chained assignments
 
             match expr {
-                // Handling assignment to a simple variable
-                // Expr::Variable(ref Arc::new(Variable{ ident, token })) => Ok(Expr::Assign(Arc::new(Assignment {
-                //     target: ident,
-                //     value: value,
-                //     ident_token: token,
-                //     arrow_token,
-                // }))),
                 Expr::Variable(ref variable) => Ok(Expr::Assign(
                     Assignment {
                         target: variable.clone(),
@@ -770,20 +757,6 @@ impl Parser {
                     }
                     .into(),
                 )),
-
-                // Expr::Access(Access {
-                //     list,
-                //     key,
-                //     brackets,
-                // }) => Ok(Expr::Set(Arc::new(Set {
-                //     target: Expr::Access(Arc::new(Access {
-                //         list,
-                //         key,
-                //         brackets,
-                //     })),
-                //     value: Box::new(value),
-                //     arrow_token,
-                // }))),
 
                 // Handling set assignment for complex expressions like array[index] = value
                 Expr::Access(ref access) => Ok(Expr::Set(
