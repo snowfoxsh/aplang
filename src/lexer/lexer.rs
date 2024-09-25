@@ -4,6 +4,7 @@ use crate::lexer::token::{LiteralValue, TokenType};
 use miette::{miette, LabeledSpan, Report, SourceSpan};
 use owo_colors::OwoColorize;
 use std::collections::HashMap;
+use std::convert::From;
 use std::fmt::Display;
 use std::sync::Arc;
 
