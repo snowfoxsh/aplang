@@ -13,6 +13,7 @@ use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::{fmt, fs, io};
+use clap::builder::OsStr;
 
 pub struct Initialized;
 pub struct Lexed;
@@ -51,7 +52,7 @@ impl ApLang {
     pub fn new_from_stdin(source_code: impl Into<Arc<str>>) -> Self {
         ApLang {
             source_code: source_code.into(),
-            file_path: None,
+            file_path: Some(PathBuf::default()),
             tokens: None,
             ast: None,
             values: None,
@@ -87,9 +88,8 @@ impl ApLang<Initialized> {
             .clone()
             .unwrap()
             .file_name()
-            .unwrap()
-            .to_string_lossy()
-            .into_owned();
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_default();
 
         let tokens = Lexer::scan(self.source_code.clone(), file_name)?;
 
@@ -116,9 +116,8 @@ impl ApLang<Lexed> {
             .clone()
             .unwrap()
             .file_name()
-            .unwrap()
-            .to_string_lossy()
-            .into_owned();
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_default();
 
         let mut parser = Parser::new(tokens, Arc::clone(&self.source_code), file_name.as_str());
 

@@ -1,4 +1,11 @@
 #![allow(dead_code, unused_variables, clippy::module_inception)]
+#[cfg(any(feature = "wasm", target_arch = "wasm32"))]
+compile_error!(r#"
+HALT! It seems like you are attempting to compile aplang into a binary with the "wasm" feature enabled. \
+Do not do this. 
+This features is ment for calling aplang from wasm ONLY. Please reinstall or recompile aplang without the wasm feature.
+"#);
+
 
 use clap::Parser;
 use miette::{miette, Result};
