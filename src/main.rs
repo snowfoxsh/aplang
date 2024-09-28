@@ -25,6 +25,8 @@ mod parser;
 mod standard_library;
 
 fn main() -> Result<()> {
+    init_output();
+    
     let args = CommandLine::parse();
 
     stacker::maybe_grow(1024 * 1024, args.stack_size, || run(args))
@@ -106,3 +108,13 @@ fn run(args: CommandLine) -> Result<()> {
 
     Ok(())
 }
+
+fn init_output() {
+    use std::io::Write;
+    
+    env_logger::Builder::from_default_env()
+        .filter_level(log::LevelFilter::Info)
+        .format(|buf, record| writeln!(buf, "{}", record.args()))
+        .init();
+}
+

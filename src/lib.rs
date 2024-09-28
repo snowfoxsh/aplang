@@ -23,6 +23,10 @@ pub mod standard_library;
 pub use aplang::*;
 
 
+#[cfg(feature = "wasm")]
+pub mod wasm;
+
+
 #[test]
 pub fn test() {
     let aplang = ApLang::new_from_stdin("3 + 3");
@@ -35,18 +39,18 @@ pub fn test() {
     println!("{buf}");
 }
 
-#[cfg(feature = "wasm")]
-pub mod wasm {
-    use wasm_bindgen::prelude::*;
-    #[wasm_bindgen]
-    pub fn aplang(source_code: &str) -> String {
-        let aplang = crate::ApLang::new_from_stdin(source_code);
-        let lexed = aplang.lex().unwrap();
-        let parsed = lexed.parse().unwrap();
-        let result = parsed.execute_with_debug().unwrap();
-
-        let mut buf = String::new();
-        result.debug_output(&mut buf).unwrap();
-        buf
-    }
-}
+// #[cfg(feature = "wasm")]
+// pub mod wasm {
+//     use wasm_bindgen::prelude::*;
+//     #[wasm_bindgen]
+//     pub fn aplang(source_code: &str) -> String {
+//         let aplang = crate::ApLang::new_from_stdin(source_code);
+//         let lexed = aplang.lex().unwrap();
+//         let parsed = lexed.parse().unwrap();
+//         let result = parsed.execute_with_debug().unwrap();
+// 
+//         let mut buf = String::new();
+//         result.debug_output(&mut buf).unwrap();
+//         buf
+//     }
+// }

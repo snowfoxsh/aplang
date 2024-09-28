@@ -13,7 +13,6 @@ use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::{fmt, fs, io};
-use clap::builder::OsStr;
 
 pub struct Initialized;
 pub struct Lexed;
