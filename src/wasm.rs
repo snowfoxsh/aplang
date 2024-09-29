@@ -2,9 +2,12 @@
 
 use wasm_bindgen::prelude::wasm_bindgen;
 use std::cell::RefCell;
+use std::sync::Arc;
 use web_sys::{window, Element};
-use log::{info, Level, Metadata, Record};
+use log::{error, Level, Metadata, Record};
 use wasm_bindgen::JsValue;
+use wasm_bindgen_futures::spawn_local;
+use crate::{ApLang};
 
 thread_local! {
     static DOM: RefCell<Option<Element>> = const { RefCell::new(None) };
@@ -28,12 +31,6 @@ pub fn init_dom_logging(parent: Element) -> Result<(), JsValue> {
     Ok(())
 }
 
-#[wasm_bindgen]
-pub fn test_logger() {
-    info!("hello from the logger )1");
-    info!("hello from the logger )2");
-}
-
 pub struct DOMLogger;
 
 impl log::Log for DOMLogger {
@@ -48,8 +45,18 @@ impl log::Log for DOMLogger {
                 if let Some(ref element)  = *out.borrow() {
                     let document = window().unwrap().document().unwrap();
                     let p =  document.create_element("p").unwrap();
-                    p.set_class_name("log-line");
+                    
+                    let mut classes = Vec::new();
+                    classes.push("log-line");
+                    classes.push(match record.metadata().level() {
+                        Level::Info => "info",
+                        Level::Error => "error",
+                        _ => "other"
+                    });
+                    
+                    p.set_class_name(&classes.join(" "));
                     p.set_text_content(Some(&message));
+                    
                     element.append_child(&p).unwrap();
                 }
             })
@@ -57,4 +64,42 @@ impl log::Log for DOMLogger {
     }
 
     fn flush(&self) {}
+}
+
+#[wasm_bindgen]
+pub fn aplang(source_code: &str) {
+    // make sure source can escape
+    let source_code: Arc<str> = source_code.into();
+    
+    spawn_local(async {
+        let aplang = ApLang::new_from_stdin(source_code);
+
+        let lexed = match aplang.lex() {
+            Ok(lexed) => lexed,
+            Err(reports) => {
+                for report in reports {
+                    error!("{:?}", report)
+                }
+                return;
+            }
+        };
+
+        let parsed = match lexed.parse() {
+            Ok(parsed) => parsed,
+            Err(reports) => {
+                for report in reports {
+                    error!("{:?}", report)
+                }
+                return;
+            }
+        };
+
+
+        match parsed.execute() {
+            Err(report) => {
+                error!("{:?}", report)
+            }
+            Ok(_) => { /* nop */}
+        }    
+    });
 }

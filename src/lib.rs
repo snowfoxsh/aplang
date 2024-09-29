@@ -19,7 +19,7 @@ pub mod interpreter;
 pub mod lexer;
 pub mod parser;
 pub mod standard_library;
-
+pub mod output;
 pub use aplang::*;
 
 
@@ -38,19 +38,3 @@ pub fn test() {
     result.debug_output(&mut buf).unwrap();
     println!("{buf}");
 }
-
-// #[cfg(feature = "wasm")]
-// pub mod wasm {
-//     use wasm_bindgen::prelude::*;
-//     #[wasm_bindgen]
-//     pub fn aplang(source_code: &str) -> String {
-//         let aplang = crate::ApLang::new_from_stdin(source_code);
-//         let lexed = aplang.lex().unwrap();
-//         let parsed = lexed.parse().unwrap();
-//         let result = parsed.execute_with_debug().unwrap();
-// 
-//         let mut buf = String::new();
-//         result.debug_output(&mut buf).unwrap();
-//         buf
-//     }
-// }

@@ -4,6 +4,7 @@ use crate::standard_library::io::input;
 use crate::std_function;
 use rand::Rng;
 use std::collections::HashMap;
+use crate::display;
 
 mod file_system;
 mod io;
@@ -51,13 +52,13 @@ fn std_core() -> FunctionMap {
     let mut functions = FunctionMap::new();
 
     std_function!(functions => fn DISPLAY(value: Value) {
-        println!("{}", value);
+        display!("{}\n", value);
 
         return Ok(Value::Null)
     });
 
     std_function!(functions => fn DISPLAY_NOLN(value: Value) {
-        print!("{}", value);
+        display!("{}", value);
 
         return Ok(Value::Null)
     });
