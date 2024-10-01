@@ -2,83 +2,72 @@
 
 use wasm_bindgen::prelude::wasm_bindgen;
 use std::cell::RefCell;
+use std::io::Stdin;
 use std::sync::Arc;
+use std::sync::mpsc::Receiver;
+use js_sys::Function;
 use web_sys::{window, Element};
-use log::{error, Level, Metadata, Record};
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::spawn_local;
-use crate::{ApLang};
+use crate::{display, display_error, ApLang};
 
+// thread_local! {
+//     static DOM: RefCell<Option<Element>> = const { RefCell::new(None) };
+// }
+
+// #[wasm_bindgen]
+// pub fn init_console_logging() {
+//     console_log::init_with_level(Level::Info)
+//         .expect("CRITICAL FAILURE: Failed to initialize logging in browser")
+// }
+
+// #[wasm_bindgen]
+// pub fn init_dom_logging(parent: Element) -> Result<(), JsValue> {
+//     DOM.with(|out|  {
+//         *out.borrow_mut() = Some(parent)
+//     });
+//
+//     log::set_boxed_logger(Box::new(DOMLogger)).unwrap();
+//     log::set_max_level(log::LevelFilter::Info);
+//
+//     Ok(())
+// }
+
+// out: Function(this, output: String, is_error: bool)
 thread_local! {
-    static DOM: RefCell<Option<Element>> = const { RefCell::new(None) };
+    pub static OUT: RefCell<Option<Function>> = const { RefCell::new(None) };
+    pub static IN: RefCell<Option<Function>> = const { RefCell::new(None) };
 }
 
-#[wasm_bindgen]
-pub fn init_console_logging() {
-    console_log::init_with_level(Level::Info)
-        .expect("CRITICAL FAILURE: Failed to initialize logging in browser")
-}
 
+/// Provide a callback to javascript to handle input and output
 #[wasm_bindgen]
-pub fn init_dom_logging(parent: Element) -> Result<(), JsValue> {
-    DOM.with(|out|  {
-        *out.borrow_mut() = Some(parent)
+pub fn bind_io(stdout: Function, stdin: Function) {
+    // make a call to javascript
+    OUT.with(|output| {
+        *output.borrow_mut() = Some(stdout)
     });
-    
-    log::set_boxed_logger(Box::new(DOMLogger)).unwrap();
-    log::set_max_level(log::LevelFilter::Info);
-    
-    Ok(())
+
+    IN.with(|input| {
+        *input.borrow_mut() = Some(stdin)
+    })
 }
 
-pub struct DOMLogger;
-
-impl log::Log for DOMLogger {
-    fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= Level::Info
-    }
-
-    fn log(&self, record: &Record) {
-        if self.enabled(record.metadata()) {
-            let message = format!("{}", record.args());
-            DOM.with(|out| {
-                if let Some(ref element)  = *out.borrow() {
-                    let document = window().unwrap().document().unwrap();
-                    let p =  document.create_element("p").unwrap();
-                    
-                    let mut classes = Vec::new();
-                    classes.push("log-line");
-                    classes.push(match record.metadata().level() {
-                        Level::Info => "info",
-                        Level::Error => "error",
-                        _ => "other"
-                    });
-                    
-                    p.set_class_name(&classes.join(" "));
-                    p.set_text_content(Some(&message));
-                    
-                    element.append_child(&p).unwrap();
-                }
-            })
-        }
-    }
-
-    fn flush(&self) {}
-}
 
 #[wasm_bindgen]
-pub fn aplang(source_code: &str) {
+pub fn aplang(source_code: &str, stdout: Function, stdin: Function) {
+    bind_io(stdout, stdin);
+
     // make sure source can escape
     let source_code: Arc<str> = source_code.into();
     
-    spawn_local(async {
         let aplang = ApLang::new_from_stdin(source_code);
 
         let lexed = match aplang.lex() {
             Ok(lexed) => lexed,
             Err(reports) => {
                 for report in reports {
-                    error!("{:?}", report)
+                    display_error!("{:?}", report)
                 }
                 return;
             }
@@ -88,7 +77,7 @@ pub fn aplang(source_code: &str) {
             Ok(parsed) => parsed,
             Err(reports) => {
                 for report in reports {
-                    error!("{:?}", report)
+                    display_error!("{:?}", report)
                 }
                 return;
             }
@@ -97,9 +86,8 @@ pub fn aplang(source_code: &str) {
 
         match parsed.execute() {
             Err(report) => {
-                error!("{:?}", report)
+                display_error!("{:?}", report)
             }
             Ok(_) => { /* nop */}
         }    
-    });
 }

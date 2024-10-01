@@ -75,7 +75,6 @@ dependencies = [
  "console_log",
  "getrandom",
  "js-sys",
- "log",
  "mapro",
  "miette",
  "owo-colors",
