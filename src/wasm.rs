@@ -2,38 +2,10 @@
 
 use wasm_bindgen::prelude::wasm_bindgen;
 use std::cell::RefCell;
-use std::io::Stdin;
 use std::sync::Arc;
-use std::sync::mpsc::Receiver;
 use js_sys::Function;
-use web_sys::{window, Element};
-use wasm_bindgen::JsValue;
-use wasm_bindgen_futures::spawn_local;
-use crate::{display, display_error, ApLang};
+use crate::{display_error, ApLang};
 
-// thread_local! {
-//     static DOM: RefCell<Option<Element>> = const { RefCell::new(None) };
-// }
-
-// #[wasm_bindgen]
-// pub fn init_console_logging() {
-//     console_log::init_with_level(Level::Info)
-//         .expect("CRITICAL FAILURE: Failed to initialize logging in browser")
-// }
-
-// #[wasm_bindgen]
-// pub fn init_dom_logging(parent: Element) -> Result<(), JsValue> {
-//     DOM.with(|out|  {
-//         *out.borrow_mut() = Some(parent)
-//     });
-//
-//     log::set_boxed_logger(Box::new(DOMLogger)).unwrap();
-//     log::set_max_level(log::LevelFilter::Info);
-//
-//     Ok(())
-// }
-
-// out: Function(this, output: String, is_error: bool)
 thread_local! {
     pub static OUT: RefCell<Option<Function>> = const { RefCell::new(None) };
     pub static IN: RefCell<Option<Function>> = const { RefCell::new(None) };
