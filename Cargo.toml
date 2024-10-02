@@ -27,17 +27,14 @@ rand = "0.9.0-alpha.2"
 
 # dependencies based on features
 
-#test-log = "0.2.16" # both | enable when writing tests
 miette = { version = "7.2.0", optional = true } # both
 
 stacker = { version = "0.1.17", optional = true } # native
 
 getrandom = { version = "0.2.15", optional = true } # wasm
 wasm-bindgen = { version = "0.2.93", optional = true } # wasm
-console_log = { version = "1.0.0", optional = true } # wasm
 js-sys = { version = "0.3.70", optional = true } # wasm
-web-sys = { version = "0.3.70", optional = true } # wasm
-wasm-bindgen-futures = { version = "0.4.43", optional = true } # wasm
+
 
 
 [features]
@@ -47,7 +44,7 @@ native = ["miette/fancy", "stacker"]
 # YOU SHALL NOT RUN AS A BINARY WITH THE WASM FEATURE!
 # "wasm" feature, enabling wasm-specific dependencies
 # cargo build --no-default-features --features wasm
-wasm = ["miette/fancy-no-syscall", "getrandom/js", "wasm-bindgen", "js-sys", "console_log", "web-sys/Element", "web-sys/Document", "web-sys/Window", "wasm-bindgen-futures"]
+wasm = ["miette/fancy-no-syscall", "getrandom/js", "wasm-bindgen", "js-sys"]
 
 # default is empty, so you can explicitly opt-in to "wasm"
 default = ["native"]
