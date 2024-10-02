@@ -1,13 +1,13 @@
 use crate::interpreter::FunctionMap;
 use crate::interpreter::Value;
-use crate::std_function;
+use crate::{display, std_function};
 use std::cell::RefCell;
 use std::io;
 use std::io::Write;
 use std::rc::Rc;
 
 pub(super) fn input(prompt: &str) -> Option<String> {
-    print!("{}", prompt);
+    display!("{}", prompt);
     io::stdout().flush().ok()?;
 
     let mut buf = String::new();

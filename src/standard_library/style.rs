@@ -1,6 +1,6 @@
 use crate::interpreter::FunctionMap;
 use crate::interpreter::Value;
-use crate::std_function;
+use crate::{display, std_function};
 use mapro::map;
 use std::collections::HashMap;
 
@@ -61,7 +61,7 @@ pub(super) fn std_style() -> FunctionMap {
             return Ok(Value::Bool(false))
         };
 
-        print!("{}", code);
+        display!("{}", code);
 
         return Ok(Value::Bool(true))
     });
@@ -69,7 +69,7 @@ pub(super) fn std_style() -> FunctionMap {
     std_function!(functions => fn CLEAR_STYLE() {
 
         // clear all styles
-        print!("\x1b[0m");
+        display!("\x1b[0m");
 
         return Ok(Value::Null)
     });

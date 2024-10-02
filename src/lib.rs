@@ -10,6 +10,7 @@
 //! i still provide it as an option.
 //! everything is public because of that.
 //! use with care
+//! ---
 //! <3
 
 pub mod aplang;
@@ -18,5 +19,22 @@ pub mod interpreter;
 pub mod lexer;
 pub mod parser;
 pub mod standard_library;
-
+pub mod output;
 pub use aplang::*;
+
+
+#[cfg(feature = "wasm")]
+pub mod wasm;
+
+
+#[test]
+pub fn test() {
+    let aplang = ApLang::new_from_stdin("3 + 3");
+    let lexed = aplang.lex().unwrap();
+    let parsed = lexed.parse().unwrap();
+    let result = parsed.execute_with_debug().unwrap();
+
+    let mut buf = String::new();
+    result.debug_output(&mut buf).unwrap();
+    println!("{buf}");
+}
