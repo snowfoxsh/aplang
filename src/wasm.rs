@@ -55,9 +55,7 @@ pub fn bind_io(stdout: Function, stdin: Function) {
 
 
 #[wasm_bindgen]
-pub fn aplang(source_code: &str, stdout: Function, stdin: Function) {
-    bind_io(stdout, stdin);
-
+pub fn aplang(source_code: &str) {
     // make sure source can escape
     let source_code: Arc<str> = source_code.into();
     
