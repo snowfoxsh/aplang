@@ -58,3 +58,8 @@ The second section provides documentation for the standard library. Whenever the
 # Misc
 Make sure your code works as intended (obviously). If you are intending to contribute to the codebase itself please see the contributing guide in the respective repo. This guide is for contributing to the book.
 
+# In Progress
+- [ ] Better Errors:
+	- [ ] Write better error messages
+ 	- [ ] Interpreter report object is clunky 
+
