@@ -3,7 +3,7 @@
 Based on the AP-CSP [spec](https://apcentral.collegeboard.org/media/pdf/ap-computer-science-principles-exam-reference-sheet.pdf).
 
 # Start Here
-**To learn more about ApLang visit [aplang.org/book](https://aplang.org/book).** This is where the documentation lives!
+**To learn more about ApLang visit [aplang.org](https://aplang.org).** This is where the documentation lives!
 
 **Also install the [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=aplang.aplang)**!
 
