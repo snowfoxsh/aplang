@@ -1,6 +1,6 @@
 [package]
 name = "aplang"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 authors = ["Patrick Unick", "Eli Fischl"]
 description = "A programming language made to aid students who are taking AP Computer Science Principals."
@@ -14,6 +14,8 @@ repository = "https://github.com/snowfoxsh/aplang"
 default-run = "aplang"
 
 # see more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.release]
+lto = true
 
 [lib]
 crate-type = ["cdylib", "rlib"]
