@@ -3,7 +3,7 @@ use crate::interpreter::Value;
 use crate::std_function;
 use std::cell::RefCell;
 use std::fs;
-use std::fs::OpenOptions;
+use std::fs::{create_dir, create_dir_all, remove_dir, remove_dir_all, remove_file, OpenOptions};
 use std::io::Write;
 use std::path::Path;
 use std::rc::Rc;
@@ -28,6 +28,14 @@ pub(super) fn file_system() -> FunctionMap {
         let path = Path::new(&path);
 
         return Ok(Value::Bool(path.is_dir()))
+    });
+
+    std_function!(functions => fn FILE_REMOVE(path: Value::String) {
+        let result =  remove_file(path)
+            .map(|_| Value::Bool(true))
+            .unwrap_or_else(|_| Value::Bool(false));
+
+        return Ok(result)
     });
 
     // returns True if successful
@@ -77,7 +85,7 @@ pub(super) fn file_system() -> FunctionMap {
         return Ok(Value::Bool(true))
     });
 
-    std_function!(functions => fn READ_DIRECTORY(path: Value::String) {
+    std_function!(functions => fn DIRECTORY_READ(path: Value::String) {
         let paths = fs::read_dir(path).expect("Failed to read directory");
 
         let mut dir_list = Vec::new();
@@ -88,6 +96,39 @@ pub(super) fn file_system() -> FunctionMap {
         }
 
         return Ok(Value::List(Rc::new(RefCell::new(dir_list))))
+    });
+
+    std_function!(functions => fn DIRECTORY_CREATE(path: Value::String) {
+        let result =  create_dir(path)
+            .map(|_| Value::Bool(true))
+            .unwrap_or_else(|_| Value::Bool(false));
+
+        return Ok(result)
+    });
+
+    std_function!(functions => fn DIRECTORY_CREATE_ALL(path: Value::String) {
+        let result =  create_dir_all(path)
+            .map(|_| Value::Bool(true))
+            .unwrap_or_else(|_| Value::Bool(false));
+
+        return Ok(result)
+    });
+
+
+    std_function!(functions => fn DIRECTORY_REMOVE(path: Value::String) {
+        let result =  remove_dir(path)
+            .map(|_| Value::Bool(true))
+            .unwrap_or_else(|_| Value::Bool(false));
+
+        return Ok(result)
+    });
+
+    std_function!(functions => fn DIRECTORY_REMOVE_ALL(path: Value::String) {
+        let result =  remove_dir_all(path)
+            .map(|_| Value::Bool(true))
+            .unwrap_or_else(|_| Value::Bool(false));
+
+        return Ok(result)
     });
 
     functions
