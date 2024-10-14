@@ -2,17 +2,56 @@ use crate::interpreter::FunctionMap;
 use crate::interpreter::Value;
 use crate::{display, std_function};
 use std::cell::RefCell;
-use std::io;
-use std::io::Write;
 use std::rc::Rc;
 
+#[cfg(not(feature = "wasm"))]
 pub(super) fn input(prompt: &str) -> Option<String> {
+    use std::io;
+    use std::io::Write;
+
     display!("{}", prompt);
     io::stdout().flush().ok()?;
 
     let mut buf = String::new();
     io::stdin().read_line(&mut buf).ok()?;
     Some(buf.trim_end().to_string())
+}
+
+#[cfg(feature = "wasm")]
+pub(super) fn input(prompt: &str) -> Option<String> {
+    use wasm_bindgen::prelude::*;
+    use crate::wasm::IN;
+
+    display!("begin input");
+    // let output = IN.with(|input| {
+    //     if let Some(ref js) = *input.borrow() {
+    //        let this = JsValue::NULL;
+    //
+    //        let input_result = js.call1(
+    //            &this,
+    //            &JsValue::from_str(prompt), // prompt
+    //        ).ok()?;
+    //
+    //        input_result.as_string()
+    //     } else {
+    //         None
+    //     }
+    // });
+
+    IN.with(|input| {
+        if let Some(ref callback) = *input.borrow() {
+            let this = JsValue::NULL;
+
+            callback.call1(&this, &JsValue::from_str("   |hello|    ")).unwrap();
+        }
+    });
+
+    let output = Some("output".to_string());
+    display!("end input");
+
+    display!("{prompt}{}\n", output.clone().unwrap_or_default());
+
+    output
 }
 
 fn format(fstring: String, args: Rc<RefCell<Vec<Value>>>) -> Option<String> {
