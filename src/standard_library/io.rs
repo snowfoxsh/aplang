@@ -22,7 +22,7 @@ pub(super) fn input(prompt: &str) -> Option<String> {
     use wasm_bindgen::prelude::*;
     use crate::wasm::IN;
 
-    display!("begin input");
+    display!("begin input\n");
     // let output = IN.with(|input| {
     //     if let Some(ref js) = *input.borrow() {
     //        let this = JsValue::NULL;
@@ -42,12 +42,18 @@ pub(super) fn input(prompt: &str) -> Option<String> {
         if let Some(ref callback) = *input.borrow() {
             let this = JsValue::NULL;
 
-            callback.call1(&this, &JsValue::from_str("   |hello|    ")).unwrap();
+            let res = callback.call1(
+                &this,
+                &JsValue::from_str(prompt)
+            ).ok()?;
+
+
+            display!("{}\n", res.as_string().unwrap());
         }
     });
 
     let output = Some("output".to_string());
-    display!("end input");
+    display!("end input\n");
 
     display!("{prompt}{}\n", output.clone().unwrap_or_default());
 
