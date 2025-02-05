@@ -58,8 +58,25 @@ The second section provides documentation for the standard library. Whenever the
 # Misc
 Make sure your code works as intended (obviously). If you are intending to contribute to the codebase itself please see the contributing guide in the respective repo. This guide is for contributing to the book.
 
-# In Progress
+# Progress
 - [ ] Better Errors:
 	- [ ] Write better error messages
- 	- [ ] Interpreter report object is clunky 
-
+	- [ ] Add warning for \n { after stmt
+	- [ ] Fix strange "primary" error message
+ 	- [ ] Interpreter report object is clunky
+ - [ ] imporve standard library (any ideas)
+ - [ ] Binary Installers
+    - [ ] Microsoft Store
+    - [ ] Winget
+    - [ ] MacOs
+## Website
+- [x] Add input prompting 
+- [ ] Refactor messy react components in playground
+- [ ] Add syntax highlighting to the playground editor
+- [ ] Fix bug with overflowing text in editor and console output
+- [ ] Add a code share features to playground
+    - [ ] Permalink code shareing
+    - [ ] Code with me style sessions (difficult)
+- [ ] Flesh out the website
+    - [ ] Add more information to the home page
+- [ ] Add forum section for people to discuss aplang
