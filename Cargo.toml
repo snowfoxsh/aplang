@@ -9,13 +9,14 @@ readme = "README.md"
 homepage = "https://aplang.org/"
 license = "GPL-3.0-or-later"
 keywords = ["aplang", "ap", "programming", "language", "apcsp"]
-categories = ["compilers"]
+categories = ["compilers", "wasm"]
 repository = "https://github.com/snowfoxsh/aplang"
 default-run = "aplang"
 
 # see more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [profile.release]
 lto = true
+opt-level = 3
 
 [lib]
 crate-type = ["cdylib", "rlib"]
