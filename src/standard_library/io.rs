@@ -22,7 +22,6 @@ pub(super) fn input(prompt: &str) -> Option<String> {
     use wasm_bindgen::prelude::*;
     use crate::wasm::IN;
 
-    display!("begin input\n");
     // let output = IN.with(|input| {
     //     if let Some(ref js) = *input.borrow() {
     //        let this = JsValue::NULL;
@@ -39,25 +38,23 @@ pub(super) fn input(prompt: &str) -> Option<String> {
     // });
 
     IN.with(|input| {
+        // display!("debug log (wasm): trying to call IN.with prompt: {input:?}");
         if let Some(ref callback) = *input.borrow() {
             let this = JsValue::NULL;
 
             let res = callback.call1(
                 &this,
                 &JsValue::from_str(prompt)
-            ).ok()?;
-
-
-            display!("{}\n", res.as_string().unwrap());
-        }
-    });
-
-    let output = Some("output".to_string());
-    display!("end input\n");
-
-    display!("{prompt}{}\n", output.clone().unwrap_or_default());
-
-    output
+            ).ok();
+            
+            if res.is_none() {
+                display!("debug log (wasm) error: could not call callback");
+            }
+            
+            res.unwrap().as_string()
+            // display!("debug log (wasm): {}\n", res.as_string().unwrap());
+        } else { None }
+    })
 }
 
 fn format(fstring: String, args: Rc<RefCell<Vec<Value>>>) -> Option<String> {
