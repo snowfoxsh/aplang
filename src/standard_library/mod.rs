@@ -65,6 +65,7 @@ fn std_core() -> FunctionMap {
 
     std_function!(functions => fn INPUT() {
         let result = input("").expect("Failed to get user input! Critical Failure");
+        // let result = input("").unwrap_or_default();
         Ok(Value::String(result))
     });
 

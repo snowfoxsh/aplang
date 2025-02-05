@@ -9,6 +9,7 @@ use crate::{display_error, ApLang};
 thread_local! {
     pub static OUT: RefCell<Option<Function>> = const { RefCell::new(None) };
     pub static IN: RefCell<Option<Function>> = const { RefCell::new(None) };
+    pub static WAIT: RefCell<Option<Function>> = const { RefCell::new(None)};
 }
 
 
@@ -23,6 +24,13 @@ pub fn bind_io(stdout: Function, stdin: Function) {
     IN.with(|input| {
         *input.borrow_mut() = Some(stdin)
     })
+}
+
+#[wasm_bindgen]
+pub fn bind_wait(wait: Function /* sleep(ms) */) {
+    WAIT.with(|patient| {
+        *patient.borrow_mut() = Some(wait)
+    });
 }
 
 

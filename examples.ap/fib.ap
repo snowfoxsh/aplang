@@ -10,4 +10,4 @@ PROCEDURE fib(n) {
 }
 
 // Display the 30th Fibonacci number
-DISPLAY(fib(8))
+DISPLAY(fib(30))

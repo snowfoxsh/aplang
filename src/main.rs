@@ -24,6 +24,10 @@ mod parser;
 mod standard_library;
 mod output;
 
+// this cannot compile, but it is here for clippy
+#[cfg(feature = "wasm")]
+mod wasm;
+
 fn main() -> Result<()> {
     let args = CommandLine::parse();
 

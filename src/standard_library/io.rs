@@ -2,17 +2,59 @@ use crate::interpreter::FunctionMap;
 use crate::interpreter::Value;
 use crate::{display, std_function};
 use std::cell::RefCell;
-use std::io;
-use std::io::Write;
 use std::rc::Rc;
 
+#[cfg(not(feature = "wasm"))]
 pub(super) fn input(prompt: &str) -> Option<String> {
+    use std::io;
+    use std::io::Write;
+
     display!("{}", prompt);
     io::stdout().flush().ok()?;
 
     let mut buf = String::new();
     io::stdin().read_line(&mut buf).ok()?;
     Some(buf.trim_end().to_string())
+}
+
+#[cfg(feature = "wasm")]
+pub(super) fn input(prompt: &str) -> Option<String> {
+    use wasm_bindgen::prelude::*;
+    use crate::wasm::IN;
+
+    // let output = IN.with(|input| {
+    //     if let Some(ref js) = *input.borrow() {
+    //        let this = JsValue::NULL;
+    //
+    //        let input_result = js.call1(
+    //            &this,
+    //            &JsValue::from_str(prompt), // prompt
+    //        ).ok()?;
+    //
+    //        input_result.as_string()
+    //     } else {
+    //         None
+    //     }
+    // });
+
+    IN.with(|input| {
+        // display!("debug log (wasm): trying to call IN.with prompt: {input:?}");
+        if let Some(ref callback) = *input.borrow() {
+            let this = JsValue::NULL;
+
+            let res = callback.call1(
+                &this,
+                &JsValue::from_str(prompt)
+            ).ok();
+            
+            if res.is_none() {
+                display!("debug log (wasm) error: could not call callback");
+            }
+            
+            res.unwrap().as_string()
+            // display!("debug log (wasm): {}\n", res.as_string().unwrap());
+        } else { None }
+    })
 }
 
 fn format(fstring: String, args: Rc<RefCell<Vec<Value>>>) -> Option<String> {
