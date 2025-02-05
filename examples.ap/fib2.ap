@@ -1,0 +1,19 @@
+PROCEDURE fib2(n) {
+    if (n == 1 or n == 2) {
+        return 1
+    }
+
+    a <- 1
+    b <- 1
+
+    count <- 3
+    REPEAT UNTIL ( count > n) {
+        tmp <- a + b
+        a <- b
+        b <- tmp
+        count <- count + 1
+    }
+    return b
+}
+
+DISPLAY(fib2(30))
