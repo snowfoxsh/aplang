@@ -5,6 +5,8 @@ Based on the AP-CSP [spec](https://apcentral.collegeboard.org/media/pdf/ap-compu
 # Start Here
 **To learn more about ApLang visit [aplang.org](https://aplang.org).** This is where the documentation lives!
 
+**[Try](https://aplang.org/playground) ApLang.** Test ApLang on a web editor powered by wasm. It is completley client side!
+
 **Also install the [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=aplang.aplang)**!
 
 If you are an advanced user, you can install aplang with:
