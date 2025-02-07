@@ -12,6 +12,7 @@ use miette::{miette, Result};
 use std::io;
 use std::io::{ErrorKind, Read};
 use std::time::Instant;
+use cfg_if::cfg_if;
 use crate::aplang::ApLang;
 use crate::arguments::{CommandLine, DebugMode};
 use interpreter::errors::Reports;
@@ -30,8 +31,14 @@ mod wasm;
 
 fn main() -> Result<()> {
     let args = CommandLine::parse();
-
-    stacker::maybe_grow(1024 * 1024, args.stack_size, || run(args))
+    
+    cfg_if! {
+        if #[cfg(feature = "portable")] {
+            run(args)
+        } else {
+            stacker::maybe_grow(1024 * 1024, args.stack_size, || run(args))
+        }
+    }
 }
 
 fn run(args: CommandLine) -> Result<()> {

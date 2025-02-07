@@ -22,6 +22,7 @@ opt-level = 3
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+cfg-if = "1.0.0"
 mapro = "0.1.1"
 owo-colors = "4.1.0"
 thiserror = "1.0.64"
@@ -43,6 +44,11 @@ js-sys = { version = "0.3.70", optional = true } # wasm
 [features]
 # "native" feature for non-wasm platforms, enabling native dependencies
 native = ["miette/fancy", "stacker"]
+
+# "portable" allows for fully static linking at the cost of low stack size
+# cargo build --no-default-features --features portable
+portable = ["miette/fancy-no-syscall"]
+
 
 # YOU SHALL NOT RUN AS A BINARY WITH THE WASM FEATURE!
 # "wasm" feature, enabling wasm-specific dependencies

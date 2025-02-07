@@ -70,6 +70,7 @@ dependencies = [
 name = "aplang"
 version = "0.1.7"
 dependencies = [
+ "cfg-if",
  "clap",
  "getrandom",
  "js-sys",
