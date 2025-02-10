@@ -1211,7 +1211,7 @@ impl Parser {
         let cspan = self.previous().span_to(self.peek().span());
         let labels = vec![
             LabeledSpan::at(self.peek().span(), "primary expected here"),
-            LabeledSpan::at(cspan, "consider checking your upstream code"),
+            // LabeledSpan::at(cspan, "consider checking your upstream code"),
         ];
         // todo improve this message
         let report = miette!(
