@@ -853,6 +853,13 @@ impl Interpreter {
                 help: format!("Invalid application of unary op {op} to List type"),
                 label: "Cannot do operand here".to_string(),
             }),
+            (op, NativeObject(_a)) => Err(RuntimeError {
+                named_source: NamedSource::new(self.get_file_path(), node.token.source.clone()),
+                span: node.token.span,
+                message: "Invalid Unary Op".to_string(),
+                help: format!("Invalid application of unary op {op} to NativeObject type"),
+                label: "Cannot do operand here".to_string(),
+            })
         }
     }
 

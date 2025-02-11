@@ -1,6 +1,6 @@
 #[macro_export]
 macro_rules! std_function {
-    ($location:expr => fn $name:ident ($($arg:ident:  Value $(:: $arg_type:ident)?),*) {$($body:tt)*}) => {
+    ($location:expr => fn $name:ident ($($arg:ident:  Value $(:: $arg_type:ident)? $(<$ot:ty>)?),*) {$($body:tt)*}) => {
         $location.insert(
             String::from(stringify!($name)),
             (std::rc::Rc::new($crate::interpreter::NativeProcedure {
@@ -14,7 +14,7 @@ macro_rules! std_function {
 
                     $(
                         let $arg = __iter_toks.next().unwrap();
-                        $crate::unwrap_arg_type!($arg => Value $(::$arg_type)?, _interpreter, _source);
+                        $crate::unwrap_arg_type!($arg => Value $(::$arg_type)? $(<$ot>)?, _interpreter, _source);
                     )*
 
                     $($body)*
@@ -107,8 +107,46 @@ macro_rules! unwrap_arg_type {
             );
         };
     };
+    ($value:ident => Value::NativeObject<$ot:ty>, $interpreter:ident, $source:ident) => {
+        
+        let __span = *$value.1;
+        #[allow(unused_mut)]
+        let $crate::interpreter::Value::NativeObject(mut $value) = $value.0.clone() else {
+            return Err(
+                $crate::interpreter::errors::RuntimeError {
+                    named_source: miette::NamedSource::new($interpreter.get_file_path(), $source),
+                    span: __span,
+                    message: "Invalid Argument Cast".to_string(),
+                    help: format!("Argument Value ({}) is not of type NATIVE_OBJECT<A>", stringify!($value)),
+                    label: "This argument cannot be cast into NATIVE_OBJECT".to_string(),
+                }
+            );
+        };
+        
+        /* we check to make sure it is the right struct instance */
+        if $value.as_ref().borrow().downcast_ref::<$ot>().is_none() {
+            return Err(
+                $crate::interpreter::errors::RuntimeError {
+                    named_source: miette::NamedSource::new($interpreter.get_file_path(), $source),
+                    span: __span,
+                    message: "Invalid NATIVE_OBJECT variety for function".to_string(),
+                    help: format!("THe function cannot accept this type"),
+                    label: "This argument is a NATIVE_OBJECT but not the correct variety".to_string(),
+                }
+            )
+        }
+    };
     ($value:ident => Value, $interpreter:ident, $source:ident) => {
         #[allow(unused_mut)]
         let mut $value = $value.0;
+    };
+}
+
+#[macro_export]
+macro_rules! downcast {
+    ($any:ident => $ty:ty) => {
+        #[allow(clippy::mutable_key_type)]
+        let mut __any_ref = $any.as_ref().borrow_mut();
+        let $any =  __any_ref.downcast_mut::<$ty>().unwrap();
     };
 }

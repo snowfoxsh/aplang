@@ -1,0 +1,9 @@
+IMPORT MOD "MAP"
+
+map <- MAP()
+
+MAP_INSERT(map, 1, "one")
+MAP_INSERT(map, 2, "two")
+
+DISPLAY(MAP_GET(map, 1))
+DISPLAY(MAP_GET(map, 2))

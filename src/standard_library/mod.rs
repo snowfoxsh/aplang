@@ -13,6 +13,7 @@ mod std_macros;
 mod strings;
 mod style;
 mod time;
+mod map;
 
 #[derive(Debug, Clone, Default)]
 pub struct Modules {
@@ -28,6 +29,7 @@ impl Modules {
         self.register("IO", io::std_io);
         self.register("STRING", strings::std_strings);
         self.register("STYLE", style::std_style);
+        self.register("MAP", map::std_map)
     }
     pub fn init() -> Self {
         // create bland hashmap of modules
@@ -88,10 +90,20 @@ fn std_core() -> FunctionMap {
         return Ok(poped);
     });
 
-    std_function!(functions => fn LENGTH(list: Value::List) {
-        let len = list.borrow().len() as f64;
-
-        return Ok(Value::Number(len))
+    std_function!(functions => fn LENGTH(collection: Value) {
+        let len = match collection {
+            Value::List(list) => {
+                list.borrow().len() as f64
+            }
+            Value::String(string) => {
+                string.len() as f64
+            }
+            _ => {
+                return Ok(Value::Null)
+            }
+        };
+        
+        Ok(Value::Number(len))
     });
 
     // return a random integer from a to b including a and b
