@@ -88,7 +88,7 @@ impl Display for Value {
             Value::Number(v) => write!(f, "{v}"),
             Value::Bool(b) => write!(f, "{b}",),
             _ => {
-                write!(f, "FUNCTION")
+                write!(f, "NATIVE")
             }
         }
     }
