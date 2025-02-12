@@ -14,6 +14,7 @@ mod strings;
 mod style;
 mod time;
 mod map;
+mod robot;
 
 #[derive(Debug, Clone, Default)]
 pub struct Modules {
@@ -29,7 +30,8 @@ impl Modules {
         self.register("IO", io::std_io);
         self.register("STRING", strings::std_strings);
         self.register("STYLE", style::std_style);
-        self.register("MAP", map::std_map)
+        self.register("MAP", map::std_map);
+        self.register("ROBOT", robot::std_robot)
     }
     pub fn init() -> Self {
         // create bland hashmap of modules
@@ -102,7 +104,7 @@ fn std_core() -> FunctionMap {
                 return Ok(Value::Null)
             }
         };
-        
+
         Ok(Value::Number(len))
     });
 
