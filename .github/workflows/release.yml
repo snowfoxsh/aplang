@@ -23,7 +23,7 @@ jobs:
     - name: Upload build artifact
       uses: actions/upload-artifact@v4.6.0
       with:
-        name: aplang-windows-binary
+        name: windows-binary
         path: target/release/aplang.exe
         
   build-windows-portable:
@@ -42,7 +42,7 @@ jobs:
     - name: Upload build artifact
       uses: actions/upload-artifact@v4.6.0
       with:
-        name: aplang-windows-portable-binary
+        name: windows-portable-binary
         path: target/release/aplang-portable.exe
         
   build-macos:
@@ -60,7 +60,7 @@ jobs:
     - name: Upload build artifact
       uses: actions/upload-artifact@v4.6.0
       with:
-        name: aplang-macos-binary
+        name: macos-binary
         path: target/release/aplang-portable
 
   build-macos-portable:
@@ -76,7 +76,7 @@ jobs:
     - name: Upload build artifact
       uses: actions/upload-artifact@v4.6.0
       with:
-        name: aplang-macos-portable-binary
+        name: macos-portable-binary
         path: target/release/aplang
 
   release:
@@ -85,5 +85,30 @@ jobs:
     needs: [build-windows, build-windows-portable, build-macos, build-macos-portable]
     
     steps:
-    - name: Download all artifacts
-    
+    - name: Download Windows binary
+      uses: actions/download-artifact@v4
+      with:
+        name: windows-binary
+        path: artifactswindows-binary/
+        
+    - name: Download Windows portable binary
+      uses: actions/download-artifact@v4
+      with:
+        name: windows-portable-binary
+        path: artifacts/windows-portable-binary/
+
+    - name: Download macOS binary
+      uses: actions/download-artifact@v4
+      with:
+        name: macos-binary
+        path: artifacts/macos-binary/
+
+    - name: Download macOS portable binary
+      uses: actions/download-artifact@v4
+      with:
+        name: macos-portable-binary
+        path: artifacts/macos-portable-binary/
+
+    - name: List Downloaded Files
+      run: ls -R artifacts
+      
