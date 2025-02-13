@@ -3,7 +3,7 @@ name: Auto Version Tagging
 on:
   push:
     branches:
-      - main  # Adjust if needed
+      - master
 
 permissions:
   contents: write  # Required to push new tags
