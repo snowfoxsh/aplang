@@ -2,6 +2,13 @@ name: Build Artifacts
 
 on:
   workflow_dispatch:
+    inputs:
+      do_release:
+        description: "Perform a release?"
+        required: true
+        type: boolean
+        default: false
+
   push:
     tags:
     - "v*"
@@ -111,4 +118,17 @@ jobs:
 
     - name: List Downloaded Files
       run: ls -R artifacts
+
+    - name: Create GitHub Release
+      if: github.event.inputs.do_release == 'true'
+      uses: softprops/action-gh-release@v2
+      with:
+        prerelease: true
+        draft: true
+        generate_release_notes: true
+        files: |
+          artifacts/windows-binary/aplang.exe
+          artifacts/windows-portable-binary/aplang-portable.exe
+          artifacts/macos-binary/aplang
+          artifacts/macos-portable/aplang-portable        
       
