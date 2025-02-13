@@ -1,0 +1,75 @@
+name: Build Artifacts
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+    - "v*"
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+    
+    - name: Build
+      run: cargo build --release --bin aplang
+
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4.6.0
+      with:
+        name: aplang-windows-binary
+        path: target/release/aplang.exe
+        
+  build-windows-portable:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+    
+    - name: Build
+      run: cargo build --release --no-default-features --features portable --bin aplang
+
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4.6.0
+      with:
+        name: aplang-windows-portable-binary
+        path: target/release/aplang.exe
+        
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+    
+    - name: Build
+      run: cargo build --release --no-default-features --features portable --bin aplang
+
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4.6.0
+      with:
+        name: aplang-macos-binary
+        path: target/release/aplang
+
+  build-macos-portable:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+    
+    - name: Build
+      run: cargo build --release --no-default-features --features portable --bin aplang
+
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4.6.0
+      with:
+        name: aplang-macos-portable-binary
+        path: target/release/aplang
