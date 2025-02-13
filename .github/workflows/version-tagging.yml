@@ -44,7 +44,7 @@ jobs:
           VERSION=v${{ steps.get_version.outputs.value }}
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "$VERSION" -m "Release $VERSION"
+          git tag -a "$VERSION" -m "[act] release $VERSION"
           git push origin "$VERSION"
           echo "tag_created=true" >> $GITHUB_ENV
 
