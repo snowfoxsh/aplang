@@ -34,7 +34,7 @@ Please consider using this tool in your class.
 As small of a possibility as it is, consider officially recognizing this project.
 
 ## Contributing
-I welcome contributors of all skill levels. Please see `CONTRIBUTING.md` if you are interested. 
+I welcome contributors of all skill levels. Please see `CONTRIBUTING.md` and `AGREEMENT.md` if you are interested. 
 
 ## Contact Me
 Feel free to contact me. My information is on my profile [@snowfoxsh](https://github.com/snowfoxsh)
@@ -50,7 +50,8 @@ Bugs are inevitable! If you encounter a bug please open an issue.
   
 ### Licence  
 This project is licensed under [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html) which is [recommended](https://creativecommons.org/about/program-areas/software/) by Creative Commons. 
-
+### Agreement
+By contributing to the project you agree to `AGREEMENT.md`. This is to help prevent exploitation. 
 ### Disclaimer
 This project, ApLang, is an independent initiative and is not affiliated, associated, or endorsed by the College Board in any way. The College Board is a registered trademark, and all references to it are for descriptive purposes only. The creators, maintainers, and contributors of ApLang have no official relationship with the College Board, and this project is not intended to infringe upon any trademarks or proprietary rights.
 
