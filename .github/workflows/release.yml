@@ -89,7 +89,7 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: windows-binary
-        path: artifactswindows-binary/
+        path: artifacts/windows-binary/
         
     - name: Download Windows portable binary
       uses: actions/download-artifact@v4
