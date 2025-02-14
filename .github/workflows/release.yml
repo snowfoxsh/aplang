@@ -60,9 +60,7 @@ jobs:
       uses: actions/checkout@v4
     
     - name: Build
-      run: |
-        cargo build --release --no-default-features --features portable --bin aplang
-        mv target/release/aplang target/release/aplang-portable
+      run: cargo build --release --no-default-features --features portable --bin aplang
 
     - name: Upload build artifact
       uses: actions/upload-artifact@v4.6.0
@@ -78,7 +76,10 @@ jobs:
       uses: actions/checkout@v4
     
     - name: Build
-      run: cargo build --release --no-default-features --features portable --bin aplang
+      run: |
+        cargo build --release --no-default-features --features portable --bin aplang
+        mv target/release/aplang target/release/aplang-portable
+
 
     - name: Upload build artifact
       uses: actions/upload-artifact@v4.6.0
