@@ -66,7 +66,7 @@ jobs:
       uses: actions/upload-artifact@v4.6.0
       with:
         name: macos-binary
-        path: target/release/aplang-portable
+        path: target/release/aplang
 
   build-macos-portable:
     runs-on: macos-latest
@@ -80,12 +80,11 @@ jobs:
         cargo build --release --no-default-features --features portable --bin aplang
         mv target/release/aplang target/release/aplang-portable
 
-
     - name: Upload build artifact
       uses: actions/upload-artifact@v4.6.0
       with:
         name: macos-portable-binary
-        path: target/release/aplang
+        path: target/release/aplang-portable
 
   release:
     name: Create GitHub Release
@@ -131,5 +130,5 @@ jobs:
           artifacts/windows-binary/aplang.exe
           artifacts/windows-portable-binary/aplang-portable.exe
           artifacts/macos-binary/aplang
-          artifacts/macos-portable/aplang-portable        
+          artifacts/macos-portable-binary/aplang-portable
       
