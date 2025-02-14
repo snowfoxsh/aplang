@@ -37,15 +37,19 @@ jobs:
             echo "TAG_EXISTS=false" >> $GITHUB_ENV
           fi
 
-      - name: Create and Push Git Tag
-        id: create_tag
-        if: env.TAG_EXISTS == 'false'  # Run only if the tag doesn't exist
+      - name: Create and Push Git Tag via GitHub API
+        if: env.TAG_EXISTS == 'false'
+        id: push_tag
         run: |
           VERSION=v${{ steps.get_version.outputs.value }}
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "$VERSION" -m "[act] release $VERSION"
-          git push origin "$VERSION"
+          SHA=$(git rev-parse HEAD)  # Get the latest commit SHA
+
+          # Push the tag using GitHub API
+          curl -X POST -H "Authorization: token ${{ secrets.PAT }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"ref\": \"refs/tags/$VERSION\", \"sha\": \"$SHA\"}" \
+            "https://api.github.com/repos/${{ github.repository }}/git/refs"
+
           echo "tag_created=true" >> $GITHUB_ENV
 
       - name: Print Confirmation
