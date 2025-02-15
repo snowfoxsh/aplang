@@ -85,6 +85,13 @@ impl fmt::Display for Token {
 }
 
 impl Token {
+    pub fn debug_many(tokens: &Vec<Token>) -> String {
+        let string: Vec<String> = tokens.iter().map(|t| format!("{t}")).collect();
+        format!("[{}]", string.join(", "))
+    }
+}
+
+impl Token {
     pub fn is_soft_semi(&self) -> bool {
         matches!(self.token_type, TokenType::SoftSemi)
     }
