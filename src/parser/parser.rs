@@ -368,7 +368,7 @@ impl Parser {
             // matching import ["f1", "f2", "f3"] from mod
             let lbracket = self.previous().clone();
 
-            let specific_functions: Vec<Token> = vec![];
+            let mut specific_functions: Vec<Token> = vec![];
             loop {
                 // todo: consider making this an argument because arbitrary
                 // todo: like max param limits or something
@@ -391,15 +391,19 @@ impl Parser {
                     ));
                 }
 
-                let _specific_functions = self.consume(&StringLiteral, |found| {
+                let specific_function = self.consume(&StringLiteral, |found| {
                     miette!("expected a specific function instead found {}", found)
                 })?;
+
+                specific_functions.push(specific_function.clone());
 
                 // we've reached the end of the specific functions
                 if !self.match_token(&Comma) {
                     break;
                 }
             }
+
+            println!("debug: specific functions: {:?}", specific_functions);
 
             // close off the specific functions
             let _rbracket = self.consume(&RightBracket, |_found| {
