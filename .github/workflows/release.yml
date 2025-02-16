@@ -1,4 +1,4 @@
-name: Build Artifacts
+name: Handle Release
 
 on:
   workflow_dispatch:
@@ -33,25 +33,6 @@ jobs:
         name: windows-binary
         path: target/release/aplang.exe
         
-  build-windows-portable:
-    runs-on: windows-latest
-
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-    
-    - name: Build
-      run: |
-        cargo build --release --no-default-features --features portable --bin aplang
-        mv target/release/aplang.exe target/release/aplang-portable.exe
-      
-
-    - name: Upload build artifact
-      uses: actions/upload-artifact@v4.6.0
-      with:
-        name: windows-portable-binary
-        path: target/release/aplang-portable.exe
-        
   build-macos:
     runs-on: macos-latest
 
@@ -68,28 +49,10 @@ jobs:
         name: macos-binary
         path: target/release/aplang
 
-  build-macos-portable:
-    runs-on: macos-latest
-
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-    
-    - name: Build
-      run: |
-        cargo build --release --no-default-features --features portable --bin aplang
-        mv target/release/aplang target/release/aplang-portable
-
-    - name: Upload build artifact
-      uses: actions/upload-artifact@v4.6.0
-      with:
-        name: macos-portable-binary
-        path: target/release/aplang-portable
-
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [build-windows, build-windows-portable, build-macos, build-macos-portable]
+    needs: [build-windows, build-macos]
     
     steps:
     - name: Download Windows binary
@@ -97,12 +60,6 @@ jobs:
       with:
         name: windows-binary
         path: artifacts/windows-binary/
-        
-    - name: Download Windows portable binary
-      uses: actions/download-artifact@v4
-      with:
-        name: windows-portable-binary
-        path: artifacts/windows-portable-binary/
 
     - name: Download macOS binary
       uses: actions/download-artifact@v4
@@ -110,17 +67,12 @@ jobs:
         name: macos-binary
         path: artifacts/macos-binary/
 
-    - name: Download macOS portable binary
-      uses: actions/download-artifact@v4
-      with:
-        name: macos-portable-binary
-        path: artifacts/macos-portable-binary/
-
     - name: List Downloaded Files
       run: ls -R artifacts
 
     - name: Create GitHub Release
-      if: github.event.inputs.do_release == 'true'
+      # ensure it runs manually or on tag push
+      if: ${{ github.event_name == 'push' || github.event.inputs.do_release == 'true' }}
       uses: softprops/action-gh-release@v2
       with:
         prerelease: true
@@ -128,7 +80,4 @@ jobs:
         generate_release_notes: true
         files: |
           artifacts/windows-binary/aplang.exe
-          artifacts/windows-portable-binary/aplang-portable.exe
           artifacts/macos-binary/aplang
-          artifacts/macos-portable-binary/aplang-portable
-      
