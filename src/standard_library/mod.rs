@@ -96,8 +96,8 @@ fn std_core() -> FunctionMap {
 
     // return a random integer from a to b including a and b
     std_function!(functions => fn RANDOM(a: Value::Number, b: Value::Number) {
-        let mut rng = rand::thread_rng();
-        let result = rng.gen_range(a as i64..=b as i64);
+        let mut rng = rand::rng();
+        let result = rng.random_range(a as i64..=b as i64);
 
         return Ok(Value::Number(result as f64))
     });

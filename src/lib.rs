@@ -14,18 +14,14 @@
 //! <3
 
 pub mod aplang;
-pub mod arguments;
 pub mod interpreter;
 pub mod lexer;
 pub mod parser;
 pub mod standard_library;
 pub mod output;
-pub use aplang::*;
-
-
 #[cfg(feature = "wasm")]
 pub mod wasm;
-
+pub use aplang::*;
 
 #[test]
 pub fn test() {

@@ -26,34 +26,37 @@ cfg-if = "1.0.0"
 mapro = "0.1.1"
 owo-colors = "4.1.0"
 thiserror = "2.0.11"
-clap = { version = "4.5.18", features = ["derive"] }
-rand = "0.9.0-alpha.2"
+rand = { version = "0.9.0" }
+getrandom = { version = "0.3.1"}
 
 # dependencies based on features
+clap = { version = "4.5.18", features = ["derive"], optional = true } # bin
 
 miette = { version = "7.2.0", optional = true } # both
 
 stacker = { version = "0.1.17", optional = true } # native
 
-getrandom = { version = "0.2.15", optional = true } # wasm
 wasm-bindgen = { version = "0.2.93", optional = true } # wasm
 js-sys = { version = "0.3.70", optional = true } # wasm
+web-sys = { version = "0.3.77", optional = true } # wasm
 
 
 
 [features]
 # "native" feature for non-wasm platforms, enabling native dependencies
-native = ["miette/fancy", "stacker"]
+native = ["miette/fancy", "stacker", "clap/suggestions", "clap/color"]
 
 # "portable" allows for fully static linking at the cost of low stack size
 # cargo build --no-default-features --features portable
-portable = ["miette/fancy-no-syscall"]
+portable = ["miette/fancy-no-syscall", "clap"]
 
 
 # YOU SHALL NOT RUN AS A BINARY WITH THE WASM FEATURE!
 # "wasm" feature, enabling wasm-specific dependencies
 # cargo build --no-default-features --features wasm
-wasm = ["miette/fancy-no-syscall", "getrandom/js", "wasm-bindgen", "js-sys"]
+# RUSTFLAGS='--cfg getrandom_backend="wasm_js"'
+# you must set these flags to build for wasm
+wasm = ["miette/fancy-no-syscall", "getrandom/wasm_js", "wasm-bindgen", "js-sys", "web-sys"]
 
 # default is empty, so you can explicitly opt-in to "wasm"
 default = ["native"]
