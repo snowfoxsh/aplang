@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   run-tests:
-    uses: aplang/.github/workflows/tests.yml@master
+    uses: ./.github/workflows/tests.yml
     
   tag-version:
     runs-on: ubuntu-latest
