@@ -9,8 +9,12 @@ permissions:
   contents: write  # Required to push new tags
 
 jobs:
+  run-tests:
+    uses: aplang/.github/workflows/tests.yml@master
+    
   tag-version:
     runs-on: ubuntu-latest
+    needs: run-tests
     outputs:
       new_version: ${{ steps.get_version.outputs.value }}  # Pass version to next job
       tag_created: ${{ steps.create_tag.outputs.tag_created }}  # Pass if tag was created
