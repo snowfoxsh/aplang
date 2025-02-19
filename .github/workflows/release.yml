@@ -24,14 +24,12 @@ env:
 jobs:
   build-windows:
     runs-on: windows-latest
-
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
-    
     - name: Build
-      run: cargo build --release --bin aplang
-
+      run: |
+        cargo build --release --bin aplang
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
       with:
@@ -40,7 +38,6 @@ jobs:
         
   build-macos:
     runs-on: macos-latest
-
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
@@ -48,44 +45,71 @@ jobs:
       run: |
         rustup target add aarch64-apple-darwin
         rustup target add x86_64-apple-darwin
-        
     - name: Build x86_64
-      run: cargo build --release --bin aplang --target x86_64-apple-darwin
-      
+      run: | 
+        cargo build --release --bin aplang --target x86_64-apple-darwin
     - name: Build aarch64
-      run: cargo build --release --bin aplang --target aarch64-apple-darwin
-      
-    - name: Lipo Pack
+      run: | 
+        cargo build --release --bin aplang --target aarch64-apple-darwin
+    - name: Create Fat Binary
       run: |
         mkdir -p out
         lipo -create -output out/aplang target/x86_64-apple-darwin/release/aplang target/aarch64-apple-darwin/release/aplang
-
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
       with:
         name: macos-binary
         path: out/aplang
-
+          
+  create-pkg:
+    name: Create MacOS `.pkg`
+    runs-on: macos-latest
+    needs: build-macos
+    steps:
+    - name: Download macOS binary
+      uses: actions/download-artifact@v4
+      with:
+        name: macos-binary
+        path: package-root/
+    - name: Setup Build
+      run: |
+        chmod +x package-root/aplang
+        TAG_VERSION="${GITHUB_REF_NAME#v:-0.0.0}"
+    - name: Create Package
+      run: |
+        pkgbuild --root package-root \
+          --identifier snowfoxsh.aplang \
+          --version ${TAG_VERSION} \
+          --install-location /usr/local/bin \
+          aplang.pkg
+    - name: Upload `.pkg` Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-pkg
+        path: aplang.pkg
+      
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [build-windows, build-macos]
-    
+    needs: [build-windows, build-macos, create-pkg]
     steps:
     - name: Download Windows binary
       uses: actions/download-artifact@v4
       with:
         name: windows-binary
         path: artifacts/windows/
-
     - name: Download macOS binary
       uses: actions/download-artifact@v4
       with:
         name: macos-binary
         path: artifacts/macos/
-
     - name: List Downloaded Files
       run: ls -R artifacts
+    - name: Download macOS binary
+      uses: actions/download-artifact@v4
+      with:
+        name: macos-pkg
+        path: artifacts/macos
 
     - name: Create GitHub Release
       if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.do_github_release == 'true') }}
@@ -97,6 +121,8 @@ jobs:
         files: |
           artifacts/windows/aplang.exe
           artifacts/macos/aplang
+          artifacts/macos/aplang.pkg
+
 
   cargo-publish:
     name: Publish to Crates.io
