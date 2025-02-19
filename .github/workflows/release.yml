@@ -115,4 +115,5 @@ jobs:
     - name: Publish to crates.io
       env:
         CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-      run: cargo publish --dry-run
+      # allow dirty is to make sure the Cargo.lock is always submited
+      run: cargo publish --allow-dirty
