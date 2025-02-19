@@ -60,7 +60,8 @@ jobs:
       with:
         name: macos-binary
         path: out/aplang
-          
+
+  # --- JOB: create-pkg ---
   create-pkg:
     name: Create MacOS `.pkg`
     runs-on: macos-latest
@@ -71,17 +72,23 @@ jobs:
       with:
         name: macos-binary
         path: package-root/
+
     - name: Setup Build
       run: |
+        mkdir -p package-root/
         chmod +x package-root/aplang
-        TAG_VERSION="${GITHUB_REF_NAME#v:-0.0.0}"
+        TAG_VERSION="${GITHUB_REF_NAME#v}"
+        TAG_VERSION="${TAG_VERSION:-0.0.0}"
+        echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_ENV
+
     - name: Create Package
       run: |
         pkgbuild --root package-root \
-          --identifier snowfoxsh.aplang \
-          --version ${TAG_VERSION} \
-          --install-location /usr/local/bin \
-          aplang.pkg
+            --identifier snowfoxsh.aplang \
+            --version "$TAG_VERSION" \
+            --install-location /usr/local/bin \
+            aplang.pkg
+
     - name: Upload `.pkg` Artifact
       uses: actions/upload-artifact@v4
       with:
