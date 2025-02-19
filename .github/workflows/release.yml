@@ -30,7 +30,7 @@ jobs:
       uses: actions/checkout@v4
     
     - name: Build
-      run: cargo build --release
+      run: cargo build --release --bin aplang
 
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
@@ -44,15 +44,25 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
-    
-    - name: Build
-      run: cargo build --release
+    - name: Add Targets
+      run: |
+        rustup target add aarch64-apple-darwin
+        rustup target add x86_64-apple-darwin
+        
+    - name: Build x86_64
+      run: cargo build --release --bin aplang --target x86_64-apple-darwin
+      
+    - name: Build aarch64
+      run: cargo build --release --bin aplang --target aarch64-apple-darwin
+      
+    - name: Lipo Pack
+      run: lipo -create -output out/aplang target/x86_64-apple-darwin/release/aplang target/aarch64-apple-darwin/release/aplang
 
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
       with:
         name: macos-binary
-        path: target/release/aplang
+        path: out/aplang
 
   release:
     name: Create GitHub Release
