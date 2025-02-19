@@ -56,7 +56,9 @@ jobs:
       run: cargo build --release --bin aplang --target aarch64-apple-darwin
       
     - name: Lipo Pack
-      run: lipo -create -output out/aplang target/x86_64-apple-darwin/release/aplang target/aarch64-apple-darwin/release/aplang
+      run: |
+        mkdir -p out
+        lipo -create -output out/aplang target/x86_64-apple-darwin/release/aplang target/aarch64-apple-darwin/release/aplang
 
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
