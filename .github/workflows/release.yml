@@ -92,13 +92,13 @@ jobs:
       env:
         APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
         APPLE_KEYCHAIN_PASSWORD: "temporary-keychain-password"
-        run: |
-          echo "$APPLE_CERTIFICATE" > developer_id_installer.pem
-          security create-keychain -p "$APPLE_KEYCHAIN_PASSWORD" build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p "$APPLE_KEYCHAIN_PASSWORD" build.keychain
-          security import developer_id_installer.pem -k build.keychain -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$APPLE_KEYCHAIN_PASSWORD" build.keychain
+      run: |
+        echo "$APPLE_CERTIFICATE" > developer_id_installer.pem
+        security create-keychain -p "$APPLE_KEYCHAIN_PASSWORD" build.keychain
+        security default-keychain -s build.keychain
+        security unlock-keychain -p "$APPLE_KEYCHAIN_PASSWORD" build.keychain
+        security import developer_id_installer.pem -k build.keychain -T /usr/bin/codesign
+        security set-key-partition-list -S apple-tool:,apple: -s -k "$APPLE_KEYCHAIN_PASSWORD" build.keychain
 
     - name: Upload `.pkg` Artifact
       uses: actions/upload-artifact@v4
