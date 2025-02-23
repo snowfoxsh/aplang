@@ -54,10 +54,16 @@ fn test_var() {
 pi <- 3.14
 answer <- 42
 greeting <- "hello world"
+yes <- TRUE
+no <- FALSE
+nothing <- NULL
 
 
 DISPLAY(pi)         $3.14
 DISPLAY(answer)     $42
 DISPLAY(greeting)   $hello world
+DISPLAY(yes)        $TRUE
+DISPLAY(no)         $FALSE
+DISPLAY(nothing)    $NULL
     "#);
 }
