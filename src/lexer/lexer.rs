@@ -165,7 +165,24 @@ impl Lexer {
                 } else {
                     self.add_token(Slash)
                 }
-            }
+            },
+            '\\' => {
+                if !self.char_match('\n') {
+                    let labels = vec![LabeledSpan::at(
+                        self.current_span(),
+                        "must be followed by newline (\\n)",
+                    )];
+                    
+                    let error = miette!(
+                        labels = labels,
+                        help = "use \\ to escape a newline",
+                        "expected newline (\\n) following \\ instead found {}",
+                        self.peek()
+                    ).with_source_code(self.source.clone());
+                    
+                    return Err(error);
+                }
+            },
             ' ' | '\r' | '\t' => { /* nop */ }
             '\n' => {
                 if let Some(prev) = self.tokens.last() {
