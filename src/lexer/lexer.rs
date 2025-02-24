@@ -191,7 +191,7 @@ impl Lexer {
                     // see: https://go.dev/ref/spec#Semicolons
                     match prev.token_type {
                         Identifier | // ident
-                        Number | StringLiteral | // literal
+                        Number | StringLiteral | Null | True | False | // literal
                         Break | Continue | Return |
                         RightParen | RightBracket | RightBrace
                         => {
