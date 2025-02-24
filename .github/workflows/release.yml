@@ -118,7 +118,8 @@ jobs:
         
     - name: Sign the package
       run: |
-        productsign --sign "Developer ID Installer: Patrick Unick (423YZUTX3G)" aplang-unsigned.pkg aplang.pkg
+        # productsign --sign "Developer ID Installer: Patrick Unick (423YZUTX3G)" aplang-unsigned.pkg aplang.pkg
+        timeout 60s productsign --keychain $(pwd)/temp.keychain --sign "Developer ID Installer: Patrick Unick (423YZUTX3G)" aplang-unsigned.pkg aplang.pkg
         
         
     - name: Notarize the package
