@@ -29,8 +29,7 @@ fn smart_test(smart_src: impl Into<String>) {
 
     let mut cmd = Command::cargo_bin("aplang").unwrap();
 
-    let cmd = cmd.arg(format!("-e {src}"))
-        .assert();
+    let cmd = cmd.arg(format!("-e {src}")).assert();
 
     println!("=== OUT ===");
     let runtime = String::from_utf8(cmd.get_output().stdout.clone()).unwrap();
@@ -42,15 +41,18 @@ fn smart_test(smart_src: impl Into<String>) {
 
 #[test]
 fn test_hello_world() {
-    smart_test(r#"
+    smart_test(
+        r#"
 DISPLAY("hello world") $hello world
 DISPLAY_NOLN("hello world") $hello world\
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_arithmetic_expressions() {
-    smart_test(r#"
+    smart_test(
+        r#"
     // Addition
     sum <- 5 + 3
     DISPLAY(sum) $8
@@ -70,46 +72,53 @@ fn test_arithmetic_expressions() {
     // Modulo
     remainder <- 9 MOD 4
     DISPLAY(remainder) $1
-    "#);
+    "#,
+    );
 }
-
 
 #[test]
 fn test_string_concatenation() {
-    smart_test(r#"
+    smart_test(
+        r#"
     greeting <- "Hello, "
     name <- "World!"
     full_greeting <- greeting + name
     DISPLAY(full_greeting) $Hello, World!
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_list_concatenation() {
-    smart_test(r#"
+    smart_test(
+        r#"
     list1 <- [1, 2, 3]
     list2 <- [4, 5, 6]
     combined_list <- list1 + list2
     DISPLAY(combined_list) $[1, 2, 3, 4, 5, 6]
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_function_call_expression() {
-    smart_test(r#"
+    smart_test(
+        r#"
     PROCEDURE square(x) {
         RETURN x * x
     }
     result <- square(4)
     DISPLAY(result) $16
-    
+
     DISPLAY(square(2 + 8)) $100
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_logical_expressions() {
-    smart_test(r#"
+    smart_test(
+        r#"
     a <- TRUE
     b <- FALSE
 
@@ -124,12 +133,14 @@ fn test_logical_expressions() {
     // Logical OR
     or_result <- a OR b
     DISPLAY(or_result) $TRUE
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_comparison_expressions() {
-    smart_test(r#"
+    smart_test(
+        r#"
     x <- 5
     y <- 10
 
@@ -139,12 +150,14 @@ fn test_comparison_expressions() {
     DISPLAY(x < y) $TRUE
     DISPLAY(x >= y) $FALSE
     DISPLAY(x <= y) $TRUE
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_combined_expressions() {
-    smart_test(r#"
+    smart_test(
+        r#"
     a <- 2
     b <- 3
     c <- 4
@@ -152,22 +165,14 @@ fn test_combined_expressions() {
     // Parentheses control the order of operations:
     result <- (a + b) * c
     DISPLAY(result) $20
-    "#);
+    "#,
+    );
 }
-
-
-
-
-
-
-
-
-
-
 
 #[test]
 fn test_var() {
-    smart_test(r#"
+    smart_test(
+        r#"
 pi <- 3.14
 answer <- 42
 greeting <- "hello world"
@@ -182,12 +187,14 @@ DISPLAY(greeting)   $hello world
 DISPLAY(yes)        $TRUE
 DISPLAY(no)         $FALSE
 DISPLAY(nothing)    $NULL
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_if() {
-    smart_test(r#"
+    smart_test(
+        r#"
     x <- 10
     y <- 5
     IF (x > y) {
@@ -205,23 +212,27 @@ fn test_if() {
     } ELSE {
         DISPLAY("y is non-negative") $y is non-negative
     }
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_if_else_false() {
-    smart_test(r#"
+    smart_test(
+        r#"
     IF (FALSE) {
         DISPLAY("wrong")
     } ELSE {
         DISPLAY("right") $right
     }
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_nested_if() {
-    smart_test(r#"
+    smart_test(
+        r#"
     num <- 42
     IF (num > 0) {
         DISPLAY("num is positive") $num is positive
@@ -233,22 +244,26 @@ fn test_nested_if() {
     } ELSE {
         DISPLAY("num is non-positive")
     }
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_if_no_else_true() {
-    smart_test(r#"
+    smart_test(
+        r#"
     flag <- TRUE
     IF (flag) {
         DISPLAY("Flag is true") $Flag is true
     }
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_multiple_if() {
-    smart_test(r#"
+    smart_test(
+        r#"
     value <- 7
     IF (value < 10) {
         DISPLAY("value is less than 10") $value is less than 10
@@ -259,12 +274,14 @@ fn test_multiple_if() {
     IF (value == 7) {
         DISPLAY("value is equal to 7") $value is equal to 7
     }
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_if_else_nested() {
-    smart_test(r#"
+    smart_test(
+        r#"
     score <- 85
     IF (score >= 90) {
         DISPLAY("Grade A")
@@ -275,12 +292,14 @@ fn test_if_else_nested() {
             DISPLAY("Grade C or lower")
         }
     }
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_else_if() {
-    smart_test(r#"
+    smart_test(
+        r#"
     num <- 15
     IF (num < 10) {
         DISPLAY("num is less than 10")
@@ -289,12 +308,14 @@ fn test_else_if() {
     } ELSE {
         DISPLAY("num is 20 or more")
     }
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_else_if_grade_evaluation() {
-    smart_test(r#"
+    smart_test(
+        r#"
     score <- 85
     IF (score >= 90) {
         DISPLAY("Grade A")
@@ -305,12 +326,14 @@ fn test_else_if_grade_evaluation() {
     } ELSE {
         DISPLAY("Grade D or F")
     }
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_else_if_boundary_conditions() {
-    smart_test(r#"
+    smart_test(
+        r#"
     temperature <- 0
     IF (temperature < 0) {
         DISPLAY("Below Freezing")
@@ -319,105 +342,121 @@ fn test_else_if_boundary_conditions() {
     } ELSE IF (temperature > 0) {
         DISPLAY("Above Freezing")
     }
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_else_if_boolean() {
-    smart_test(r#"
+    smart_test(
+        r#"
     is_active <- FALSE
     IF (is_active) {
         DISPLAY("Active")
     } ELSE IF (NOT is_active) {
         DISPLAY("Inactive") $Inactive
     }
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_procedure_add() {
-    smart_test(r#"
+    smart_test(
+        r#"
     PROCEDURE add(a, b) {
         sum <- a + b
         RETURN sum
     }
     result <- add(3, 4)
     DISPLAY(result) $7
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_nested_procedures() {
-    smart_test(r#"
+    smart_test(
+        r#"
     PROCEDURE multiply(a, b) {
         product <- a * b
         RETURN product
     }
-    
+
     PROCEDURE calculate_area(length, width) {
         area <- multiply(length, width)
         RETURN area
     }
-    
+
     area <- calculate_area(5, 10)
     DISPLAY(area) $50
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_pass_by_value() {
-    smart_test(r#"
+    smart_test(
+        r#"
     PROCEDURE modify_number(n) {
         n <- n + 10
         DISPLAY(n) $15
     }
-    
+
     num <- 5
     modify_number(num)
     DISPLAY(num) $5
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_pass_by_reference() {
-    smart_test(r#"
+    smart_test(
+        r#"
     PROCEDURE add_to_list(lst) {
         APPEND(lst, 4)
         DISPLAY(lst) $[1, 2, 3, 4]
     }
-    
+
     my_list <- [1, 2, 3]
     add_to_list(my_list)
     DISPLAY(my_list) $[1, 2, 3, 4]
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_procedure_no_return() {
-    smart_test(r#"
+    smart_test(
+        r#"
     PROCEDURE greet(name) {
         DISPLAY("Hello, " + name + "!")
     }
-    
+
     greet("Alice") $Hello, Alice!
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_repeat_times_basic() {
-    smart_test(r#"
+    smart_test(
+        r#"
     REPEAT 3 TIMES {
         DISPLAY("a")
     }
     $a
     $a
     $a
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_repeat_times_counter() {
-    smart_test(r#"
+    smart_test(
+        r#"
     counter <- 0
     REPEAT 5 TIMES {
         counter <- counter + 1
@@ -428,12 +467,14 @@ fn test_repeat_times_counter() {
     $3
     $4
     $5
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_repeat_until_counter() {
-    smart_test(r#"
+    smart_test(
+        r#"
     count <- 0
     REPEAT UNTIL (count == 5) {
         count <- count + 1
@@ -444,12 +485,14 @@ fn test_repeat_until_counter() {
     $3
     $4
     $5
-    "#);
+    "#,
+    );
 }
 
 #[test]
 fn test_repeat_until_balance() {
-    smart_test(r#"
+    smart_test(
+        r#"
     balance <- 100
     goal <- 400
     REPEAT UNTIL (balance >= goal) {
@@ -458,5 +501,6 @@ fn test_repeat_until_balance() {
     }
     $200
     $400
-    "#);
+    "#,
+    );
 }
