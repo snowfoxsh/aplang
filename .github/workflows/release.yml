@@ -83,9 +83,6 @@ jobs:
         # Set temp.keychain as default keychain
         security default-keychain -s temp.keychain
 
-        # Add the keychain to the partition list
-        security set-key-partition-list -S apple-tool:,apple: -s -k "$TEMP_KEYCHAIN_PASSWORD" temp.keychain
-
         # Import certificates into the temporary keychain
         security import application_cert.p12 -k temp.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
         security import installer_cert.p12 -k temp.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
