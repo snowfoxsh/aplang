@@ -333,3 +333,72 @@ fn test_else_if_boolean() {
     }
     "#);
 }
+
+#[test]
+fn test_procedure_add() {
+    smart_test(r#"
+    PROCEDURE add(a, b) {
+        sum <- a + b
+        RETURN sum
+    }
+    result <- add(3, 4)
+    DISPLAY(result) $7
+    "#);
+}
+
+#[test]
+fn test_nested_procedures() {
+    smart_test(r#"
+    PROCEDURE multiply(a, b) {
+        product <- a * b
+        RETURN product
+    }
+    
+    PROCEDURE calculate_area(length, width) {
+        area <- multiply(length, width)
+        RETURN area
+    }
+    
+    area <- calculate_area(5, 10)
+    DISPLAY(area) $50
+    "#);
+}
+
+#[test]
+fn test_pass_by_value() {
+    smart_test(r#"
+    PROCEDURE modify_number(n) {
+        n <- n + 10
+        DISPLAY(n) $15
+    }
+    
+    num <- 5
+    modify_number(num)
+    DISPLAY(num) $5
+    "#);
+}
+
+#[test]
+fn test_pass_by_reference() {
+    smart_test(r#"
+    PROCEDURE add_to_list(lst) {
+        APPEND(lst, 4)
+        DISPLAY(lst) $[1, 2, 3, 4]
+    }
+    
+    my_list <- [1, 2, 3]
+    add_to_list(my_list)
+    DISPLAY(my_list) $[1, 2, 3, 4]
+    "#);
+}
+
+#[test]
+fn test_procedure_no_return() {
+    smart_test(r#"
+    PROCEDURE greet(name) {
+        DISPLAY("Hello, " + name + "!")
+    }
+    
+    greet("Alice") $Hello, Alice!
+    "#);
+}
