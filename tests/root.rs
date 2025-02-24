@@ -41,7 +41,7 @@ fn smart_test(smart_src: impl Into<String>) {
 }
 
 #[test]
-fn hello_world() {
+fn test_hello_world() {
     smart_test(r#"
 DISPLAY("hello world") $hello world
 DISPLAY_NOLN("hello world") $hello world\
