@@ -72,6 +72,28 @@ jobs:
       with:
         name: macos-binary
         path: package-root/
+        
+    - name: Install Apple Certificates to Keychain
+      env:
+        APPLICATION_CERT_BASE64: ${{ secrets.APPLE_APPLICATION_CERT }}
+        INSTALLER_CERT_BASE64: ${{ secrets.APPLE_INSTALLER_CERT }}
+        CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+        TEMP_KEYCHAIN_PASSWORD: temp_password
+      run: |
+        echo "$APPLICATION_CERT_BASE64" | base64 --decode > application_cert.p12
+        echo "$INSTALLER_CERT_BASE64" | base64 --decode > installer_cert.p12
+
+        # Create a temporary keychain with a temporary password
+        security create-keychain -p "$TEMP_KEYCHAIN_PASSWORD" temp.keychain
+        security unlock-keychain -p "$TEMP_KEYCHAIN_PASSWORD" temp.keychain
+
+        # Import certificates into the temporary keychain
+        security import application_cert.p12 -k temp.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
+        security import installer_cert.p12 -k temp.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
+
+        # Set the key partition list with explicit unlocking
+        security set-key-partition-list -S apple-tool:,apple: -s -k "$TEMP_KEYCHAIN_PASSWORD" temp.keychain
+    - name: S
 
     - name: Setup Build
       run: |
@@ -81,26 +103,27 @@ jobs:
         TAG_VERSION="${TAG_VERSION:-0.0.0}"
         echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_ENV
 
-    - name: Create Package
+    - name: Sign Application Binary
+      env: 
+        APPLE_APPLICATION_CERT_NAME: ${{ secrets.APPLE_APPLICATION_CERT_NAME }}
       run: |
-        pkgbuild --root package-root \
-            --identifier snowfoxsh.aplang \
-            --version "$TAG_VERSION" \
-            --install-location /usr/local/bin \
-            aplang-unsigned.pkg
-    - name: Add Apple certificate to keychain
+        codesign --sign "$APPLE_APPLICATION_CERT_NAME" --options runtime --deep --force package-root/aplang
+        
+    - name: Create `.pkg` Installer
       env:
-        APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-        APPLE_KEYCHAIN_PASSWORD: "temporary-keychain-password"
+        APPLE_INSTALLER_CERT_NAME: ${{ secrets.APPLE_INSTALLER_CERT_NAME }}
       run: |
-        echo "$APPLE_CERTIFICATE" > developer_id_installer.pem
-        security create-keychain -p "$APPLE_KEYCHAIN_PASSWORD" build.keychain
-        security default-keychain -s build.keychain
-        security unlock-keychain -p "$APPLE_KEYCHAIN_PASSWORD" build.keychain
-        security import developer_id_installer.pem -k build.keychain -T /usr/bin/codesign
-        security find-identity -p codesigning build.keychain
-        security set-key-partition-list -S apple-tool:,apple: -s -k "$APPLE_KEYCHAIN_PASSWORD" build.keychain
-
+        pkgbuild --root package-root --sign "$APPLE_INSTALLER_CERT_NAME" --identifier snowfoxsh.aplang --version "$TAG_VERSION" --install-location /usr/local/bin aplang.pkg
+    - name: Notarize the package
+      env:
+        APPLE_ID_EMAIL: ${{ secrets.APPLE_ID_EMAIL }}
+        APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      run: |
+        # Submit notary
+        xcrun notarytool submit aplang.pkg --apple-id "$APPLE_ID_EMAIL" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD" --wait
+        # Staple the notary
+        xcrun stapler staple aplang.pkg
     - name: Upload `.pkg` Artifact
       uses: actions/upload-artifact@v4
       with:
