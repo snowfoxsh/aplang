@@ -184,3 +184,152 @@ DISPLAY(no)         $FALSE
 DISPLAY(nothing)    $NULL
     "#);
 }
+
+#[test]
+fn test_if() {
+    smart_test(r#"
+    x <- 10
+    y <- 5
+    IF (x > y) {
+        DISPLAY("x is greater than y") $x is greater than y
+    } ELSE {
+        DISPLAY("y is greater than or equal to x")
+    }
+
+    IF (x == 10) {
+        DISPLAY("x is exactly 10") $x is exactly 10
+    }
+
+    IF (y < 0) {
+        DISPLAY("y is negative")
+    } ELSE {
+        DISPLAY("y is non-negative") $y is non-negative
+    }
+    "#);
+}
+
+#[test]
+fn test_if_else_false() {
+    smart_test(r#"
+    IF (FALSE) {
+        DISPLAY("wrong")
+    } ELSE {
+        DISPLAY("right") $right
+    }
+    "#);
+}
+
+#[test]
+fn test_nested_if() {
+    smart_test(r#"
+    num <- 42
+    IF (num > 0) {
+        DISPLAY("num is positive") $num is positive
+        IF (num MOD 2 == 0) {
+            DISPLAY("num is even") $num is even
+        } ELSE {
+            DISPLAY("num is odd")
+        }
+    } ELSE {
+        DISPLAY("num is non-positive")
+    }
+    "#);
+}
+
+#[test]
+fn test_if_no_else_true() {
+    smart_test(r#"
+    flag <- TRUE
+    IF (flag) {
+        DISPLAY("Flag is true") $Flag is true
+    }
+    "#);
+}
+
+#[test]
+fn test_multiple_if() {
+    smart_test(r#"
+    value <- 7
+    IF (value < 10) {
+        DISPLAY("value is less than 10") $value is less than 10
+    }
+    IF (value > 5) {
+        DISPLAY("value is greater than 5") $value is greater than 5
+    }
+    IF (value == 7) {
+        DISPLAY("value is equal to 7") $value is equal to 7
+    }
+    "#);
+}
+
+#[test]
+fn test_if_else_nested() {
+    smart_test(r#"
+    score <- 85
+    IF (score >= 90) {
+        DISPLAY("Grade A")
+    } ELSE {
+        IF (score >= 80) {
+            DISPLAY("Grade B") $Grade B
+        } ELSE {
+            DISPLAY("Grade C or lower")
+        }
+    }
+    "#);
+}
+
+#[test]
+fn test_else_if() {
+    smart_test(r#"
+    num <- 15
+    IF (num < 10) {
+        DISPLAY("num is less than 10")
+    } ELSE IF (num < 20) {
+        DISPLAY("num is between 10 and 20") $num is between 10 and 20
+    } ELSE {
+        DISPLAY("num is 20 or more")
+    }
+    "#);
+}
+
+#[test]
+fn test_else_if_grade_evaluation() {
+    smart_test(r#"
+    score <- 85
+    IF (score >= 90) {
+        DISPLAY("Grade A")
+    } ELSE IF (score >= 80) {
+        DISPLAY("Grade B") $Grade B
+    } ELSE IF (score >= 70) {
+        DISPLAY("Grade C")
+    } ELSE {
+        DISPLAY("Grade D or F")
+    }
+    "#);
+}
+
+#[test]
+fn test_else_if_boundary_conditions() {
+    smart_test(r#"
+    temperature <- 0
+    IF (temperature < 0) {
+        DISPLAY("Below Freezing")
+    } ELSE IF (temperature == 0) {
+        DISPLAY("At Freezing Point") $At Freezing Point
+    } ELSE IF (temperature > 0) {
+        DISPLAY("Above Freezing")
+    }
+    "#);
+}
+
+#[test]
+fn test_else_if_boolean() {
+    smart_test(r#"
+    is_active <- FALSE
+    IF (is_active) {
+        DISPLAY("Active")
+    } ELSE IF (NOT is_active) {
+        DISPLAY("Inactive") $Inactive
+    }
+    "#);
+}
