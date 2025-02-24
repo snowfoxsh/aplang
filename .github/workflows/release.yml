@@ -109,13 +109,13 @@ jobs:
       env: 
         APPLE_APPLICATION_CERT_NAME: ${{ secrets.APPLE_APPLICATION_CERT_NAME }}
       run: |
-        codesign --keychain temp.keychain --sign "640EAB2C1E1F3A5AE857320C8BCA94B85AD14BE6" --options runtime --deep --force package-root/aplang
+        codesign --keychain temp.keychain --sign "Developer ID Application: Patrick Unick (423YZUTX3G)"--options runtime --deep --force package-root/aplang
         
     - name: Create `.pkg` Installer
       env:
         APPLE_INSTALLER_CERT_NAME: ${{ secrets.APPLE_INSTALLER_CERT_NAME }}
       run: |
-        pkgbuild --root package-root --keychain temp.keychain --sign "FBE58DFC89B777B8BB813934B9441FD694189D16" --identifier snowfoxsh.aplang --version "$TAG_VERSION" --install-location /usr/local/bin aplang.pkg
+        pkgbuild --root package-root --keychain temp.keychain --sign "Developer ID Installer: Patrick Unick (423YZUTX3G)" --identifier snowfoxsh.aplang --version "$TAG_VERSION" --install-location /usr/local/bin aplang.pkg
         
     - name: Notarize the package
       env:
