@@ -36,4 +36,4 @@ jobs:
 
       - name: Verify certificate installation
         run: |
-          security find-certificate -a -p temp.keychain
+          security find-certificate -v -p temp.keychain
