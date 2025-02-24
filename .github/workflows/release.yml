@@ -106,26 +106,21 @@ jobs:
         echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_ENV
 
     - name: Sign Application Binary
-      env: 
-        APPLE_APPLICATION_CERT_NAME: ${{ secrets.APPLE_APPLICATION_CERT_NAME }}
       run: |
         codesign --keychain temp.keychain --sign "Developer ID Application: Patrick Unick (423YZUTX3G)"--options runtime --deep --force package-root/aplang
         
     - name: Create `.pkg` Installer
-      env:
-        APPLE_INSTALLER_CERT_NAME: ${{ secrets.APPLE_INSTALLER_CERT_NAME }}
       run: |
         pkgbuild --root package-root --keychain temp.keychain --sign "Developer ID Installer: Patrick Unick (423YZUTX3G)" --identifier snowfoxsh.aplang --version "$TAG_VERSION" --install-location /usr/local/bin aplang.pkg
         
     - name: Notarize the package
       env:
         APPLE_ID_EMAIL: ${{ secrets.APPLE_ID_EMAIL }}
-        APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         
       run: |
         # Submit notary
-        xcrun notarytool submit aplang.pkg --apple-id "$APPLE_ID_EMAIL" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD" --wait
+        xcrun notarytool submit aplang.pkg --apple-id "$APPLE_ID_EMAIL" --team-id "423YZUTX3G" --password "$APPLE_APP_SPECIFIC_PASSWORD" --wait
         # Staple the notary
         xcrun stapler staple aplang.pkg
         
