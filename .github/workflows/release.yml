@@ -114,7 +114,12 @@ jobs:
         
     - name: Create `.pkg` Installer
       run: |
-        pkgbuild --root package-root --keychain temp.keychain --sign "Developer ID Installer: Patrick Unick (423YZUTX3G)" --identifier snowfoxsh.aplang --version "$TAG_VERSION" --install-location /usr/local/bin aplang.pkg
+        pkgbuild --root package-root --identifier snowfoxsh.aplang --version "$TAG_VERSION" --install-location /usr/local/bin aplang-unsigned.pkg
+        
+    - name: Sign the package
+      run: |
+        productsign --sign "Developer ID Installer: Patrick Unick (423YZUTX3G)" aplang-unsigned.pkg aplang.pkg
+        
         
     - name: Notarize the package
       env:
