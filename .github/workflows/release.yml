@@ -119,7 +119,9 @@ jobs:
     - name: Sign the package
       run: |
         security unlock-keychain -p "$TEMP_KEYCHAIN_PASSWORD" temp.keychain
-        productsign --keychain temp.keychain --sign "Developer ID Installer: Patrick Unick (423YZUTX3G)" aplang-unsigned.pkg aplang.pkg
+        security set-keychain-settings temp.keychain
+
+        productsign -v --keychain temp.keychain --sign "Developer ID Installer: Patrick Unick (423YZUTX3G)" aplang-unsigned.pkg aplang.pkg
         
         
     - name: Notarize the package
