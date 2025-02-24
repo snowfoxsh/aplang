@@ -107,7 +107,7 @@ jobs:
 
     - name: Sign Application Binary
       run: |
-        codesign --keychain temp.keychain --sign "Developer ID Application: Patrick Unick (423YZUTX3G)"--options runtime --deep --force package-root/aplang
+        codesign --keychain temp.keychain --sign "Developer ID Application: Patrick Unick (423YZUTX3G)" --options runtime --deep --force package-root/aplang
         
     - name: Create `.pkg` Installer
       run: |
