@@ -84,8 +84,8 @@ jobs:
         security default-keychain -s temp.keychain
 
         # Import certificates into the temporary keychain
-        security import application_cert.p12 -k temp.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
-        security import installer_cert.p12 -k temp.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
+        security import application_cert.p12 -k temp.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign
+        security import installer_cert.p12 -k temp.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign
 
         # Set the key partition list with explicit unlocking
         security set-key-partition-list -S apple-tool:,apple: -s -k "$TEMP_KEYCHAIN_PASSWORD" temp.keychain
@@ -118,8 +118,8 @@ jobs:
         
     - name: Sign the package
       run: |
-        security unlock-keychain -p "$TEMP_KEYCHAIN_PASSWORD" temp.keychain
-        security set-keychain-settings temp.keychain
+        # security unlock-keychain -p "$TEMP_KEYCHAIN_PASSWORD" temp.keychain
+        # security set-keychain-settings temp.keychain
 
         productsign -v --keychain temp.keychain --sign "Developer ID Installer: Patrick Unick (423YZUTX3G)" aplang-unsigned.pkg aplang.pkg
         
