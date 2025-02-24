@@ -92,7 +92,6 @@ jobs:
 
         # Set the key partition list with explicit unlocking
         security set-key-partition-list -S apple-tool:,apple: -s -k "$TEMP_KEYCHAIN_PASSWORD" temp.keychain
-    - name: S
 
     - name: Setup Build
       run: |
