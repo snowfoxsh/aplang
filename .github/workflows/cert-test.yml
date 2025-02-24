@@ -1,6 +1,9 @@
 name: Install Apple Certificates
 
 on:
+  push:
+    paths:
+      - .github/workflows/install-apple-cert.yml
   workflow_dispatch:
 
 jobs:
@@ -15,15 +18,22 @@ jobs:
           APPLICATION_CERT_BASE64: ${{ secrets.APPLE_APPLICATION_CERT }}
           INSTALLER_CERT_BASE64: ${{ secrets.APPLE_INSTALLER_CERT }}
           CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+          TEMP_KEYCHAIN_PASSWORD: temp_password
         run: |
           echo "$APPLICATION_CERT_BASE64" | base64 --decode > application_cert.p12
           echo "$INSTALLER_CERT_BASE64" | base64 --decode > installer_cert.p12
 
-          security import application_cert.p12 -k ~/Library/Keychains/login.keychain-db -P "$CERT_PASSWORD" -T /usr/bin/codesign
-          security import installer_cert.p12 -k ~/Library/Keychains/login.keychain-db -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          # Create a temporary keychain with a temporary password
+          security create-keychain -p "$TEMP_KEYCHAIN_PASSWORD" temp.keychain
+          security unlock-keychain -p "$TEMP_KEYCHAIN_PASSWORD" temp.keychain
 
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$CERT_PASSWORD" ~/Library/Keychains/login.keychain-db
+          # Import certificates into the temporary keychain
+          security import application_cert.p12 -k temp.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security import installer_cert.p12 -k temp.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
+
+          # Set the key partition list with explicit unlocking
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$TEMP_KEYCHAIN_PASSWORD" temp.keychain
 
       - name: Verify certificate installation
         run: |
-          security find-certificate -a -p ~/Library/Keychains/login.keychain-db
+          security find-certificate -a -p temp.keychain
