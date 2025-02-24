@@ -114,16 +114,19 @@ jobs:
         APPLE_INSTALLER_CERT_NAME: ${{ secrets.APPLE_INSTALLER_CERT_NAME }}
       run: |
         pkgbuild --root package-root --sign "$APPLE_INSTALLER_CERT_NAME" --identifier snowfoxsh.aplang --version "$TAG_VERSION" --install-location /usr/local/bin aplang.pkg
+        
     - name: Notarize the package
       env:
         APPLE_ID_EMAIL: ${{ secrets.APPLE_ID_EMAIL }}
         APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        
       run: |
         # Submit notary
         xcrun notarytool submit aplang.pkg --apple-id "$APPLE_ID_EMAIL" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD" --wait
         # Staple the notary
         xcrun stapler staple aplang.pkg
+        
     - name: Upload `.pkg` Artifact
       uses: actions/upload-artifact@v4
       with:
