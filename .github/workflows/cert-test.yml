@@ -1,0 +1,29 @@
+name: Install Apple Certificates
+
+on:
+  workflow_dispatch:
+
+jobs:
+  install-certs:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Decode and install Apple certificates
+        env:
+          APPLICATION_CERT_BASE64: ${{ secrets.APPLE_APPLICATION_CERT }}
+          INSTALLER_CERT_BASE64: ${{ secrets.APPLE_INSTALLER_CERT }}
+          CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+        run: |
+          echo "$APPLICATION_CERT_BASE64" | base64 --decode > application_cert.p12
+          echo "$INSTALLER_CERT_BASE64" | base64 --decode > installer_cert.p12
+
+          security import application_cert.p12 -k ~/Library/Keychains/login.keychain-db -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security import installer_cert.p12 -k ~/Library/Keychains/login.keychain-db -P "$CERT_PASSWORD" -T /usr/bin/codesign
+
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$CERT_PASSWORD" ~/Library/Keychains/login.keychain-db
+
+      - name: Verify certificate installation
+        run: |
+          security find-certificate -a -p ~/Library/Keychains/login.keychain-db
