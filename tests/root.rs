@@ -402,3 +402,61 @@ fn test_procedure_no_return() {
     greet("Alice") $Hello, Alice!
     "#);
 }
+
+#[test]
+fn test_repeat_times_basic() {
+    smart_test(r#"
+    REPEAT 3 TIMES {
+        DISPLAY("a")
+    }
+    $a
+    $a
+    $a
+    "#);
+}
+
+#[test]
+fn test_repeat_times_counter() {
+    smart_test(r#"
+    counter <- 0
+    REPEAT 5 TIMES {
+        counter <- counter + 1
+        DISPLAY(counter)
+    }
+    $1
+    $2
+    $3
+    $4
+    $5
+    "#);
+}
+
+#[test]
+fn test_repeat_until_counter() {
+    smart_test(r#"
+    count <- 0
+    REPEAT UNTIL (count == 5) {
+        count <- count + 1
+        DISPLAY(count)
+    }
+    $1
+    $2
+    $3
+    $4
+    $5
+    "#);
+}
+
+#[test]
+fn test_repeat_until_balance() {
+    smart_test(r#"
+    balance <- 100
+    goal <- 400
+    REPEAT UNTIL (balance >= goal) {
+        balance <- balance * 2
+        DISPLAY(balance)
+    }
+    $200
+    $400
+    "#);
+}
