@@ -1,0 +1,6 @@
+balance <- 100
+goal <- 400
+REPEAT UNTIL (balance >= goal) {
+    balance <- balance * 2
+    DISPLAY(balance)
+}
