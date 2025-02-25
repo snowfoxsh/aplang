@@ -238,7 +238,18 @@ impl Parser {
 
         if self.match_token(&For) {
             let for_token = self.previous().clone();
-            return self.for_each(for_token);
+
+            // we're now in a loop
+            let cache_loop_state = self.in_loop_scope;
+            self.in_loop_scope = true;
+            
+            // parse FOR EACH loop
+            let result = self.for_each(for_token);
+
+            // we *might* not be in a loop anymore
+            self.in_loop_scope = cache_loop_state;
+            
+            return result
         }
 
         // { expr }
