@@ -15,7 +15,7 @@ jobs:
           MakeAppx pack /d "ci\msix-package-root" /p "aplang.msix"
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@4.6.1
         with:
           name: aplang-msix
           path: aplang.msix
