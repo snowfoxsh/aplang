@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use assert_cmd::Command;
 use std::fmt::Write;
 
@@ -503,4 +505,173 @@ fn test_repeat_until_balance() {
     $400
     "#,
     );
+}
+
+#[test]
+fn test_loop_break() {
+    smart_test(r#"
+    i <- 1
+    REPEAT 10 TIMES {
+        DISPLAY(i)
+        i <- i + 1
+        IF (i > 5) {
+            BREAK
+        }
+    }
+    $1
+    $2
+    $3
+    $4
+    $5
+    "#);
+}
+
+// #[test]
+fn test_continue_in_repeat_loop() {
+    smart_test(r#"
+    counter <- 1
+    REPEAT 10 TIMES {
+        DISPLAY(counter)
+        counter <- counter + 1
+        IF (counter == 5 OR counter == 7) {
+            CONTINUE
+        }
+    }
+    $1
+    $2
+    $3
+    $4
+    $6
+    $8
+    $9
+    $10
+    "#);
+}
+
+
+// #[test]
+fn test_break_in_for_each_loop() {
+    smart_test(r#"
+    myList <- ["a", "b", "stopHere", "c", "d"]
+    FOR EACH item IN myList {
+        IF (item == "stopHere") {
+            BREAK
+        }
+        DISPLAY(item)
+    }
+    $a
+    $b
+    "#);
+}
+
+// #[test]
+fn test_continue_in_for_each_loop() {
+    smart_test(r#"
+    myList <- ["a", "skipThis", "b", "c"]
+    FOR EACH item IN myList {
+        IF (item == "skipThis") {
+            CONTINUE
+        }
+        DISPLAY(item)
+    }
+    $a
+    $b
+    $c
+    "#);
+}
+
+// #[test]
+fn test_nested_break_in_loops() {
+    smart_test(r#"
+    outerCounter <- 0
+    REPEAT 3 TIMES {
+        outerCounter <- outerCounter + 1
+        innerCounter <- 0
+        REPEAT 5 TIMES {
+            innerCounter <- innerCounter + 1
+            IF (innerCounter == 3) {
+                BREAK
+            }
+            DISPLAY(outerCounter + "-" + innerCounter)
+        }
+    }
+    $1-1
+    $1-2
+    $2-1
+    $2-2
+    $3-1
+    $3-2
+    "#);
+}
+
+// #[test]
+fn test_nested_continue_in_loops() {
+    smart_test(r#"
+    outerCounter <- 0
+    REPEAT 2 TIMES {
+        outerCounter <- outerCounter + 1
+        innerCounter <- 0
+        REPEAT 4 TIMES {
+            innerCounter <- innerCounter + 1
+            IF (innerCounter == 2) {
+                CONTINUE
+            }
+            DISPLAY(outerCounter + "-" + innerCounter)
+        }
+    }
+    $1-1
+    $1-3
+    $1-4
+    $2-1
+    $2-3
+    $2-4
+    "#);
+}
+
+#[test]
+fn test_nested_repeat_until() {
+    smart_test(r#"
+    outerCounter <- 0
+    REPEAT UNTIL (outerCounter == 3) {
+        outerCounter <- outerCounter + 1
+        innerCounter <- 0
+        REPEAT UNTIL (innerCounter == 2) {
+            innerCounter <- innerCounter + 1
+            DISPLAY("" + outerCounter + "-" + innerCounter)
+        }
+    }
+    $1-1
+    $1-2
+    $2-1
+    $2-2
+    $3-1
+    $3-2
+    "#);
+}
+
+#[test]
+fn test_nested_repeat_until_with_breaks_and_continue() {
+    smart_test(r#"
+    outerCounter <- 0
+    REPEAT UNTIL (outerCounter == 3) {
+        outerCounter <- outerCounter + 1
+        innerCounter <- 0
+        REPEAT UNTIL (innerCounter == 5) {
+            innerCounter <- innerCounter + 1
+            IF (innerCounter == 2) {
+                CONTINUE
+            }
+            IF (innerCounter == 4) {
+                BREAK
+            }
+            DISPLAY("" + outerCounter + "-" + innerCounter)
+        }
+    }
+    $1-1
+    $1-3
+    $2-1
+    $2-3
+    $3-1
+    $3-3
+    "#);
 }
