@@ -61,3 +61,6 @@ wasm = ["miette/fancy-no-syscall", "getrandom/wasm_js", "wasm-bindgen", "js-sys"
 # default is empty, so you can explicitly opt-in to "wasm"
 default = ["native"]
 
+[dev-dependencies]
+assert_cmd = "2.0.16"
+#predicates = "3.1.3"

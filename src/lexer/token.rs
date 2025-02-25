@@ -55,6 +55,7 @@ pub enum TokenType {
     And,
     Or,
 
+    // Keyword Literals
     True,
     False,
     Null,

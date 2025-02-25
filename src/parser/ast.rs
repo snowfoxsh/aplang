@@ -573,9 +573,9 @@ pub mod pretty {
             match self {
                 Literal::Number(num) => write!(f, "{}", num),
                 Literal::String(s) => write!(f, "\"{}\"", s), // Enclose strings in quotes
-                Literal::True => write!(f, "true"),
-                Literal::False => write!(f, "false"),
-                Literal::Null => write!(f, "null"),
+                Literal::True => write!(f, "TRUE"),
+                Literal::False => write!(f, "FALSE"),
+                Literal::Null => write!(f, "NULL"),
             }
         }
     }
