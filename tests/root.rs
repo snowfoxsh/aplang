@@ -564,7 +564,7 @@ fn test_break_in_for_each_loop() {
     "#);
 }
 
-// #[test]
+#[test]
 fn test_continue_in_for_each_loop() {
     smart_test(r#"
     myList <- ["a", "skipThis", "b", "c"]
@@ -580,7 +580,7 @@ fn test_continue_in_for_each_loop() {
     "#);
 }
 
-// #[test]
+#[test]
 fn test_nested_break_in_loops() {
     smart_test(r#"
     outerCounter <- 0
@@ -604,7 +604,7 @@ fn test_nested_break_in_loops() {
     "#);
 }
 
-// #[test]
+#[test]
 fn test_nested_continue_in_loops() {
     smart_test(r#"
     outerCounter <- 0
