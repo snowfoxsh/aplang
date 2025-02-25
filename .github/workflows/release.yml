@@ -143,15 +143,27 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      
     - name: Download exe build artifact
       uses: actions/download-artifact@v4
       with:
         name: windows-binary
         path: ci/msix-package-root
+        
     - name: Setup Windows SDK 
       uses: GuillaumeFalourd/setup-windows10-sdk-action@v2.4
       with:
         sdk-version: 26100
+        
+    - name: Update Package Version
+      run: |
+        TAG_VERSION="${GITHUB_REF_NAME#v}"
+        TAG_VERSION="${TAG_VERSION:-0.0.0}"
+        echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_ENV
+        $ManifestPath = "ci/msix-package-root/AppxManifest.xml"
+        (Get-Content $ManifestPath) -replace '__VERSION_REGEX_REPLACE__', "$env:TAG_VERSION" | Set-Content $ManifestPath
+      shell: pwsh
+      
     - name: Create MSIX Package
       run: |
         & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\makeappx.exe" pack /d "ci\msix-package-root" /p "aplang.msix"
