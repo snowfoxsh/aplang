@@ -157,8 +157,12 @@ jobs:
         
     - name: Update Package Version
       run: |
-        $TAG_VERSION = $Env:GITHUB_REF_NAME -replace '^v', ''
-        if (-not $TAG_VERSION) { $TAG_VERSION = "0.0.0" }
+        if ($Env:GITHUB_REF_TYPE -eq "tag") {
+            $TAG_VERSION = $Env:GITHUB_REF_NAME -replace '^v', ''
+        } else {
+            Write-Output "Not a tag build. Defaulting version to 0.0.0"
+            $TAG_VERSION = "0.0.0"
+        }
         
         # Add `.0` to the end of the version
         $TAG_VERSION = "$TAG_VERSION.0"
