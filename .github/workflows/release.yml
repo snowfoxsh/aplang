@@ -157,11 +157,12 @@ jobs:
         
     - name: Update Package Version
       run: |
-        TAG_VERSION="${GITHUB_REF_NAME#v}"
-        TAG_VERSION="${TAG_VERSION:-0.0.0}"
-        echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_ENV
+        $TAG_VERSION = $Env:GITHUB_REF_NAME -replace '^v', ''
+        if (-not $TAG_VERSION) { $TAG_VERSION = "0.0.0" }
+        echo "TAG_VERSION=$TAG_VERSION" >> $Env:GITHUB_ENV
+    
         $ManifestPath = "ci/msix-package-root/AppxManifest.xml"
-        (Get-Content $ManifestPath) -replace '__VERSION_REGEX_REPLACE__', "$env:TAG_VERSION" | Set-Content $ManifestPath
+        (Get-Content $ManifestPath) -replace '__VERSION_REGEX_REPLACE__', "$TAG_VERSION" | Set-Content $ManifestPath
       shell: pwsh
       
     - name: Create MSIX Package
