@@ -139,6 +139,7 @@ jobs:
 
   build-msix:
     runs-on: windows-latest
+    needs: build-windows
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
