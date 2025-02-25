@@ -1,0 +1,21 @@
+name: Build MSIX Package
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-msix:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Create MSIX Package
+        run: |
+          MakeAppx pack /d "ci\msix-package-root" /p "aplang.msix"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: aplang-msix
+          path: aplang.msix
