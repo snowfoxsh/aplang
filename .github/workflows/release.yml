@@ -121,22 +121,45 @@ jobs:
         productsign --keychain temp.keychain --sign "Developer ID Installer: Patrick Unick (423YZUTX3G)" aplang-unsigned.pkg aplang.pkg
         
         
-    - name: Notarize the package
-      env:
-        APPLE_ID_EMAIL: ${{ secrets.APPLE_ID_EMAIL }}
-        APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-      run: |
-        # Submit notary
-        xcrun notarytool submit aplang.pkg --apple-id "$APPLE_ID_EMAIL" --team-id "423YZUTX3G" --password "$APPLE_APP_SPECIFIC_PASSWORD" --wait
-        # Staple the notary
-        xcrun stapler staple aplang.pkg
+    # - name: Notarize the package
+    #   env:
+    #     APPLE_ID_EMAIL: ${{ secrets.APPLE_ID_EMAIL }}
+    #     APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+    #   run: |
+    #     # Submit notary
+    #     xcrun notarytool submit aplang.pkg --apple-id "$APPLE_ID_EMAIL" --team-id "423YZUTX3G" --password "$APPLE_APP_SPECIFIC_PASSWORD" --wait
+    #     # Staple the notary
+    #     xcrun stapler staple aplang.pkg
         
     - name: Upload `.pkg` Artifact
       uses: actions/upload-artifact@v4
       with:
         name: macos-pkg
         path: aplang.pkg
-      
+
+  build-msix:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Download exe build artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: windows-binary
+        path: ci/msix-package-root
+    - name: Setup Windows SDK 
+      uses: GuillaumeFalourd/setup-windows10-sdk-action@v2.4
+      with:
+        sdk-version: 26100
+    - name: Create MSIX Package
+      run: |
+        & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\makeappx.exe" pack /d "ci\msix-package-root" /p "aplang.msix"
+    - name: Upload `.msix` Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-msix
+        path: aplang.msix
+          
   release:
     name: Create GitHub Release
     if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.do_github_release == 'true') }}
