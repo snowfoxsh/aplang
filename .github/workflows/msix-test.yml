@@ -13,11 +13,6 @@ jobs:
         uses: GuillaumeFalourd/setup-windows10-sdk-action@v2.4
         with:
           sdk-version: 26100
-      - name: List Sdks
-        run: |
-          ls "C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64"
-          ls "C:\Program Files (x86)\Windows Kits\10\bin\x64"
-          echo $env:Path
       - name: Create MSIX Package
         run: |
-          makeappx.exe pack /d "ci\msix-package-root" /p "aplang.msix"
+          & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\makeappx.exe" pack /d "ci\msix-package-root" /p "aplang.msix"
