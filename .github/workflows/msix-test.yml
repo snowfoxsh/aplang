@@ -9,11 +9,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Add Windows SDK Tools to PATH
-        run: |
-          echo "Adding Windows SDK to PATH"
-          $env:Path += ";C:\Program Files (x86)\Windows Kits\10\bin\x64"
-          echo $env:Path
+      - name: Setup Windows SDK 
+        uses: GuillaumeFalourd/setup-windows10-sdk-action@v2.4
       - name: Create MSIX Package
         run: |
           MakeAppx pack /d "ci\msix-package-root" /p "aplang.msix"
