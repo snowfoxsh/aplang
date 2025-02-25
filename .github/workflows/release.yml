@@ -15,7 +15,7 @@ on:
 
   push:
     tags:
-    - "v*"
+      - "v*"
 
 env:
   CARGO_TERM_COLOR: always
@@ -24,41 +24,41 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-    - name: Build
-      run: |
-        cargo build --release --bin aplang
-    - name: Upload build artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: windows-binary
-        path: target/release/aplang.exe
-        
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Build
+        run: |
+          cargo build --release --bin aplang
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-binary
+          path: target/release/aplang.exe
+
   build-macos:
     runs-on: macos-latest
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-    - name: Add Targets
-      run: |
-        rustup target add aarch64-apple-darwin
-        rustup target add x86_64-apple-darwin
-    - name: Build x86_64
-      run: | 
-        cargo build --release --bin aplang --target x86_64-apple-darwin
-    - name: Build aarch64
-      run: | 
-        cargo build --release --bin aplang --target aarch64-apple-darwin
-    - name: Create Fat Binary
-      run: |
-        mkdir -p out
-        lipo -create -output out/aplang target/x86_64-apple-darwin/release/aplang target/aarch64-apple-darwin/release/aplang
-    - name: Upload build artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: macos-binary
-        path: out/aplang
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Add Targets
+        run: |
+          rustup target add aarch64-apple-darwin
+          rustup target add x86_64-apple-darwin
+      - name: Build x86_64
+        run: |
+          cargo build --release --bin aplang --target x86_64-apple-darwin
+      - name: Build aarch64
+        run: |
+          cargo build --release --bin aplang --target aarch64-apple-darwin
+      - name: Create Fat Binary
+        run: |
+          mkdir -p out
+          lipo -create -output out/aplang target/x86_64-apple-darwin/release/aplang target/aarch64-apple-darwin/release/aplang
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-binary
+          path: out/aplang
 
   # --- JOB: create-pkg ---
   create-pkg:
@@ -66,162 +66,162 @@ jobs:
     runs-on: macos-latest
     needs: build-macos
     steps:
-    - name: Install Apple Certificates to Keychain
-      env:
-        APPLICATION_CERT_BASE64: ${{ secrets.APPLE_APPLICATION_CERT }}
-        INSTALLER_CERT_BASE64: ${{ secrets.APPLE_INSTALLER_CERT }}
-        CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
-        TEMP_KEYCHAIN_PASSWORD: temp_password
-      run: |
-        echo "$APPLICATION_CERT_BASE64" | base64 --decode > application_cert.p12
-        echo "$INSTALLER_CERT_BASE64" | base64 --decode > installer_cert.p12
+      - name: Install Apple Certificates to Keychain
+        env:
+          APPLICATION_CERT_BASE64: ${{ secrets.APPLE_APPLICATION_CERT }}
+          INSTALLER_CERT_BASE64: ${{ secrets.APPLE_INSTALLER_CERT }}
+          CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+          TEMP_KEYCHAIN_PASSWORD: temp_password
+        run: |
+          echo "$APPLICATION_CERT_BASE64" | base64 --decode > application_cert.p12
+          echo "$INSTALLER_CERT_BASE64" | base64 --decode > installer_cert.p12
+          
+          # Create a temporary keychain with a temporary password
+          security create-keychain -p "$TEMP_KEYCHAIN_PASSWORD" temp.keychain
+          security unlock-keychain -p "$TEMP_KEYCHAIN_PASSWORD" temp.keychain
+          
+          # Set temp.keychain as default keychain
+          security default-keychain -s temp.keychain
+          
+          # Import certificates into the temporary keychain
+          security import application_cert.p12 -k temp.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign
+          security import installer_cert.p12 -k temp.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T/usr/bin/productsign
+          
+          # Set the key partition list with explicit unlocking
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$TEMP_KEYCHAIN_PASSWORD" temp.keychain
 
-        # Create a temporary keychain with a temporary password
-        security create-keychain -p "$TEMP_KEYCHAIN_PASSWORD" temp.keychain
-        security unlock-keychain -p "$TEMP_KEYCHAIN_PASSWORD" temp.keychain
-        
-        # Set temp.keychain as default keychain
-        security default-keychain -s temp.keychain
+      - name: List Certs
+        run: |
+          security find-identity -v temp.keychain
 
-        # Import certificates into the temporary keychain
-        security import application_cert.p12 -k temp.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign
-        security import installer_cert.p12 -k temp.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T/usr/bin/productsign
+      - name: Download macOS binary
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-binary
+          path: package-root/
 
-        # Set the key partition list with explicit unlocking
-        security set-key-partition-list -S apple-tool:,apple: -s -k "$TEMP_KEYCHAIN_PASSWORD" temp.keychain
+      - name: Setup Build
+        run: |
+          mkdir -p package-root/
+          chmod +x package-root/aplang
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          TAG_VERSION="${TAG_VERSION:-0.0.0}"
+          echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_ENV
 
-    - name: List Certs
-      run: |
-        security find-identity -v temp.keychain
-        
-    - name: Download macOS binary
-      uses: actions/download-artifact@v4
-      with:
-        name: macos-binary
-        path: package-root/
-        
-    - name: Setup Build
-      run: |
-        mkdir -p package-root/
-        chmod +x package-root/aplang
-        TAG_VERSION="${GITHUB_REF_NAME#v}"
-        TAG_VERSION="${TAG_VERSION:-0.0.0}"
-        echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_ENV
+      - name: Sign Application Binary
+        run: |
+          codesign --keychain temp.keychain --sign "Developer ID Application: Patrick Unick (423YZUTX3G)" --options runtime --deep --force package-root/aplang
 
-    - name: Sign Application Binary
-      run: |
-        codesign --keychain temp.keychain --sign "Developer ID Application: Patrick Unick (423YZUTX3G)" --options runtime --deep --force package-root/aplang
-        
-    - name: Create `.pkg` Installer
-      run: |
-        pkgbuild --root package-root --identifier snowfoxsh.aplang --version "$TAG_VERSION" --install-location /usr/local/bin aplang-unsigned.pkg
-        
-    - name: Sign the package
-      run: |
-        productsign --keychain temp.keychain --sign "Developer ID Installer: Patrick Unick (423YZUTX3G)" aplang-unsigned.pkg aplang.pkg
-        
-        
-    # - name: Notarize the package
-    #   env:
-    #     APPLE_ID_EMAIL: ${{ secrets.APPLE_ID_EMAIL }}
-    #     APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-    #   run: |
-    #     # Submit notary
-    #     xcrun notarytool submit aplang.pkg --apple-id "$APPLE_ID_EMAIL" --team-id "423YZUTX3G" --password "$APPLE_APP_SPECIFIC_PASSWORD" --wait
-    #     # Staple the notary
-    #     xcrun stapler staple aplang.pkg
-        
-    - name: Upload `.pkg` Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: macos-pkg
-        path: aplang.pkg
+      - name: Create `.pkg` Installer
+        run: |
+          pkgbuild --root package-root --identifier snowfoxsh.aplang --version "$TAG_VERSION" --install-location /usr/local/bin aplang-unsigned.pkg
+
+      - name: Sign the package
+        run: |
+          productsign --keychain temp.keychain --sign "Developer ID Installer: Patrick Unick (423YZUTX3G)" aplang-unsigned.pkg aplang.pkg
+          
+          
+          # - name: Notarize the package
+          #   env:
+          #     APPLE_ID_EMAIL: ${{ secrets.APPLE_ID_EMAIL }}
+          #     APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          #   run: |
+          #     # Submit notary
+          #     xcrun notarytool submit aplang.pkg --apple-id "$APPLE_ID_EMAIL" --team-id "423YZUTX3G" --password "$APPLE_APP_SPECIFIC_PASSWORD" --wait
+          #     # Staple the notary
+          #     xcrun stapler staple aplang.pkg
+
+      - name: Upload `.pkg` Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-pkg
+          path: aplang.pkg
 
   build-msix:
     runs-on: windows-latest
     needs: build-windows
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Download exe build artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: windows-binary
-        path: ci/msix-package-root
-        
-    - name: Setup Windows SDK 
-      uses: GuillaumeFalourd/setup-windows10-sdk-action@v2.4
-      with:
-        sdk-version: 26100
-        
-    - name: Update Package Version
-      run: |
-        if ($Env:GITHUB_REF_TYPE -eq "tag") {
-            $TAG_VERSION = $Env:GITHUB_REF_NAME -replace '^v', ''
-        } else {
-            Write-Output "Not a tag build. Defaulting version to 0.0.0"
-            $TAG_VERSION = "0.0.0"
-        }
-        
-        # Add `.0` to the end of the version
-        $TAG_VERSION = "$TAG_VERSION.0"
-        
-        echo "TAG_VERSION=$TAG_VERSION" >> $Env:GITHUB_ENV
-        
-        $ManifestPath = "ci/msix-package-root/AppxManifest.xml"
-        (Get-Content $ManifestPath) -replace '__VERSION_REGEX_REPLACE__', "$TAG_VERSION" | Set-Content $ManifestPath
-      shell: pwsh
-      
-    - name: Cat package
-      run: |
-        cat ci/msix-package-root/AppxManifest.xml
-    - name: Create MSIX Package
-      run: |
-        & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\makeappx.exe" pack /d "ci\msix-package-root" /p "aplang.msix"
-    - name: Upload `.msix` Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: windows-msix
-        path: aplang.msix
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download exe build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-binary
+          path: ci/msix-package-root
+
+      - name: Setup Windows SDK
+        uses: GuillaumeFalourd/setup-windows10-sdk-action@v2.4
+        with:
+          sdk-version: 26100
+
+      - name: Update Package Version
+        run: |
+          if ($Env:GITHUB_REF_TYPE -eq "tag") {
+              $TAG_VERSION = $Env:GITHUB_REF_NAME -replace '^v', ''
+          } else {
+              Write-Output "Not a tag build. Defaulting version to 0.0.0"
+              $TAG_VERSION = "0.0.0"
+          }
           
+          # Add `.0` to the end of the version
+          $TAG_VERSION = "$TAG_VERSION.0"
+          
+          echo "TAG_VERSION=$TAG_VERSION" >> $Env:GITHUB_ENV
+          
+          $ManifestPath = "ci/msix-package-root/AppxManifest.xml"
+          (Get-Content $ManifestPath) -replace '__VERSION_REGEX_REPLACE__', "$TAG_VERSION" | Set-Content $ManifestPath
+        shell: pwsh
+
+      - name: Cat package
+        run: |
+          cat ci/msix-package-root/AppxManifest.xml
+      - name: Create MSIX Package
+        run: |
+          & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\makeappx.exe" pack /d "ci\msix-package-root" /p "aplang.msix"
+      - name: Upload `.msix` Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-msix
+          path: aplang.msix
+
   release:
     name: Create GitHub Release
     if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.do_github_release == 'true') }}
 
     runs-on: ubuntu-latest
-    needs: [build-windows, build-macos, create-pkg]
+    needs: [ build-windows, build-macos, create-pkg ]
     steps:
-    - name: Download Windows binary
-      uses: actions/download-artifact@v4
-      with:
-        name: windows-binary
-        path: artifacts/windows/
-        
-    - name: Download macOS binary
-      uses: actions/download-artifact@v4
-      with:
-        name: macos-binary
-        path: artifacts/macos/
-        
-    - name: List Downloaded Files
-      run: ls -R artifacts
-    - name: Download macOS binary
-      uses: actions/download-artifact@v4
-      with:
-        name: macos-pkg
-        path: artifacts/macos
+      - name: Download Windows binary
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-binary
+          path: artifacts/windows/
 
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        prerelease: true
-        generate_release_notes: true
-        draft: ${{ github.event_name != 'push' }}
-        files: |
-          artifacts/windows/aplang.exe
-          artifacts/macos/aplang
-          artifacts/macos/aplang.pkg
+      - name: Download macOS binary
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-binary
+          path: artifacts/macos/
+
+      - name: List Downloaded Files
+        run: ls -R artifacts
+      - name: Download macOS binary
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-pkg
+          path: artifacts/macos
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          generate_release_notes: true
+          draft: ${{ github.event_name != 'push' }}
+          files: |
+            artifacts/windows/aplang.exe
+            artifacts/macos/aplang
+            artifacts/macos/aplang.pkg
 
 
   cargo-publish:
@@ -230,28 +230,28 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.do_crates_release == 'true') }}
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Read version from Cargo.toml
-      id: cargo_toml_version
-      uses: SebRollen/toml-action@v1.2.0
-      with:
-        file: Cargo.toml
-        field: package.version
-  
-    - name: Ensure Cargo.toml version matches tag
-      if: startsWith(github.ref, 'refs/tags/v')
-      run: |
-        TAG_VERSION="${GITHUB_REF_NAME#v}"
-        CARGO_VERSION="${{ steps.cargo_toml_version.outputs.value }}"
-        if [ "$TAG_VERSION" != "$CARGO_VERSION" ]; then
-          echo "Error: Tag version ($TAG_VERSION) does not match Cargo.toml version ($CARGO_VERSION)"
-          exit 1
-        fi
+      - name: Read version from Cargo.toml
+        id: cargo_toml_version
+        uses: SebRollen/toml-action@v1.2.0
+        with:
+          file: Cargo.toml
+          field: package.version
 
-    - name: Publish to crates.io
-      env:
-        CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-      # allow dirty is to make sure the Cargo.lock is always submited
-      run: cargo publish --allow-dirty
+      - name: Ensure Cargo.toml version matches tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          CARGO_VERSION="${{ steps.cargo_toml_version.outputs.value }}"
+          if [ "$TAG_VERSION" != "$CARGO_VERSION" ]; then
+            echo "Error: Tag version ($TAG_VERSION) does not match Cargo.toml version ($CARGO_VERSION)"
+            exit 1
+          fi
+
+      - name: Publish to crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        # allow dirty is to make sure the Cargo.lock is always submited
+        run: cargo publish --allow-dirty
