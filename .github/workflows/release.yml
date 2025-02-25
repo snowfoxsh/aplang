@@ -159,12 +159,19 @@ jobs:
       run: |
         $TAG_VERSION = $Env:GITHUB_REF_NAME -replace '^v', ''
         if (-not $TAG_VERSION) { $TAG_VERSION = "0.0.0" }
+        
+        # Add `.0` to the end of the version
+        $TAG_VERSION = "$TAG_VERSION.0"
+        
         echo "TAG_VERSION=$TAG_VERSION" >> $Env:GITHUB_ENV
-    
+        
         $ManifestPath = "ci/msix-package-root/AppxManifest.xml"
         (Get-Content $ManifestPath) -replace '__VERSION_REGEX_REPLACE__', "$TAG_VERSION" | Set-Content $ManifestPath
       shell: pwsh
       
+    - name: Cat package
+      run: |
+        cat ci/msix-package-root/AppxManifest.xml
     - name: Create MSIX Package
       run: |
         & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\makeappx.exe" pack /d "ci\msix-package-root" /p "aplang.msix"
