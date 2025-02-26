@@ -29,10 +29,10 @@ pub enum DebugMode {
 )]
 pub struct CommandLine {
     /// The source file that will be run, pass in a file path
-    #[arg(value_name="FILE_PATH", required_unless_present_any=&["eval", "eval_stdin"], conflicts_with_all=&["eval", "eval_stdin"])]
+    #[arg(value_name="FILE_PATH", required_unless_present_any=&["eval", "eval_stdin", "info"], conflicts_with_all=&["eval", "eval_stdin"])]
     pub file: Option<PathBuf>,
 
-    /// Execute code passed into stdin
+    /// Execute code from a string
     #[arg(short='e', long, value_name="CODE", conflicts_with_all=&["file", "eval_stdin"])]
     pub eval: Option<Arc<str>>,
 
@@ -40,8 +40,23 @@ pub struct CommandLine {
     #[arg(long, conflicts_with_all=&["file", "eval"])]
     pub eval_stdin: bool,
 
+    /// Displays the info splash screen
+    #[arg(
+        long,
+        conflicts_with_all = &[
+            "file",
+            "eval",
+            "eval_stdin",
+            "check",
+            "debug",
+            "enforce_file_extension",
+            "stack_size"
+        ]
+    )]
+    pub info: bool,
+
     /// Disallows execution of non .ap files
-    #[arg(long, default_value = "true")]
+    #[arg(long, default_value = "true", help_heading = "Advanced Options")]
     pub enforce_file_extension: bool,
 
     /// Specify the internal debug mode
