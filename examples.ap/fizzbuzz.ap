@@ -1,0 +1,16 @@
+// Fizz Buzz
+i <- 1
+REPEAT 100 TIMES {
+  s <- ""
+  IF (i MOD 3 == 0) {
+    s <- s + "Fizz"
+  }
+  IF (i MOD 5 == 0) {
+    s <- s + "Buzz"
+  }
+  IF (LENGTH(s) == 0) {
+    s <- i
+  }
+  DISPLAY(s)
+  i <- i + 1
+}
