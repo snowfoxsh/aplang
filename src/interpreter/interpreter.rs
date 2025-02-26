@@ -145,21 +145,20 @@ impl Interpreter {
                         self.loop_stack.push(LoopControl::default());
 
                         // floor the value into an int so we can iterate
-                        let count = count as usize;
-                        for _ in 1..=count {
-                            // if the BREAK stmt was called handle it
-                            if self.loop_stack.last().unwrap().should_break {
-                                self.loop_stack.last_mut().unwrap().should_break = false;
-                                break;
-                            }
+                        for _ in 1..=count as usize {
+                            self.stmt(&repeat_times.body)?;
 
                             // if the CONTINUE stmt was called handle it
                             if self.loop_stack.last().unwrap().should_continue {
                                 self.loop_stack.last_mut().unwrap().should_continue = false;
                                 continue;
                             }
-
-                            self.stmt(&repeat_times.body)?;
+                            
+                            // if the BREAK stmt was called handle it
+                            if self.loop_stack.last().unwrap().should_break {
+                                self.loop_stack.last_mut().unwrap().should_break = false;
+                                break;
+                            }
                         }
 
                         // exit the loop
@@ -184,6 +183,8 @@ impl Interpreter {
                 self.loop_stack.push(LoopControl::default());
 
                 while !Self::is_truthy(&self.expr(&repeat_until.condition)?) {
+                    self.stmt(&repeat_until.body)?;
+                    
                     // if the BREAK stmt was called handle it
                     if self.loop_stack.last().unwrap().should_break {
                         self.loop_stack.last_mut().unwrap().should_break = false;
@@ -196,7 +197,6 @@ impl Interpreter {
                         continue;
                     }
 
-                    self.stmt(&repeat_until.body)?;
                 }
 
                 // exit the loop
@@ -242,22 +242,21 @@ impl Interpreter {
                         .define(element.clone(), values.borrow()[i].clone());
                     // execute body
 
-                    // handle break and continue
+                    
+                    self.stmt(&for_each.body)?;
 
                     // if the BREAK stmt was called handle it
                     if self.loop_stack.last().unwrap().should_break {
                         self.loop_stack.last_mut().unwrap().should_break = false;
                         break;
                     }
-
+                    // handle break and continue
                     // if the CONTINUE stmt was called then we need to deal with that
                     if self.loop_stack.last().unwrap().should_continue {
                         self.loop_stack.last_mut().unwrap().should_continue = false;
                         continue;
                     }
 
-                    // todo possible bug: confirm that this doesnt have any weird value errors
-                    self.stmt(&for_each.body)?;
                     // get temp val out and change it in vec
                     (*values.borrow_mut())[i] = self.venv.remove(element.clone()).unwrap().0;
                 }

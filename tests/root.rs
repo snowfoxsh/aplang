@@ -529,13 +529,13 @@ fn test_loop_break() {
 #[test]
 fn test_continue_in_repeat_loop() {
     smart_test(r#"
-    counter <- 1
+    counter <- 0
     REPEAT 10 TIMES {
-        DISPLAY(counter)
         counter <- counter + 1
         IF (counter == 5 OR counter == 7) {
             CONTINUE
         }
+        DISPLAY(counter)
     }
     $1
     $2
@@ -592,7 +592,7 @@ fn test_nested_break_in_loops() {
             IF (innerCounter == 3) {
                 BREAK
             }
-            DISPLAY(outerCounter + "-" + innerCounter)
+            DISPLAY("" + outerCounter + "-" + innerCounter)
         }
     }
     $1-1
@@ -616,7 +616,7 @@ fn test_nested_continue_in_loops() {
             IF (innerCounter == 2) {
                 CONTINUE
             }
-            DISPLAY(outerCounter + "-" + innerCounter)
+            DISPLAY("" + outerCounter + "-" + innerCounter)
         }
     }
     $1-1
