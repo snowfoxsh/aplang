@@ -19,7 +19,7 @@
     <rescap:Capability Name="runFullTrust"/>
   </Capabilities>
   <Applications>
-    <Application EntryPoint="Windows.FullTrustApplication" Executable="aplang.exe" Id="aplang.exe" uap10:Subsystem="console" uap10:SupportsMultipleInstances="true">
+    <Application EntryPoint="Windows.FullTrustApplication" Executable="AI_STUBS\AiStubX64.exe" Id="aplang.exe" uap10:Subsystem="console" uap10:SupportsMultipleInstances="true">
       <uap:VisualElements BackgroundColor="transparent" Description="aplang.exe" DisplayName="aplang.exe" Square150x150Logo="Assets\aplang.exeSquare150x150Logo.png" Square44x44Logo="Assets\aplang.exeSquare44x44Logo.png">
         <uap:InitialRotationPreference>
           <uap:Rotation Preference="portrait"/>
@@ -43,3 +43,4 @@
     <build:Item Name="MakePri.exe" Version="10.0.20348.1"/>
   </build:Metadata>
 </Package>
+
