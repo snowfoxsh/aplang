@@ -145,21 +145,20 @@ impl Interpreter {
                         self.loop_stack.push(LoopControl::default());
 
                         // floor the value into an int so we can iterate
-                        let mut iter = 1..=count as usize;
-                        for _ in iter {
-                            // if the BREAK stmt was called handle it
-                            if self.loop_stack.last().unwrap().should_break {
-                                self.loop_stack.last_mut().unwrap().should_break = false;
-                                break;
-                            }
+                        for _ in 1..=count as usize {
+                            self.stmt(&repeat_times.body)?;
 
                             // if the CONTINUE stmt was called handle it
                             if self.loop_stack.last().unwrap().should_continue {
                                 self.loop_stack.last_mut().unwrap().should_continue = false;
                                 continue;
                             }
-
-                            self.stmt(&repeat_times.body)?;
+                            
+                            // if the BREAK stmt was called handle it
+                            if self.loop_stack.last().unwrap().should_break {
+                                self.loop_stack.last_mut().unwrap().should_break = false;
+                                break;
+                            }
                         }
 
                         // exit the loop
