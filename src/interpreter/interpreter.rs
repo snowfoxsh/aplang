@@ -184,6 +184,8 @@ impl Interpreter {
                 self.loop_stack.push(LoopControl::default());
 
                 while !Self::is_truthy(&self.expr(&repeat_until.condition)?) {
+                    self.stmt(&repeat_until.body)?;
+                    
                     // if the BREAK stmt was called handle it
                     if self.loop_stack.last().unwrap().should_break {
                         self.loop_stack.last_mut().unwrap().should_break = false;
@@ -196,7 +198,6 @@ impl Interpreter {
                         continue;
                     }
 
-                    self.stmt(&repeat_until.body)?;
                 }
 
                 // exit the loop
@@ -241,7 +242,7 @@ impl Interpreter {
                     self.venv
                         .define(element.clone(), values.borrow()[i].clone());
                     // execute body
-                    
+
                     
                     self.stmt(&for_each.body)?;
 
@@ -256,7 +257,7 @@ impl Interpreter {
                         self.loop_stack.last_mut().unwrap().should_continue = false;
                         continue;
                     }
-                    
+
                     // get temp val out and change it in vec
                     (*values.borrow_mut())[i] = self.venv.remove(element.clone()).unwrap().0;
                 }
