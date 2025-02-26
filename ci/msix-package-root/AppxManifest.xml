@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Package IgnorableNamespaces="build rescap uap uap10 uap5 uap8" xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:build="http://schemas.microsoft.com/developer/appx/2015/build" xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10" xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5" xmlns:uap8="http://schemas.microsoft.com/appx/manifest/uap/windows10/8">
-  <Identity Name="aplang" ProcessorArchitecture="x64" Publisher="CN=snowfoxsh" Version="__VERSION_REGEX_REPLACE__"/>
+  <Identity Name="snowfoxsh.aplang" ProcessorArchitecture="x64" Publisher="CN=49D10E47-B12B-4716-9225-651692BC7B92" Version="__VERSION_REGEX_REPLACE__"/>
   <Properties>
     <PublisherDisplayName>snowfoxsh</PublisherDisplayName>
     <DisplayName>aplang</DisplayName>
