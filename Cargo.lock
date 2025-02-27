@@ -68,7 +68,7 @@ dependencies = [
 
 [[package]]
 name = "aplang"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "assert_cmd",
  "cfg-if",
