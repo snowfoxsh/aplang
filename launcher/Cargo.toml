@@ -1,0 +1,13 @@
+[package]
+name = "launcher"
+version = "1.0.0"
+edition = "2021"
+
+# this binary is just the entry point for aplang in the MSIX package
+# make it as lean as possible
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+opt-level = "s"
+strip = "symbols"

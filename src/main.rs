@@ -29,6 +29,10 @@ mod output;
 #[cfg(feature = "wasm")]
 mod wasm;
 
+#[cfg(feature = "splash")]
+mod splash;
+
+
 fn main() -> Result<()> {
     let args = CommandLine::parse();
     
@@ -43,6 +47,15 @@ fn main() -> Result<()> {
 
 fn run(args: CommandLine) -> Result<()> {
     let mut debug_buffer = String::new();
+
+    #[cfg(feature = "splash")]
+    if args.info {
+        // show the splash screen
+        splash::show_splash().unwrap();
+        return Ok(());
+    }
+
+
 
     let aplang = if let Some(file_path) = args.file {
         ApLang::new_from_file(file_path.clone()).map_err(|err| match err.kind() {
