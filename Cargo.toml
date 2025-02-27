@@ -20,6 +20,7 @@ opt-level = 3
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+name = "aplang_lib"
 
 [dependencies]
 cfg-if = "1.0.0"

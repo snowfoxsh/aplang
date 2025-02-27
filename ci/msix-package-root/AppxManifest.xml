@@ -23,7 +23,7 @@
     <rescap:Capability Name="runFullTrust"/>
   </Capabilities>
   <Applications>
-    <Application EntryPoint="Windows.FullTrustApplication" Executable="run.exe" Id="aplang.exe" uap10:Subsystem="console" uap10:SupportsMultipleInstances="true">
+    <Application EntryPoint="Windows.FullTrustApplication" Executable="launcher.exe" Id="aplang.exe" uap10:Subsystem="console" uap10:SupportsMultipleInstances="true">
       <uap:VisualElements BackgroundColor="transparent" Description="aplang.exe" DisplayName="aplang.exe" Square150x150Logo="Assets\aplang.exeSquare150x150Logo.png" Square44x44Logo="Assets\aplang.exeSquare44x44Logo.png">
         <uap:InitialRotationPreference>
           <uap:Rotation Preference="portrait"/>
