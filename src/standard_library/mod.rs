@@ -54,6 +54,11 @@ impl Modules {
 
 fn std_core() -> FunctionMap {
     let mut functions = FunctionMap::new();
+    
+    std_function!(functions => fn VERSION() {
+        let maybe_version = option_env!("CARGO_PKG_VERSION");
+        return Ok(Value::String(maybe_version.unwrap_or("0.0.0").to_string()))
+    });
 
     std_function!(functions => fn DISPLAY(value: Value) {
         display!("{}\n", value);
