@@ -40,6 +40,7 @@ stacker = { version = "0.1.17", optional = true } # native
 wasm-bindgen = { version = "0.2.93", optional = true } # wasm
 js-sys = { version = "0.3.70", optional = true } # wasm
 web-sys = { version = "0.3.77", optional = true } # wasm
+cowvert = "0.1.1"
 
 [features]
 # "native" feature for non-wasm platforms, enabling native dependencies

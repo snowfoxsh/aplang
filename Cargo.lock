@@ -73,6 +73,7 @@ dependencies = [
  "assert_cmd",
  "cfg-if",
  "clap",
+ "cowvert",
  "getrandom",
  "js-sys",
  "mapro",
@@ -214,6 +215,12 @@ name = "colorchoice"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3fd119d74b830634cea2a0f58bbd0d54540518a14397557951e79340abc28c0"
+
+[[package]]
+name = "cowvert"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7401131d92e0c8153d0e4236e3bdfc5372f2ca1b3e2f282cbbf262acef95fddd"
 
 [[package]]
 name = "difflib"

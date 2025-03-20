@@ -52,3 +52,31 @@ pub struct RuntimeError {
     pub help: String,
     pub label: String,
 }
+
+#[derive(Copy, Clone)]
+pub struct Span {
+    offset: usize,
+    length: usize,
+}
+
+// todo: rename to LabeledSpan
+pub struct SpanLabel {
+    span: Span,
+    label: Option<String>,
+    /// maybe needs field called primary
+    /// see miette [LabeledSpan]
+}
+
+pub struct Error<const S: usize> {
+    message: String,
+    file_name: String,
+    spans: Box<[SpanLabel; S]>,
+    help: Option<String>,
+    code: Option<String>,
+}
+
+impl<const S: usize> Error<S> {
+    pub fn todo() -> Error<S> {
+        todo!()
+    }
+}
