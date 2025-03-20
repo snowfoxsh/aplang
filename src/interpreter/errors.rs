@@ -67,16 +67,18 @@ pub struct SpanLabel {
     /// see miette [LabeledSpan]
 }
 
-pub struct Error<const S: usize> {
+pub struct Error{
     message: String,
     file_name: String,
-    spans: Box<[SpanLabel; S]>,
+    spans: Vec<SpanLabel>,
     help: Option<String>,
     code: Option<String>,
 }
 
-impl<const S: usize> Error<S> {
-    pub fn todo() -> Error<S> {
+impl Error {
+    pub fn todo() -> Error {
         todo!()
     }
 }
+
+pub type AResult<T, const S: usize> = Result<T, Error>;

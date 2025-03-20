@@ -5,6 +5,7 @@ mod procedure;
 mod value;
 mod env2;
 mod i2;
+mod v2;
 
 // used by ApLang
 pub use interpreter::Interpreter;
