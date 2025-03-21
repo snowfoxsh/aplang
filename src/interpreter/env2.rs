@@ -1,5 +1,6 @@
 use std::cell::{Ref, RefCell};
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::rc::Rc;
 use cowvert::Data;
 use crate::interpreter::v2::Value;
@@ -39,23 +40,74 @@ impl Environment {
         self.values.insert(name, value)
     }
 
-    /// Gets a value from the environment
-    /// It is a Data<Value> so you can choose to take it by ref (assign) or value (clone)
-    /// Searches for a variable and returns a `Ref` to the inner value.
-    // Change the return type to not be tied to the input reference lifetime
-    pub fn search(this: &EnvRef, name: &str) -> Option<ValueRef> {
-        let env_borrow = this.borrow();
+    pub fn get<'a, 'b>(&'b self, name: impl Into<&'a str>) -> Option<&'b ValueRef> {
+        let name = name.into();
 
-        // If found in current environment, clone the ValueRef and return it
-        if let Some(value) = env_borrow.values.get(name) {
-            return Some(value.clone());
+        
+        if let Some(value) = self.values.get(name) {
+            Some(value)
+        } else if let Some(parent) = &self.parent {
+            parent.borrow().get(name)
+        } else {
+            None
         }
+        
+        // let mut env = self;
 
-        // If there's a parent, search recursively
-        if let Some(parent) = &env_borrow.parent {
-            return Environment::search(parent, name);
+        // loop {
+        //     if let Some(value) = env.values.get(name) {
+        //         return Some(value);
+        //     }
+        // 
+        //     if let Some(parent) = &env.parent {
+        //         env = parent.as_ref();
+        //     } else {
+        //         return None;
+        //     }
+        // }
+    }
+}
+
+pub trait SearchEnv {
+    fn get_ref<'a>(&self, name: impl Into<&'a str>) -> Option<ValueRef>;
+    fn get_val<'a>(&self, name: impl Into<&'a str>) -> Option<ValueRef>;
+}
+
+impl SearchEnv for EnvRef {
+    fn get_ref<'a>(&self, name: impl Into<&'a str>) -> Option<ValueRef> {
+        let name = name.into();
+        let mut env_borrow = self.borrow();
+
+        loop {
+            if let Some(mut value) = env_borrow.values.get(name) {
+                return Some(value.by_ref());
+            }
+
+            if let Some(parent) = &env_borrow.parent {
+                env_borrow = parent.borrow();
+            } else {
+                return None
+            }
         }
+    }
 
-        None
+    fn get_val<'a>(&self, name: impl Into<&'a str>) -> Option<ValueRef> {
+        let name = name.into();
+        let mut env_borrow = self.borrow();
+
+        loop {
+            if let Some(mut value) = env_borrow.values.get(name) {
+                return Some(match value.borrow().deref() {
+                    Value::Null | Value::Bool(_) | Value::Number(_) => value.by_val(),
+                    _ => value.by_cow()
+                })
+            }
+
+            if let Some(parent) = &env_borrow.parent {
+                env_borrow = parent.borrow();
+            } else {
+                return None;
+            }
+        }
     }
 }
