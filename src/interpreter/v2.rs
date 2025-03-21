@@ -2,18 +2,29 @@ use std::any::Any;
 use std::fmt::{Display, Formatter};
 use cowvert::Data;
 
+
 pub trait Object: Any + Display {
+    fn as_any(&self) -> &dyn Any;
+    fn clone_box(&self) -> Box<dyn Object>;
+}
+
+// Blanket impl for Clone on Box<dyn Object>
+impl Clone for Box<dyn Object> {
+    fn clone(&self) -> Box<dyn Object> {
+        self.clone_box()
+    }
 }
 
 
-// #[derive(Debug)]
+
+#[derive(Clone)]
 pub enum Value {
     Null,
     Bool(bool),
     Number(f64),
     String(String),
     List(Vec<Data<Value>>),
-    Object(dyn Object),
+    Object(Box<dyn Object>),
     Callable(())
 }
 
@@ -23,7 +34,11 @@ impl Display for Value {
             Value::Null => write!(f, "NULL"),
             Value::Bool(true) => write!(f, "TRUE"),
             Value::Bool(false) => write!(f, "FALSE"),
-            Value::Number(v) | Value::String(v) | Value::Object(v) => write!(f, "{v}"),
+            // Value::Number(v) | Value::String(v) | Value::Object(v) => write!(f, "{v}"),
+            Value::Number(n) => write!(f, "{n}"),
+            Value::String(s) => write!(f, "{s}"),
+            Value::Object(o) => write!(f, "{o}"),
+            
             Value::List(list) => {
                 write!(f, "[")?;
                 
@@ -32,7 +47,7 @@ impl Display for Value {
                         write!(f, ", ")?;
                     }
                     
-                    write!(f, "{item}")?;
+                    write!(f, "{}", *item.borrow())?;
                 }
                 
                 write!(f, "]")

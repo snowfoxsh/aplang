@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 use cowvert::Data;
@@ -24,10 +24,10 @@ impl Environment {
     }
 
     /// Creates a new layer with self as the parent
-    pub fn layer(self: EnvRef) -> EnvRef {
+    pub fn layer(this: EnvRef) -> EnvRef {
         let env = Environment {
             values: HashMap::new(),
-            parent: Some(self),
+            parent: Some(this),
         };
 
         Rc::new(RefCell::new(env))
@@ -39,16 +39,23 @@ impl Environment {
         self.values.insert(name, value)
     }
 
-    /// Gets a variable from the environment
+    /// Gets a value from the environment
     /// It is a Data<Value> so you can choose to take it by ref (assign) or value (clone)
-    pub fn search(&self, name: impl Into<&str>) -> Option<&ValueRef> {
-        let name: &str = name.into();
-        if let Some(val) = self.values.get(name) {
-            Some(val)
-        } else if let Some(ref parent) = self.parent {
-            parent.borrow().search(name)
-        } else {
-            None
+    /// Searches for a variable and returns a `Ref` to the inner value.
+    // Change the return type to not be tied to the input reference lifetime
+    pub fn search(this: &EnvRef, name: &str) -> Option<ValueRef> {
+        let env_borrow = this.borrow();
+
+        // If found in current environment, clone the ValueRef and return it
+        if let Some(value) = env_borrow.values.get(name) {
+            return Some(value.clone());
         }
+
+        // If there's a parent, search recursively
+        if let Some(parent) = &env_borrow.parent {
+            return Environment::search(parent, name);
+        }
+
+        None
     }
 }

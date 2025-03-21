@@ -63,8 +63,8 @@ pub struct Span {
 pub struct SpanLabel {
     span: Span,
     label: Option<String>,
-    /// maybe needs field called primary
-    /// see miette [LabeledSpan]
+    // maybe needs field called primary
+    // see miette [LabeledSpan]
 }
 
 pub struct Error{
