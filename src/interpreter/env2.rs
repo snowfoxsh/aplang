@@ -40,31 +40,37 @@ impl Environment {
         self.values.insert(name, value)
     }
 
-    pub fn get<'a, 'b>(&'b self, name: impl Into<&'a str>) -> Option<&'b ValueRef> {
+    fn get_ref<'a>(&mut self, name: impl Into<&'a str>) -> Option<ValueRef> {
         let name = name.into();
 
-        
-        if let Some(value) = self.values.get(name) {
-            Some(value)
+        if let Some(value) = self.values.get_mut(name) {
+            Some(value.by_ref())
         } else if let Some(parent) = &self.parent {
-            parent.borrow().get(name)
+            parent.get_ref(name)
         } else {
             None
         }
-        
-        // let mut env = self;
+    }
 
-        // loop {
-        //     if let Some(value) = env.values.get(name) {
-        //         return Some(value);
-        //     }
-        // 
-        //     if let Some(parent) = &env.parent {
-        //         env = parent.as_ref();
-        //     } else {
-        //         return None;
-        //     }
-        // }
+    fn get_val<'a>(&mut self, name: impl Into<&'a str>) -> Option<ValueRef> {
+        let name = name.into();
+
+        if let Some(value) = self.values.get_mut(name) {
+            let by_val = match value.borrow().deref() {
+                Value::Null | Value::Bool(_) | Value::Number(_) => true,
+                _ => false,
+            };
+
+            Some(if by_val {
+                value.by_ref()
+            } else {
+                value.by_cow()
+            })
+        } else if let Some(parent) = &self.parent {
+            parent.get_val(name)
+        } else {
+            None
+        }
     }
 }
 
@@ -76,38 +82,34 @@ pub trait SearchEnv {
 impl SearchEnv for EnvRef {
     fn get_ref<'a>(&self, name: impl Into<&'a str>) -> Option<ValueRef> {
         let name = name.into();
-        let mut env_borrow = self.borrow();
 
-        loop {
-            if let Some(mut value) = env_borrow.values.get(name) {
-                return Some(value.by_ref());
-            }
-
-            if let Some(parent) = &env_borrow.parent {
-                env_borrow = parent.borrow();
-            } else {
-                return None
-            }
+        if let Some(value) = self.borrow_mut().values.get_mut(name) {
+            Some(value.by_ref())
+        } else if let Some(parent) = &self.borrow().parent {
+            parent.get_ref(name)
+        } else {
+            None
         }
     }
 
     fn get_val<'a>(&self, name: impl Into<&'a str>) -> Option<ValueRef> {
         let name = name.into();
-        let mut env_borrow = self.borrow();
 
-        loop {
-            if let Some(mut value) = env_borrow.values.get(name) {
-                return Some(match value.borrow().deref() {
-                    Value::Null | Value::Bool(_) | Value::Number(_) => value.by_val(),
-                    _ => value.by_cow()
-                })
-            }
+        if let Some(value) = self.borrow_mut().values.get_mut(name) {
+            let by_val = match value.borrow().deref() {
+                Value::Null | Value::Bool(_) | Value::Number(_) => true,
+                _ => false,
+            };
 
-            if let Some(parent) = &env_borrow.parent {
-                env_borrow = parent.borrow();
+            Some(if by_val {
+                value.by_ref()
             } else {
-                return None;
-            }
+                value.by_cow()
+            })
+        } else if let Some(parent) = &self.borrow().parent {
+            parent.get_val(name)
+        } else {
+            None
         }
     }
 }

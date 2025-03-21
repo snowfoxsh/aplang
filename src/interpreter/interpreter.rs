@@ -802,6 +802,7 @@ impl Interpreter {
             Literal::Null => Value::Null,
         }
     }
+
     fn unary(&mut self, node: &Unary) -> Result<Value, RuntimeError> {
         let value = self.expr(&node.right)?;
 
