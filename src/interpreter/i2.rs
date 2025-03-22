@@ -52,21 +52,22 @@ impl Interpreter {
 
     /// REPEAT <expr> TIMES { }
     fn repeat_times_stmt(&mut self, repeat_times: &Arc<RepeatTimes>) -> Result<Flow, Error> {
-        match self.expr(&repeat_times.count)? {
-            Value::Number(count) => {
-                for _ in 0..count as usize {
-                    let flow = self.stmt(&repeat_times.body)?;
-                    match flow {
-                        Flow::Normal(_) => continue,
-                        Flow::Continue => continue,
-                        Flow::Break => break,
-                        Flow::Return(_) => return Ok(flow),
-                    }
-                }
-                Ok(Flow::Normal(Data::value(Value::Null)))
-            }
-            value => Err(Error::todo()),
-        }
+        // match self.expr(&repeat_times.count)? {
+        //     Value::Number(count) => {
+        //         for _ in 0..count as usize {
+        //             let flow = self.stmt(&repeat_times.body)?;
+        //             match flow {
+        //                 Flow::Normal(_) => continue,
+        //                 Flow::Continue => continue,
+        //                 Flow::Break => break,
+        //                 Flow::Return(_) => return Ok(flow),
+        //             }
+        //         }
+        //         Ok(Flow::Normal(Data::value(Value::Null)))
+        //     }
+        //     value => Err(Error::todo()),
+        // }
+        todo!()
     }
 
     fn repeat_until_stmt(&mut self, repeat_until_stmt: &Arc<RepeatUntil>) -> Result<Flow, Error> {

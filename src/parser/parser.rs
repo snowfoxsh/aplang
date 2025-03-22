@@ -187,7 +187,7 @@ impl Parser {
         self.in_function_scope = true;
 
         // parse the body of the function
-        let body = self.statement()?;
+        let body = self.body()?;
         // restore the previous function scope state
         self.in_function_scope = function_scope_state_cache;
 
@@ -277,17 +277,18 @@ impl Parser {
         self.expression_statement()
     }
     
-    fn body(&mut self) -> miette::Result<Arc<Block>> {
+    // will always be Stmt::block
+    fn body(&mut self) -> miette::Result<Stmt> {
         let rb_token = self.consume(&LeftBrace, |found| {
            miette! {
-               "todo"
+               "todo {found}"
            } 
         })?.clone();
-
-        let Stmt::Block(block) = self.block(rb_token)? else {
-            unreachable!("failed to produce block, expected block")
-        };
         
+        let block = self.block(rb_token)?;
+        
+        assert!(matches!(block, Stmt::Block(_)), "body is not of type block");
+
         Ok(block)
     }
     
@@ -521,7 +522,7 @@ impl Parser {
             })?
             .clone();
 
-        let then_branch = self.statement()?;
+        let then_branch = self.body()?;
 
         let (else_branch, else_token) = if self.match_token(&Else) {
             // there is an ELSE branch
@@ -566,7 +567,7 @@ impl Parser {
             )
         })?.clone();
 
-        let body = self.statement()?;
+        let body = self.body()?;
 
         Ok(Stmt::RepeatTimes(
             RepeatTimes {
@@ -638,7 +639,7 @@ impl Parser {
             })?
             .clone();
 
-        let body = self.statement()?;
+        let body = self.body()?;
 
         Ok(Stmt::RepeatUntil(
             RepeatUntil {
@@ -717,7 +718,7 @@ impl Parser {
 
         let list_token = self.previous().clone();
 
-        let body = self.statement()?;
+        let body = self.body()?;
 
         Ok(Stmt::ForEach(
             ForEach {
