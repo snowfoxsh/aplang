@@ -1,8 +1,10 @@
 use std::path::PathBuf;
 use std::sync::Arc;
+use cowvert::Data;
 use crate::interpreter::env2::EnvRef;
 use crate::interpreter::env2::ValueRef;
 use crate::interpreter::errors::Error;
+use crate::interpreter::v2::Value;
 use crate::parser::ast::{Variable, Grouping, RepeatTimes, Access, Assignment, Ast, Binary, Block, Continue, Expr, ExprLiteral, ForEach, If, Import, List, Literal, Logical, ProcCall, ProcDeclaration, RepeatUntil, Return, Set, Stmt, Unary, Break};
 
 // #[derive(Debug)]
@@ -48,8 +50,23 @@ impl Interpreter {
         todo!()
     }
 
-    fn repeat_times_stmt(&mut self, repeat_times_stmt: &Arc<RepeatTimes>) -> Result<Flow, Error> {
-        todo!()
+    /// REPEAT <expr> TIMES { }
+    fn repeat_times_stmt(&mut self, repeat_times: &Arc<RepeatTimes>) -> Result<Flow, Error> {
+        match self.expr(&repeat_times.count)? {
+            Value::Number(count) => {
+                for _ in 0..count as usize {
+                    let flow = self.stmt(&repeat_times.body)?;
+                    match flow {
+                        Flow::Normal(_) => continue,
+                        Flow::Continue => continue,
+                        Flow::Break => break,
+                        Flow::Return(_) => return Ok(flow),
+                    }
+                }
+                Ok(Flow::Normal(Data::value(Value::Null)))
+            }
+            value => Err(Error::todo()),
+        }
     }
 
     fn repeat_until_stmt(&mut self, repeat_until_stmt: &Arc<RepeatUntil>) -> Result<Flow, Error> {
