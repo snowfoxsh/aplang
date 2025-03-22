@@ -276,7 +276,21 @@ impl Parser {
 
         self.expression_statement()
     }
+    
+    fn body(&mut self) -> miette::Result<Arc<Block>> {
+        let rb_token = self.consume(&LeftBrace, |found| {
+           miette! {
+               "todo"
+           } 
+        })?.clone();
 
+        let Stmt::Block(block) = self.block(rb_token)? else {
+            unreachable!("failed to produce block, expected block")
+        };
+        
+        Ok(block)
+    }
+    
     fn block(&mut self, lb_token: Token) -> miette::Result<Stmt> {
         let mut statements = vec![];
 
@@ -311,16 +325,13 @@ impl Parser {
             })?
             .clone();
 
-        Ok(Stmt::Block(
-            Block {
+            Ok(Stmt::Block(Block {
                 lb_token,
                 statements,
                 rb_token,
-            }
-            .into(),
-        ))
+            }.into()))
     }
-
+    
     fn break_statement(&mut self, break_token: Token) -> miette::Result<Stmt> {
         if !self.in_loop_scope {
             // todo improve this message
