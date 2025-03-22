@@ -5,17 +5,34 @@ use cowvert::Data;
 
 pub trait Object: Any + Display {
     fn as_any(&self) -> &dyn Any;
-    fn clone_box(&self) -> Box<dyn Object>;
+    fn clone_object(&self) -> Box<dyn Object>;
+    fn eq(&self, other: &dyn Object) -> bool { false }
 }
 
-// Blanket impl for Clone on Box<dyn Object>
-impl Clone for Box<dyn Object> {
-    fn clone(&self) -> Box<dyn Object> {
-        self.clone_box()
+// blanket impl for 
+impl<T: Any + Display + Clone + PartialEq> Object for T {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn clone_object(&self) -> Box<dyn Object> {
+        Box::new(self.clone())
+    }
+
+    fn eq(&self, other: &dyn Object) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<T>()
+            .map_or(false, |o| o == self)
     }
 }
 
-
+// blanket impl for Clone on Box<dyn Object>
+impl Clone for Box<dyn Object> {
+    fn clone(&self) -> Box<dyn Object> {
+        self.clone_object()
+    }
+}
 
 #[derive(Clone)]
 pub enum Value {
@@ -34,22 +51,17 @@ impl Display for Value {
             Value::Null => write!(f, "NULL"),
             Value::Bool(true) => write!(f, "TRUE"),
             Value::Bool(false) => write!(f, "FALSE"),
-            // Value::Number(v) | Value::String(v) | Value::Object(v) => write!(f, "{v}"),
             Value::Number(n) => write!(f, "{n}"),
             Value::String(s) => write!(f, "{s}"),
             Value::Object(o) => write!(f, "{o}"),
-            
             Value::List(list) => {
                 write!(f, "[")?;
-                
                 for (i, item) in list.iter().enumerate() {
                     if i > 0 {
                         write!(f, ", ")?;
                     }
-                    
                     write!(f, "{}", *item.borrow())?;
                 }
-                
                 write!(f, "]")
             },
             Value::Callable(_) => todo!(),
@@ -64,19 +76,28 @@ impl PartialEq<Self> for Value {
             (Value::Number(a), Value::Number(b)) => a == b,
             (Value::Bool(a), Value::Bool(b)) => a == b,
             (Value::String(a), Value::String(b)) => a == b,
-
-            // todo
-            (Value::List(a), Value::List(b)) => todo!(),
-            (Value::Object(a), Value::Object(b)) => todo!(),
+            (Value::List(a), Value::List(b)) =>
+                a.iter().zip(b.iter()).all(|(a, b)| *a.borrow() == *b.borrow()),
+            (Value::Object(a), Value::Object(b)) => a.eq(b.as_ref()),
             (Value::Callable(a), Value::Callable(b)) => todo!(),
-            
-            // (Value::List(a), Value::List(b)) => a.borrow() == *b.borrow(),
-            // (Value::NativeObject(a), Value::NativeObject(b)) => Rc::ptr_eq(a, b),
-            // (Value::NativeFunction(), Value::NativeFunction()) => false, // Define better comparison if needed
-            // (Value::Function(), Value::Function()) => false,             // Define better comparison if needed
+
             _ => false,
         }
     }
 }
 
 impl Eq for Value {}
+
+
+impl Value {
+
+
+    fn is_truthy(&self) -> bool {
+        match self {
+            Value::Bool(b) => *b,
+            Value::Number(n) if *n == 0.0 => false,
+            Value::Null => false,
+            _ => true,
+        }
+    }
+}
