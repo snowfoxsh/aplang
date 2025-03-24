@@ -202,6 +202,13 @@ impl Parser {
     }
 
     fn statement(&mut self) -> miette::Result<Stmt> {
+        // [<de>] 
+        if self.match_token(&LeftBracket) {
+            let left_bracket_toekn = self.previous().clone();
+            
+            return self.destructure(left_bracket_toekn);
+        }
+        
         // import statement
         if self.match_token(&Import) {
             let import_token = self.previous().clone();
@@ -276,7 +283,7 @@ impl Parser {
 
         self.expression_statement()
     }
-    
+
     // will always be Stmt::block
     fn body(&mut self) -> miette::Result<Stmt> {
         let rb_token = self.consume(&LeftBrace, |found| {
@@ -284,9 +291,9 @@ impl Parser {
                "todo {found}"
            } 
         })?.clone();
-        
+
         let block = self.block(rb_token)?;
-        
+
         assert!(matches!(block, Stmt::Block(_)), "body is not of type block");
 
         Ok(block)
@@ -580,6 +587,94 @@ impl Parser {
             .into(),
         ))
     }
+    // 
+    // 
+    // fn destruct_pattern(&mut self) -> miette::Result<DestructPattern> {
+    //     let lb_token = self.consume(&LeftBracket, |_token| {
+    //         miette!("expected '[' at start of destructuring pattern")
+    //     })?.clone();
+    // 
+    //     let mut items = vec![];
+    //     // If not immediately ']', parse one or more identifiers
+    //     if !self.check(&RightBracket) {
+    //         loop {
+    //             let ident_token = self.consume(&Identifier, |token| {
+    //                 miette!("expected identifier in destructuring pattern, found {}", token.lexeme)
+    //             })?.clone();
+    // 
+    //             let variable = Variable {
+    //                 ident: ident_token.lexeme.clone(),
+    //                 token: ident_token,
+    //             };
+    //             items.push(Some(variable));
+    // 
+    //             // if there's no comma, we're done
+    //             if !self.match_token(&Comma) {
+    //                 break;
+    //             }
+    //         }
+    //     }
+    // 
+    //     let rb_token = self.consume(&RightBracket, |token| {
+    //         miette!("expected ']' to close destructuring pattern, found {}", token.lexeme)
+    //     })?.clone();
+    // 
+    //     Ok(DestructPattern {
+    //         items,
+    //         brackets: (lb_token, rb_token),
+    //     })
+    // }
+
+    fn destructure(&mut self, lb_token: Token) -> miette::Result<Stmt> {
+        self.confirm(&LeftBracket)?;
+        
+        // the pattern is empty, error
+        if self.check(&RightBracket) {
+            // todo: improve error message
+            let error = miette! {
+                "pattern cannot be empty"
+            };
+            
+            return Err(error.with_source_code(self.source.clone()));
+        }
+        
+        
+        let mut items = vec![];
+        loop {
+            // no identifier
+            if self.match_token(&Comma) {
+                items.push(None);
+                continue;
+            }
+
+            let ident_token = self.consume(&Identifier, |token| {
+                miette!("expected identifier in destructuring pattern, found {}", token.lexeme)
+            })?.clone();
+            
+            if !self.match_token(&Comma) {
+                break; 
+           }
+        }
+
+        let rb_token = self.consume(&RightBracket, |token| {
+            miette!("expected ']' to close destructuring pattern, found {}", token.lexeme)
+        })?.clone();
+        
+        
+        
+        let arrow_token = self.consume(&Arrow, |token| {
+            miette!("expected '<-' after destruct pattern, found {}", token.lexeme)
+        })?.clone();
+        
+        let right = self.expression()?;
+        
+        Ok(Stmt::Destructure(Arc::new(Destructor {
+            items,
+            brackets: (lb_token, rb_token),
+            arrow_token,
+            right,
+        })))
+    }
 
     fn repeat_until(&mut self, repeat_token: Token) -> miette::Result<Stmt> {
         // confirm that the repeat token has been consumed
@@ -766,6 +861,8 @@ impl Parser {
         self.assignment()
     }
 
+
+
     fn assignment(&mut self) -> miette::Result<Expr> {
         let expr = self.or()?;
         let expr_token = self.previous().clone();
@@ -830,6 +927,8 @@ impl Parser {
             Ok(expr)
         }
     }
+
+
 
     // and ( "OR" and )*
     fn or(&mut self) -> miette::Result<Expr> {

@@ -38,6 +38,8 @@ pub enum Stmt {
     Break(Arc<Break>),
 
     Import(Arc<Import>),
+
+     Destructure(Arc<Destructor>),
 }
 #[derive(Debug, Clone)]
 pub struct If {
@@ -219,6 +221,17 @@ pub struct Assignment {
     pub ident_token: Token,
     pub arrow_token: Token,
 }
+
+#[derive(Debug, Clone)]
+pub struct Destructor {
+    pub items: Vec<Option<Variable>>,
+    pub brackets: (Token, Token),
+    
+    
+    pub arrow_token: Token,
+    pub right: Expr,
+}
+
 #[derive(Debug, Clone)]
 pub struct Set {
     pub target: Expr,
@@ -373,6 +386,11 @@ pub mod pretty {
                         .collect::<Vec<_>>()
                         .into_iter(),
                 ),
+                Stmt::Destructure(de) => {
+                    Box::new(std::iter::once(
+                        Box::new(de.right.clone()) as Box<dyn TreePrinter>
+                    ))
+                }
                 Stmt::Return(return_stmt) => Box::new(
                     return_stmt
                         .data
@@ -430,6 +448,7 @@ pub mod pretty {
                         .collect::<Vec<_>>()
                         .into_iter(),
                 ),
+
                 Expr::Variable(_) | Expr::Literal(_) => Box::new(std::iter::empty()),
                 Expr::Assign(assignment) => Box::new(std::iter::once(Box::new(
                     assignment.value.clone(),
@@ -485,6 +504,7 @@ pub mod pretty {
                 Expr::Assign(assignment) => {
                     write!(f, "{} <- {}", assignment.target, assignment.value)
                 }
+                // Expr::Destructure(de) => write!(f, "de"),
                 Expr::Set(set) => write!(f, "{}[{}] = {}", set.target, set.arrow_token, set.value),
             }
         }
@@ -493,6 +513,7 @@ pub mod pretty {
     impl Display for Stmt {
         fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
             match self {
+                Stmt::Destructure(de) => write!(f, "@ de"),
                 Stmt::Expr(expr) => write!(f, "{}", expr),
                 Stmt::If(if_stmt) => {
                     let else_part = if let Some(else_branch) = &if_stmt.else_branch {

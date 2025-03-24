@@ -123,7 +123,7 @@ impl Interpreter {
         self.ast.program = program; // Restore the program
         Ok(values)
     }
-
+    
     // a stmt by definition returns nothing
     pub(super) fn stmt(&mut self, stmt: &Stmt) -> Result<(), RuntimeError> {
         match stmt {
@@ -341,6 +341,9 @@ impl Interpreter {
 
                 Ok(())
             }
+            Stmt::Destructure(de) => {
+                todo!()
+            },
             Stmt::Import(import) => {
                 // get a ref to the module name to be imported/activated
                 let Some(LiteralValue::String(module_name)) = import.module_name.literal.as_ref()

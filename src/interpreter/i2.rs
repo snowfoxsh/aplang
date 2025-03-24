@@ -5,7 +5,7 @@ use crate::interpreter::env2::EnvRef;
 use crate::interpreter::env2::ValueRef;
 use crate::interpreter::errors::Error;
 use crate::interpreter::v2::Value;
-use crate::parser::ast::{Variable, Grouping, RepeatTimes, Access, Assignment, Ast, Binary, Block, Continue, Expr, ExprLiteral, ForEach, If, Import, List, Literal, Logical, ProcCall, ProcDeclaration, RepeatUntil, Return, Set, Stmt, Unary, Break};
+use crate::parser::ast::{Destructor, Variable, Grouping, RepeatTimes, Access, Assignment, Ast, Binary, Block, Continue, Expr, ExprLiteral, ForEach, If, Import, List, Literal, Logical, ProcCall, ProcDeclaration, RepeatUntil, Return, Set, Stmt, Unary, Break};
 
 // #[derive(Debug)]
 enum Flow {
@@ -39,6 +39,7 @@ impl Interpreter {
             Stmt::Continue(cont) => self.cont_stmt(cont),
             Stmt::Import(import) => self.import_stmt(import),
             Stmt::Break(brk) => self.break_stmt(brk),
+            Stmt::Destructure(de) => self.destructure_stmt(de),
         }
     }
 
@@ -52,21 +53,6 @@ impl Interpreter {
 
     /// REPEAT <expr> TIMES { }
     fn repeat_times_stmt(&mut self, repeat_times: &Arc<RepeatTimes>) -> Result<Flow, Error> {
-        // match self.expr(&repeat_times.count)? {
-        //     Value::Number(count) => {
-        //         for _ in 0..count as usize {
-        //             let flow = self.stmt(&repeat_times.body)?;
-        //             match flow {
-        //                 Flow::Normal(_) => continue,
-        //                 Flow::Continue => continue,
-        //                 Flow::Break => break,
-        //                 Flow::Return(_) => return Ok(flow),
-        //             }
-        //         }
-        //         Ok(Flow::Normal(Data::value(Value::Null)))
-        //     }
-        //     value => Err(Error::todo()),
-        // }
         todo!()
     }
 
@@ -97,6 +83,10 @@ impl Interpreter {
     fn import_stmt(&mut self, import_stmt: &Arc<Import>) -> Result<Flow, Error> {
         todo!()
     }
+
+    fn destructure_stmt(&self, p0: &Arc<Destructor>) -> Result<Flow, Error> {
+        todo!()
+    }
 }
 
 /// Expr
@@ -114,6 +104,7 @@ impl Interpreter {
             Expr::List(list) => self.list_expr(list),
             Expr::Assign(assign) => self.assign_expr(assign),
             Expr::Set(set) => self.set_expr(set),
+            // Expr::Destructure(de) => self.destructure_expr(de),
         }
     }
 
