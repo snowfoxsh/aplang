@@ -2,7 +2,7 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
 use cowvert::Data;
-use crate::interpreter::env2::EnvRef;
+use crate::interpreter::env2::{EnvRef, Layer};
 use crate::interpreter::env2::ValueRef;
 use crate::interpreter::errors::Error;
 use crate::interpreter::v2::{Object, Value};
@@ -11,10 +11,16 @@ use crate::parser::ast::{Destructor, Variable, Grouping, RepeatTimes, Access, As
 // #[derive(Debug)]
 enum Flow {
     // Normal(ValueRef),
-    Normal,
+    Normal(ValueRef),
     Return(ValueRef),
     Break,    // broke out of loop
     Continue, // continued loop iteration
+}
+
+impl Default for Flow {
+    fn default() -> Self {
+        Flow::Normal(Data::value(Value::Null))
+    }
 }
 
 pub struct Interpreter {
@@ -30,8 +36,8 @@ pub struct Interpreter {
 impl Interpreter {
     fn stmt(&mut self, stmt: &Stmt) -> Result<Flow, Error> {
         match stmt {
-            Stmt::Expr(expr) => self.expr(expr),
-            Stmt::Block(block) => self.block(block),
+            Stmt::Expr(expr) => Ok(Flow::Normal(self.expr(expr)?)),
+            Stmt::Block(block) => self.block_stmt(block),
             Stmt::If(ifs) => self.if_stmt(ifs),
             Stmt::RepeatTimes(repeat_times) => self.repeat_times_stmt(repeat_times),
             Stmt::RepeatUntil(repeat_until) => self.repeat_until_stmt(repeat_until),
@@ -45,12 +51,33 @@ impl Interpreter {
         }
     }
 
-    fn block(&mut self, block_stmt: &Arc<Block>) -> Result<Flow, Error> {
-        todo!()
+    // { <stmts> }
+    fn block_stmt(&mut self, block_stmt: &Arc<Block>) -> Result<Flow, Error> {
+        self.env = self.env.layer();
+
+        for stmt in block_stmt.statements.iter() {
+            let flow = self.stmt(stmt)?;
+
+            match flow {
+                Flow::Normal(_) => { /* nop */ },
+                _ => return Ok(flow),
+            }
+        }
+        
+        self.env = self.env.scrape();
+
+        Ok(Flow::default())
     }
 
+    // IF <cond> { ]
     fn if_stmt(&mut self, if_stmt: &Arc<If>) -> Result<Flow, Error> {
-        todo!()
+        if self.expr(&if_stmt.condition)?.borrow().deref().is_truthy() {
+            self.stmt(&if_stmt.then_branch)
+        } else if let Some(else_branch) = &if_stmt.else_branch {
+            self.stmt(else_branch)
+        } else {
+            Ok(Flow::default())
+        }
     }
 
     /// REPEAT <expr> TIMES { }
@@ -69,14 +96,14 @@ impl Interpreter {
             let flow = self.stmt(&repeat_times.body)?;
             
             match flow {
-                Flow::Normal => {},
+                Flow::Normal(_) => {/* nop */},
                 Flow::Continue => continue,
                 Flow::Break => break,
                 Flow::Return(r) => return Ok(Flow::Return(r))
             }
         }
         
-        Ok(Flow::Normal)
+        Ok(Flow::default())
     }
 
     // REPEAT UNTIL ( <cond> ) { }
@@ -85,18 +112,38 @@ impl Interpreter {
             let flow = self.stmt(&repeat_until.body)?;
             
             match flow {
-                Flow::Normal => {}
+                Flow::Normal(_) => {/* nop */},
                 Flow::Continue => continue,
                 Flow::Break => break,
                 Flow::Return(r) => return Ok(Flow::Return(r))
             }
         }
         
-        Ok(Flow::Normal)
+        Ok(Flow::default())
     }
 
+    // FOR EACH <var> IN <list> { }
     fn for_each_stmt(&mut self, for_each_stmt: &Arc<ForEach>) -> Result<Flow, Error> {
-        todo!()
+        let list = self.expr(&for_each_stmt.list)?;
+
+        let list = match list.borrow().deref() {
+            Value::List(list) => list.iter(),
+            Value::String(s) =>
+                s.chars()
+                .map(|ch| Data::value(Value::String(ch.to_string())))
+                .collect::<Vec<_>>()
+                .iter(),
+            Value::Object(obj) => {
+                if let Some(iter) = obj.iter() {
+                    return iter
+                } else {
+                    return Err(Error::todo())
+                }
+            },
+            _ => return Err(Error::todo()),
+        };
+
+        Ok(Flow::default())
     }
 
     fn proc_decl_stmt(&mut self, proc_decl_stmt: &Arc<ProcDeclaration>) -> Result<Flow, Error> {
@@ -105,18 +152,18 @@ impl Interpreter {
 
     fn ret_stmt(&mut self, ret_stmt: &Arc<Return>) -> Result<Flow, Error> {
         if let Some(return_value) = &ret_stmt.data {
-            todo!()
+            Ok(Flow::Return(self.expr(return_value)?))
         } else {
             Ok(Flow::Return(Data::value(Value::Null)))
         }
     }
 
     fn cont_stmt(&mut self, cont_stmt: &Arc<Continue>) -> Result<Flow, Error> {
-        todo!()
+        Ok(Flow::Continue)
     }
     
     fn break_stmt(&mut self, break_stmt: &Arc<Break>) -> Result<Flow, Error> {
-        todo!()
+        Ok(Flow::Break)
     }
 
     fn import_stmt(&mut self, import_stmt: &Arc<Import>) -> Result<Flow, Error> {
@@ -132,11 +179,11 @@ impl Interpreter {
 impl Interpreter {
     fn expr(&mut self, expr: &Expr) -> Result<ValueRef, Error> {
         match expr {
+            Expr::Literal(literal) => self.literal_expr(literal),
             Expr::Binary(binary) => self.binary_expr(binary),
             Expr::Unary(unary) => self.unary_expr(unary),
             Expr::Grouping(grouping) => self.grouping_expr(grouping),
             Expr::Logical(logical) => self.logical_expr(logical),
-            Expr::Literal(literal) => self.literal_expr(literal),
             Expr::Variable(var) => self.variable_expr(var),
             Expr::ProcCall(call) => self.call_expr(call),
             Expr::Access(access) => self.access_expr(access),
@@ -146,8 +193,28 @@ impl Interpreter {
         }
     }
 
+    fn literal_expr(&mut self, literal_expr: &Arc<ExprLiteral>) -> Result<ValueRef, Error> {
+        let lit = match &literal_expr.value {
+            Literal::Number(n) => Value::Number(*n),
+            Literal::String(s) => Value::String(s.clone()), // value clone here
+            Literal::True => Value::Bool(true),
+            Literal::False => Value::Bool(false),
+            Literal::Null => Value::Null,
+        };
+        
+        Ok(Data::value(lit))
+    }
+    
     fn binary_expr(&mut self, binary: &Arc<Binary>) -> Result<ValueRef, Error> {
-        todo!()
+        use crate::interpreter::v2::Value::*;
+        use crate::parser::ast::BinaryOp::*;
+        
+        let lhs = self.expr(&binary.left)?;
+        let rhs = self.expr(&binary.right)?;
+        
+        match (lhs, &binary.operator, rhs) {
+            (_, EqualEqual, _) => Ok(Data::value())
+        }
     }
 
     fn unary_expr(&mut self, unary: &Arc<Unary>) -> Result<ValueRef, Error> {
@@ -155,16 +222,13 @@ impl Interpreter {
     }
 
     fn grouping_expr(&mut self, grouping_expr: &Arc<Grouping>) -> Result<ValueRef, Error> {
-        todo!()
+        self.expr(&grouping_expr.expr)
     }
 
     fn logical_expr(&mut self, logical_expr: &Arc<Logical>) -> Result<ValueRef, Error> {
         todo!()
     }
 
-    fn literal_expr(&mut self, literal_expr: &Arc<ExprLiteral>) -> Result<ValueRef, Error> {
-        todo!()
-    }
     
     fn variable_expr(&mut self, variable_expr: &Arc<Variable>) -> Result<ValueRef, Error> {
         todo!()

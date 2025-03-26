@@ -7,6 +7,7 @@ pub trait Object: Any + Display {
     fn as_any(&self) -> &dyn Any;
     fn clone_object(&self) -> Box<dyn Object>;
     fn eq(&self, other: &dyn Object) -> bool { false }
+    fn iter(&self) -> Option<dyn Iterator<Item=Data<Value>>> { None }
 }
 
 // blanket impl for 

@@ -2,6 +2,7 @@ use std::cell::{Ref, RefCell};
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::rc::Rc;
+use std::sync::Arc;
 use cowvert::Data;
 use crate::interpreter::v2::Value;
 
@@ -12,6 +13,7 @@ pub struct Environment {
     values: HashMap<String, ValueRef>,
     parent: Option<EnvRef>,
 }
+
 
 impl Environment {
     /// Creates a new empty [Environment]
@@ -71,6 +73,21 @@ impl Environment {
         } else {
             None
         }
+    }
+}
+
+pub trait Layer {
+    fn layer(&self) -> EnvRef;
+    fn scrape(self) -> EnvRef;
+}
+
+impl Layer for EnvRef {
+    fn layer(&self) -> EnvRef {
+        Environment::layer(Rc::clone(self))
+    }
+
+    fn scrape(&self) -> EnvRef {
+        self.borrow().parent.clone().unwrap()
     }
 }
 
