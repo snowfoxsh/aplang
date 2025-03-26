@@ -345,9 +345,9 @@ impl Interpreter {
                 let expr = self.expr(&de.right)?;
                 
                 // use an iter trait here instead
-                match expr {
-                    Value::List(l) => 
-                }
+                // match expr {
+                //     Value::List(l) => 
+                // }
                 
                 todo!()
             },

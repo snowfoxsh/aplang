@@ -1,12 +1,16 @@
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::sync::Arc;
 use cowvert::Data;
-use crate::interpreter::env2::{EnvRef, Layer};
+use std::borrow::BorrowMut;
+use std::borrow::Borrow;
+use crate::parser::ast::BinaryOp::{EqualEqual, Greater, GreaterEqual, Less, LessEqual, Minus, Plus, Slash, Star};
+use crate::interpreter::env2::{Env, EnvRef, Layer};
 use crate::interpreter::env2::ValueRef;
 use crate::interpreter::errors::Error;
-use crate::interpreter::v2::{Object, Value};
-use crate::parser::ast::{Destructor, Variable, Grouping, RepeatTimes, Access, Assignment, Ast, Binary, Block, Continue, Expr, ExprLiteral, ForEach, If, Import, List, Literal, Logical, ProcCall, ProcDeclaration, RepeatUntil, Return, Set, Stmt, Unary, Break};
+use crate::interpreter::v2::{Object, SmartClone, Value};
+use crate::parser::ast::{Destructor, Variable, Grouping, RepeatTimes, Access, Assignment, Ast, Binary, Block, Continue, Expr, ExprLiteral, ForEach, If, Import, List, Literal, Logical, ProcCall, ProcDeclaration, RepeatUntil, Return, Set, Stmt, Unary, Break, LogicalOp};
 
 // #[derive(Debug)]
 enum Flow {
@@ -64,7 +68,7 @@ impl Interpreter {
             }
         }
         
-        self.env = self.env.scrape();
+        self.env = self.env.clone().scrape();
 
         Ok(Flow::default())
     }
@@ -82,7 +86,9 @@ impl Interpreter {
 
     /// REPEAT <expr> TIMES { }
     fn repeat_times_stmt(&mut self, repeat_times: &Arc<RepeatTimes>) -> Result<Flow, Error> {
-        let count = self.expr(&repeat_times.count)?.borrow().deref();
+        let binding = self.expr(&repeat_times.count)?;
+        let binding = binding.borrow();
+        let count = binding.deref();
         
         // error if type cannot become a number
         let count = match count {
@@ -122,20 +128,28 @@ impl Interpreter {
         Ok(Flow::default())
     }
 
-    // FOR EACH <var> IN <list> { }
+    // FOR EACH <item> IN <iter> { }
     fn for_each_stmt(&mut self, for_each_stmt: &Arc<ForEach>) -> Result<Flow, Error> {
         let list = self.expr(&for_each_stmt.list)?;
 
-        let list = match list.borrow().deref() {
-            Value::List(list) => list.iter(),
-            Value::String(s) =>
-                s.chars()
-                .map(|ch| Data::value(Value::String(ch.to_string())))
-                .collect::<Vec<_>>()
-                .iter(),
+        let binding = list.borrow();
+
+        let temp_storage: Vec<Data<Value>>;
+        let iter: Box<dyn Iterator<Item = &Data<Value>>> = match binding.deref() {
+            Value::List(list) => {
+                Box::new(list.iter())
+            },
+            Value::String(s) => {
+                let vec: Vec<Data<Value>> = s
+                    .chars()
+                    .map(|ch| Data::value(Value::String(ch.to_string())))
+                    .collect();
+                temp_storage = vec;
+                Box::new(temp_storage.iter())
+            },
             Value::Object(obj) => {
                 if let Some(iter) = obj.iter() {
-                    return iter
+                    iter
                 } else {
                     return Err(Error::todo())
                 }
@@ -143,13 +157,19 @@ impl Interpreter {
             _ => return Err(Error::todo()),
         };
 
+        for item in iter {
+        }
+
         Ok(Flow::default())
     }
 
+
+    // EXPORT? PROCEDURE <name>( <params> ) { }
     fn proc_decl_stmt(&mut self, proc_decl_stmt: &Arc<ProcDeclaration>) -> Result<Flow, Error> {
         todo!()
     }
 
+    // RETURN
     fn ret_stmt(&mut self, ret_stmt: &Arc<Return>) -> Result<Flow, Error> {
         if let Some(return_value) = &ret_stmt.data {
             Ok(Flow::Return(self.expr(return_value)?))
@@ -158,18 +178,22 @@ impl Interpreter {
         }
     }
 
+    // CONTINUE
     fn cont_stmt(&mut self, cont_stmt: &Arc<Continue>) -> Result<Flow, Error> {
         Ok(Flow::Continue)
     }
-    
+
+    // BREAK
     fn break_stmt(&mut self, break_stmt: &Arc<Break>) -> Result<Flow, Error> {
         Ok(Flow::Break)
     }
 
+    // IMPORT
     fn import_stmt(&mut self, import_stmt: &Arc<Import>) -> Result<Flow, Error> {
         todo!()
     }
 
+    // [ <binds> ] <- <expr>
     fn destructure_stmt(&self, p0: &Arc<Destructor>) -> Result<Flow, Error> {
         todo!()
     }
@@ -208,13 +232,57 @@ impl Interpreter {
     fn binary_expr(&mut self, binary: &Arc<Binary>) -> Result<ValueRef, Error> {
         use crate::interpreter::v2::Value::*;
         use crate::parser::ast::BinaryOp::*;
+        let value = Data::value;
+
+        let mut lhs_binding = self.expr(&binary.left)?;
+        let mut lhs = lhs_binding.borrow_mut();
+        let mut rhs_binding = self.expr(&binary.right)?;
+        let mut rhs = rhs_binding.borrow_mut();
+
+        let op = &binary.operator;
         
-        let lhs = self.expr(&binary.left)?;
-        let rhs = self.expr(&binary.right)?;
-        
-        match (lhs, &binary.operator, rhs) {
-            (_, EqualEqual, _) => Ok(Data::value())
-        }
+        Ok(match (lhs.deref_mut(), op, rhs.deref_mut()) {
+            // comparison
+            (a, EqualEqual, b) => value(Bool(todo!())),
+            (a, NotEqual, b) => value(Bool(todo!())),
+            (Number(a), Less, Number(b)) => value(Bool(a < b)),
+            (Number(a), LessEqual, Number(b)) => value(Bool(a <= b)),
+            (Number(a), Greater, Number(b)) => value(Bool(a > b)),
+            (Number(a), GreaterEqual, Number(b)) => value(Bool(a >= b)),
+            
+            // arithmatic
+            (Number(a), Plus, Number(b)) => value(Number(*a + *b)),
+            (Number(a), Minus, Number(b)) => value(Number(*a - *b)),
+            (Number(a), Star, Number(b)) => value(Number(*a * *b)),
+            (&mut Number(a), Slash, &mut Number(b)) => {
+                if b != 0.0 {
+                    value(Number(a / b))
+                } else {
+                    return Err(Error::todo())
+                }
+            }
+            (&mut Number(a), Modulo, &mut Number(b)) => {
+                if b != 0.0 {
+                    value(Number(a % b))
+                } else {
+                    return Err(Error::todo())
+                }
+            }
+            
+            // string
+            (String(a), Plus, b) => value(String(format!("{a}{b}"))),
+            // list
+            (List(a), Plus, List(b)) => {
+                let new: Vec<_> = a.iter_mut()
+                    .map(|v| v.smart_clone())
+                    .chain(b.iter_mut().map(|v| v.smart_clone()))
+                    .collect();
+
+                value(List(new))
+            }
+            
+            _ => return Err(Error::todo())
+        })
     }
 
     fn unary_expr(&mut self, unary: &Arc<Unary>) -> Result<ValueRef, Error> {
@@ -226,12 +294,25 @@ impl Interpreter {
     }
 
     fn logical_expr(&mut self, logical_expr: &Arc<Logical>) -> Result<ValueRef, Error> {
-        todo!()
-    }
+        let left = self.expr(&logical_expr.left)?;
+        let short_circuit = match logical_expr.operator {
+            LogicalOp::Or => left.borrow().deref().is_truthy(),
+            LogicalOp::And => !left.borrow().deref().is_truthy(),
+        };
 
+        if short_circuit {
+            Ok(left)
+        } else {
+            Ok(self.expr(&logical_expr.right)?)
+        }
+    }
     
     fn variable_expr(&mut self, variable_expr: &Arc<Variable>) -> Result<ValueRef, Error> {
-        todo!()
+        if let Some(var) = self.env.get_ref(&*variable_expr.ident) {
+            Ok(var)
+        } else {
+            Err(Error::todo())
+        }
     }
 
     fn call_expr(&mut self, call_expr: &Arc<ProcCall>) -> Result<ValueRef, Error> {

@@ -1,6 +1,6 @@
 use std::cell::{Ref, RefCell};
 use std::collections::HashMap;
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 use std::sync::Arc;
 use cowvert::Data;
@@ -76,9 +76,35 @@ impl Environment {
     }
 }
 
+pub trait Env {
+    fn define(&mut self, name: String, value: ValueRef) -> Option<ValueRef>;
+    fn get_ref<'a>(&mut self, name: impl Into<&'a str>) -> Option<ValueRef>;
+    fn get_val<'a>(&mut self, name: impl Into<&'a str>) -> Option<ValueRef>;
+}
+
+impl Env for EnvRef {
+    fn define(&mut self, name: String, value: ValueRef) -> Option<ValueRef> {
+        let mut binding = self.borrow_mut();
+        let env = binding.deref_mut();
+        env.define(name, value)
+    }
+
+    fn get_ref<'a>(&mut self, name: impl Into<&'a str>) -> Option<ValueRef> {
+        let mut binding = self.borrow_mut();
+        let env = binding.deref_mut();
+        env.get_ref(name)
+    }
+
+    fn get_val<'a>(&mut self, name: impl Into<&'a str>) -> Option<ValueRef> {
+        let mut binding = self.borrow_mut();
+        let env = binding.deref_mut();
+        env.get_val(name)
+    }
+}
+
 pub trait Layer {
     fn layer(&self) -> EnvRef;
-    fn scrape(self) -> EnvRef;
+    fn scrape(&self) -> EnvRef;
 }
 
 impl Layer for EnvRef {

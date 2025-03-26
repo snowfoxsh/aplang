@@ -1,5 +1,6 @@
 use std::any::Any;
 use std::fmt::{Display, Formatter};
+use std::ops::Deref;
 use cowvert::Data;
 
 
@@ -7,10 +8,10 @@ pub trait Object: Any + Display {
     fn as_any(&self) -> &dyn Any;
     fn clone_object(&self) -> Box<dyn Object>;
     fn eq(&self, other: &dyn Object) -> bool { false }
-    fn iter(&self) -> Option<dyn Iterator<Item=Data<Value>>> { None }
+    fn iter(&self) -> Option<Box<dyn Iterator<Item=&Data<Value>>>> { None }
 }
 
-// blanket impl for 
+// blanket impl for T
 impl<T: Any + Display + Clone + PartialEq> Object for T {
     fn as_any(&self) -> &dyn Any {
         self
@@ -81,11 +82,12 @@ impl PartialEq<Self> for Value {
                 a.iter().zip(b.iter()).all(|(a, b)| *a.borrow() == *b.borrow()),
             (Value::Object(a), Value::Object(b)) => a.eq(b.as_ref()),
             (Value::Callable(a), Value::Callable(b)) => todo!(),
-
             _ => false,
         }
     }
 }
+
+// fn equals() 
 
 impl Eq for Value {}
 
@@ -97,6 +99,25 @@ impl Value {
             Value::Number(n) if *n == 0.0 => false,
             Value::Null => false,
             _ => true,
+        }
+    }
+}
+
+pub trait SmartClone {
+    fn smart_clone(&mut self) -> Self;
+}
+
+impl SmartClone for Data<Value> {
+    fn smart_clone(&mut self) -> Self {
+        let use_val = {
+            let val = self.borrow();
+            matches!(val.deref(), Value::Null | Value::Bool(_) | Value::Number(_))
+        };
+
+        if use_val {
+            self.by_val()
+        } else {
+            self.by_cow()
         }
     }
 }
