@@ -90,9 +90,7 @@ impl Eq for Value {}
 
 
 impl Value {
-
-
-    fn is_truthy(&self) -> bool {
+    pub fn is_truthy(&self) -> bool {
         match self {
             Value::Bool(b) => *b,
             Value::Number(n) if *n == 0.0 => false,

@@ -50,68 +50,96 @@ fn run(args: CommandLine) -> Result<()> {
 
     #[cfg(feature = "splash")]
     if args.info {
-        // show the splash screen
         splash::show_splash().unwrap();
         return Ok(());
     }
 
-
-
     let aplang = if let Some(file_path) = args.file {
         ApLang::new_from_file(file_path.clone()).map_err(|err| match err.kind() {
-            ErrorKind::NotFound => miette!("Could not read file {}", file_path.display(),),
-            other_err => miette!(
-                "Critical Failure. Could not read file! {} {err:?}",
-                file_path.display(),
-            ),
+            ErrorKind::NotFound => miette!("Could not read file {}", file_path.display()),
+            other_err => miette!("Critical Failure. Could not read file! {} {err:?}", file_path.display()),
         })
     } else if let Some(eval) = args.eval {
         Ok(ApLang::new_from_stdin(eval))
     } else if args.eval_stdin {
         let mut buffer = String::new();
-
         io::stdin()
             .read_to_string(&mut buffer)
             .map_err(|err| miette!("failed to read from stdin\n{}", err))?;
         Ok(ApLang::new_from_stdin(buffer))
     } else {
         unreachable!()
-    };
+    }?;
 
-    // execute the lexer
-    let lexed = aplang?.lex().map_err(Reports::from)?; // todo implement errors here
-
-    // if the flag is enabled, capture the debug info
+    // --- Lexer Stage ---
+    let lex_result = aplang.lex();
     if matches!(args.debug, DebugMode::All | DebugMode::Lexer) {
-        lexed
-            .debug_output(&mut debug_buffer)
-            .map_err(|err| miette!("could not write debug info for lexer!\n{}", err))?
+        match &lex_result {
+            Ok(lexed_val) => {
+                if let Err(err) = lexed_val.debug_output(&mut debug_buffer) {
+                    eprintln!("Error printing lexer debug info: {}", err);
+                } else {
+                    eprintln!("Lexer Debug Output:\n{}", debug_buffer);
+                }
+                debug_buffer.clear();
+            }
+            Err(e) => {
+                eprintln!("Lexer stage encountered an error: {:?}", e);
+                if !debug_buffer.is_empty() {
+                    eprintln!("Lexer Debug Output (partial):\n{}", debug_buffer);
+                }
+            }
+        }
     }
+    let lexed = lex_result.map_err(Reports::from)?;
 
-    // execute the parser
-    let parsed = lexed.parse().map_err(Reports::from)?;
-
-    // todo implement errors here
+    // --- Parser Stage ---
+    let parse_result = lexed.parse();
     if matches!(args.debug, DebugMode::All | DebugMode::Parser) {
-        parsed
-            .debug_output(&mut debug_buffer)
-            .map_err(|err| miette!("could not write debug info for parser!\n{}", err))?
+        match &parse_result {
+            Ok(parsed_val) => {
+                if let Err(err) = parsed_val.debug_output(&mut debug_buffer) {
+                    eprintln!("Error printing parser debug info: {}", err);
+                } else {
+                    eprintln!("Parser Debug Output:\n{}", debug_buffer);
+                }
+                debug_buffer.clear();
+            }
+            Err(e) => {
+                eprintln!("Parser stage encountered an error: {:?}", e);
+                if !debug_buffer.is_empty() {
+                    eprintln!("Parser Debug Output (partial):\n{}", debug_buffer);
+                }
+            }
+        }
     }
+    let parsed = parse_result.map_err(Reports::from)?;
 
-    // stop if we're only checking
+    // Stop if we're only checking
     if args.check {
         return Ok(());
     }
 
-    // execute the interpreter
+    // --- Interpreter Stage ---
     let runtime = if matches!(args.debug, DebugMode::All | DebugMode::Interpreter) {
         let start = Instant::now();
-        let executed = parsed.execute_with_debug()?;
+        let exec_result = parsed.execute_with_debug();
+        if let Err(e) = &exec_result {
+            eprintln!("Interpreter stage encountered an error: {}", e);
+            if !debug_buffer.is_empty() {
+                eprintln!("Interpreter Debug Output (partial):\n{}", debug_buffer);
+            }
+            // Propagate the error after printing debug info
+            return exec_result.map(|_| ()).map_err(|e| e.into());
+        }
+        let executed = exec_result?;
         let elapsed = start.elapsed();
-        executed
-            .debug_output(&mut debug_buffer)
-            .map_err(|err| miette!("could not write debug info for parser!\n{}", err))?;
-
+        if let Err(err) = executed.debug_output(&mut debug_buffer) {
+            eprintln!("Error printing interpreter debug info: {}", err);
+        } else {
+            eprintln!("Interpreter Debug Output:\n{}", debug_buffer);
+        }
+        debug_buffer.clear();
         elapsed
     } else {
         let start = Instant::now();
@@ -119,15 +147,9 @@ fn run(args: CommandLine) -> Result<()> {
         start.elapsed()
     };
 
-    // todo: consider adding a flag that will specify a write location for the debug string
-    // write out our debug buffer if requested
-    if !matches!(args.debug, DebugMode::None) {
-        eprintln!("{}", debug_buffer);
-        if matches!(args.debug, DebugMode::Time | DebugMode::All) {
-            eprintln!("EXECUTION TIME: {:?}", runtime)
-        }
+    if matches!(args.debug, DebugMode::Time | DebugMode::All) {
+        eprintln!("EXECUTION TIME: {:?}", runtime);
     }
 
     Ok(())
 }
-

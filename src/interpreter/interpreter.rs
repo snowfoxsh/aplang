@@ -123,7 +123,7 @@ impl Interpreter {
         self.ast.program = program; // Restore the program
         Ok(values)
     }
-    
+
     // a stmt by definition returns nothing
     pub(super) fn stmt(&mut self, stmt: &Stmt) -> Result<(), RuntimeError> {
         match stmt {
@@ -342,6 +342,13 @@ impl Interpreter {
                 Ok(())
             }
             Stmt::Destructure(de) => {
+                let expr = self.expr(&de.right)?;
+                
+                // use an iter trait here instead
+                match expr {
+                    Value::List(l) => 
+                }
+                
                 todo!()
             },
             Stmt::Import(import) => {

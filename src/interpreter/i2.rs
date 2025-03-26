@@ -1,15 +1,17 @@
+use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
 use cowvert::Data;
 use crate::interpreter::env2::EnvRef;
 use crate::interpreter::env2::ValueRef;
 use crate::interpreter::errors::Error;
-use crate::interpreter::v2::Value;
+use crate::interpreter::v2::{Object, Value};
 use crate::parser::ast::{Destructor, Variable, Grouping, RepeatTimes, Access, Assignment, Ast, Binary, Block, Continue, Expr, ExprLiteral, ForEach, If, Import, List, Literal, Logical, ProcCall, ProcDeclaration, RepeatUntil, Return, Set, Stmt, Unary, Break};
 
 // #[derive(Debug)]
 enum Flow {
-    Normal(ValueRef),
+    // Normal(ValueRef),
+    Normal,
     Return(ValueRef),
     Break,    // broke out of loop
     Continue, // continued loop iteration
@@ -53,11 +55,44 @@ impl Interpreter {
 
     /// REPEAT <expr> TIMES { }
     fn repeat_times_stmt(&mut self, repeat_times: &Arc<RepeatTimes>) -> Result<Flow, Error> {
-        todo!()
+        let count = self.expr(&repeat_times.count)?.borrow().deref();
+        
+        // error if type cannot become a number
+        let count = match count {
+            Value::Number(n) => *n as u64,
+            value => {
+                return Err(Error::todo())
+            },
+        };
+        
+        for _ in 1..=count {
+            let flow = self.stmt(&repeat_times.body)?;
+            
+            match flow {
+                Flow::Normal => {},
+                Flow::Continue => continue,
+                Flow::Break => break,
+                Flow::Return(r) => return Ok(Flow::Return(r))
+            }
+        }
+        
+        Ok(Flow::Normal)
     }
 
-    fn repeat_until_stmt(&mut self, repeat_until_stmt: &Arc<RepeatUntil>) -> Result<Flow, Error> {
-        todo!()
+    // REPEAT UNTIL ( <cond> ) { }
+    fn repeat_until_stmt(&mut self, repeat_until: &Arc<RepeatUntil>) -> Result<Flow, Error> {
+        while self.expr(&repeat_until.condition)?.borrow().deref().is_truthy() {
+            let flow = self.stmt(&repeat_until.body)?;
+            
+            match flow {
+                Flow::Normal => {}
+                Flow::Continue => continue,
+                Flow::Break => break,
+                Flow::Return(r) => return Ok(Flow::Return(r))
+            }
+        }
+        
+        Ok(Flow::Normal)
     }
 
     fn for_each_stmt(&mut self, for_each_stmt: &Arc<ForEach>) -> Result<Flow, Error> {
@@ -69,7 +104,11 @@ impl Interpreter {
     }
 
     fn ret_stmt(&mut self, ret_stmt: &Arc<Return>) -> Result<Flow, Error> {
-        todo!()
+        if let Some(return_value) = &ret_stmt.data {
+            todo!()
+        } else {
+            Ok(Flow::Return(Data::value(Value::Null)))
+        }
     }
 
     fn cont_stmt(&mut self, cont_stmt: &Arc<Continue>) -> Result<Flow, Error> {
@@ -91,7 +130,7 @@ impl Interpreter {
 
 /// Expr
 impl Interpreter {
-    fn expr(&mut self, expr: &Expr) -> Result<Flow, Error> {
+    fn expr(&mut self, expr: &Expr) -> Result<ValueRef, Error> {
         match expr {
             Expr::Binary(binary) => self.binary_expr(binary),
             Expr::Unary(unary) => self.unary_expr(unary),
@@ -104,51 +143,50 @@ impl Interpreter {
             Expr::List(list) => self.list_expr(list),
             Expr::Assign(assign) => self.assign_expr(assign),
             Expr::Set(set) => self.set_expr(set),
-            // Expr::Destructure(de) => self.destructure_expr(de),
         }
     }
 
-    fn binary_expr(&mut self, binary: &Arc<Binary>) -> Result<Flow, Error> {
+    fn binary_expr(&mut self, binary: &Arc<Binary>) -> Result<ValueRef, Error> {
         todo!()
     }
 
-    fn unary_expr(&mut self, unary: &Arc<Unary>) -> Result<Flow, Error> {
+    fn unary_expr(&mut self, unary: &Arc<Unary>) -> Result<ValueRef, Error> {
         todo!()
     }
 
-    fn grouping_expr(&mut self, grouping_expr: &Arc<Grouping>) -> Result<Flow, Error> {
+    fn grouping_expr(&mut self, grouping_expr: &Arc<Grouping>) -> Result<ValueRef, Error> {
         todo!()
     }
 
-    fn logical_expr(&mut self, logical_expr: &Arc<Logical>) -> Result<Flow, Error> {
+    fn logical_expr(&mut self, logical_expr: &Arc<Logical>) -> Result<ValueRef, Error> {
         todo!()
     }
 
-    fn literal_expr(&mut self, literal_expr: &Arc<ExprLiteral>) -> Result<Flow, Error> {
+    fn literal_expr(&mut self, literal_expr: &Arc<ExprLiteral>) -> Result<ValueRef, Error> {
         todo!()
     }
     
-    fn variable_expr(&mut self, variable_expr: &Arc<Variable>) -> Result<Flow, Error> {
+    fn variable_expr(&mut self, variable_expr: &Arc<Variable>) -> Result<ValueRef, Error> {
         todo!()
     }
 
-    fn call_expr(&mut self, call_expr: &Arc<ProcCall>) -> Result<Flow, Error> {
+    fn call_expr(&mut self, call_expr: &Arc<ProcCall>) -> Result<ValueRef, Error> {
         todo!()
     }
 
-    fn access_expr(&mut self, access_expr: &Arc<Access>) -> Result<Flow, Error> {
+    fn access_expr(&mut self, access_expr: &Arc<Access>) -> Result<ValueRef, Error> {
         todo!()
     }
 
-    fn list_expr(&mut self, list_expr: &Arc<List>) -> Result<Flow, Error> {
+    fn list_expr(&mut self, list_expr: &Arc<List>) -> Result<ValueRef, Error> {
         todo!()
     }
     
-    fn assign_expr(&mut self, assign_expr: &Arc<Assignment>) -> Result<Flow, Error> {
+    fn assign_expr(&mut self, assign_expr: &Arc<Assignment>) -> Result<ValueRef, Error> {
         todo!()
     }
     
-    fn set_expr(&mut self, set_expr: &Arc<Set>) -> Result<Flow, Error> {
+    fn set_expr(&mut self, set_expr: &Arc<Set>) -> Result<ValueRef, Error> {
         todo!()
     }
 }
