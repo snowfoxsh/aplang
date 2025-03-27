@@ -895,7 +895,7 @@ impl Parser {
                             .into(),
                         ),
                         list: access.list.clone(),
-                        idx: access.key.clone(),
+                        key: access.key.clone(),
                         value,
                         list_token: access.list_token.clone(),
                         brackets: access.brackets.clone(),

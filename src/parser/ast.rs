@@ -238,7 +238,7 @@ pub struct Set {
     pub value: Expr,
 
     pub list: Expr,
-    pub idx: Expr,
+    pub key: Expr,
 
     pub list_token: Token,
     pub brackets: (Token, Token),

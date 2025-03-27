@@ -686,7 +686,7 @@ impl Interpreter {
 
     fn set(&mut self, set: &crate::parser::ast::Set) -> Result<Value, RuntimeError> {
         let list = self.expr(&set.list)?;
-        let idx = self.expr(&set.idx)?;
+        let idx = self.expr(&set.key)?;
         let value = self.expr(&set.value)?;
 
         let Value::List(ref list) = list else {

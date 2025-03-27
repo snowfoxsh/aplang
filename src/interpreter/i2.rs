@@ -239,9 +239,7 @@ impl Interpreter {
         let mut rhs_binding = self.expr(&binary.right)?;
         let mut rhs = rhs_binding.borrow_mut();
 
-        let op = &binary.operator;
-        
-        Ok(match (lhs.deref_mut(), op, rhs.deref_mut()) {
+        Ok(match (lhs.deref_mut(), &binary.operator, rhs.deref_mut()) {
             // comparison
             (a, EqualEqual, b) => value(Bool(todo!())),
             (a, NotEqual, b) => value(Bool(todo!())),
@@ -286,7 +284,18 @@ impl Interpreter {
     }
 
     fn unary_expr(&mut self, unary: &Arc<Unary>) -> Result<ValueRef, Error> {
-        todo!()
+        use crate::interpreter::v2::Value::*;
+        use crate::parser::ast::UnaryOp::*;
+
+        let operand_binding = self.expr(&unary.right)?;
+        let operand = operand_binding.borrow();
+        Ok(match (&unary.operator, operand.deref()) {
+            (Minus, Number(num)) => Data::value(Number(-num)),
+            (Not, value) => Data::value(Bool(!value.is_truthy())),
+
+            // todo add specific errors here
+            _ => return Err(Error::todo())
+        })
     }
 
     fn grouping_expr(&mut self, grouping_expr: &Arc<Grouping>) -> Result<ValueRef, Error> {
@@ -337,10 +346,10 @@ impl Interpreter {
             (key - 1.0) as usize
         };
         
-        let list = list.borrow_mut();
-        let list = list.deref();
+        let mut list = list.borrow_mut();
+        let list = list.deref_mut();
         match list {
-            Value::List(mut list) => {
+            Value::List(list) => {
                 if let Some(elm) = list.get_mut(key) {
                     Ok(elm.by_ref())
                 } else {
@@ -349,16 +358,27 @@ impl Interpreter {
                 }
             },
             Value::String(s) => {
-                todo!()
+                if let Some(ch) = s.chars().nth(key) {
+                    Ok(Data::value(Value::String(ch.to_string())))
+                } else {
+                    // out of bounds
+                    Err(Error::todo())
+                }
             },
             _ => {
-                todo!()
+                Err(Error::todo())
             }
         }
     }
 
     fn list_expr(&mut self, list_expr: &Arc<List>) -> Result<ValueRef, Error> {
-        todo!()
+        let mut list = Vec::with_capacity(list_expr.items.len());
+        
+        for expr in list_expr.items.iter() {
+            list.push(self.expr(expr)?);
+        }
+        
+        Ok(Data::value(Value::List(list)))
     }
     
     fn assign_expr(&mut self, assign_expr: &Arc<Assignment>) -> Result<ValueRef, Error> {
@@ -373,6 +393,46 @@ impl Interpreter {
     }
     
     fn set_expr(&mut self, set_expr: &Arc<Set>) -> Result<ValueRef, Error> {
-        todo!()
+        // get the list
+        let mut list = self.expr(&set_expr.list)?;
+        
+        let mut list_binding = list.borrow_mut();
+        let Value::List(list) = list_binding.deref_mut() else  {
+            return Err(Error::todo())
+        };
+
+        // get the key
+        let key = self.expr(&set_expr.key)?;
+        let key = key.borrow();
+        let key = key.deref();
+
+        let Value::Number(key) = key else {
+            return Err(Error::todo())
+        };
+
+        let key = if *key < 1.0 {
+            // cannot index less than 1.0
+            return Err(Error::todo())
+        } else {
+            // index starting at 1
+            (key - 1.0) as usize
+        };
+
+        if key >= list.len() {
+            // out of bounds
+            return Err(Error::todo())
+        }
+
+        // get the value
+        let value = self.expr(&set_expr.value)?;
+        let Some(elm) = list.get_mut(key) else {
+            return Err(Error::todo())
+        };
+        let handle = elm.by_ref();
+
+        // set the value
+        *elm = value;
+        
+        Ok(handle)
     }
 }
