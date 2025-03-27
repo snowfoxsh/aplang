@@ -320,7 +320,41 @@ impl Interpreter {
     }
 
     fn access_expr(&mut self, access_expr: &Arc<Access>) -> Result<ValueRef, Error> {
-        todo!()
+        let mut list = self.expr(&access_expr.list)?;
+        
+        let key = self.expr(&access_expr.key)?;
+        let key = key.borrow();
+        let key = key.deref();
+        let Value::Number(key) = key else {
+            return Err(Error::todo())
+        };
+        
+        let key = if *key < 1.0 {
+            // cannot index less than 1.0
+            return Err(Error::todo())
+        } else {
+            // index starting at 1
+            (key - 1.0) as usize
+        };
+        
+        let list = list.borrow_mut();
+        let list = list.deref();
+        match list {
+            Value::List(mut list) => {
+                if let Some(elm) = list.get_mut(key) {
+                    Ok(elm.by_ref())
+                } else {
+                    // out of bounds
+                    Err(Error::todo())
+                }
+            },
+            Value::String(s) => {
+                todo!()
+            },
+            _ => {
+                todo!()
+            }
+        }
     }
 
     fn list_expr(&mut self, list_expr: &Arc<List>) -> Result<ValueRef, Error> {
@@ -328,11 +362,14 @@ impl Interpreter {
     }
     
     fn assign_expr(&mut self, assign_expr: &Arc<Assignment>) -> Result<ValueRef, Error> {
-        let result = self.expr(&assign_expr.value)?;
+        let mut result = self.expr(&assign_expr.value)?;
+        let handle = result.by_ref();
         
         let _exists = self.env.define(&assign_expr.target.ident, result);
         
-        // todo: decide if i should return
+        // also return a ref to the value
+        // this maybe should be a Cow?
+        Ok(handle)
     }
     
     fn set_expr(&mut self, set_expr: &Arc<Set>) -> Result<ValueRef, Error> {
