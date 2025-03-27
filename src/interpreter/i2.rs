@@ -328,7 +328,11 @@ impl Interpreter {
     }
     
     fn assign_expr(&mut self, assign_expr: &Arc<Assignment>) -> Result<ValueRef, Error> {
-        todo!()
+        let result = self.expr(&assign_expr.value)?;
+        
+        let _exists = self.env.define(&assign_expr.target.ident, result);
+        
+        // todo: decide if i should return
     }
     
     fn set_expr(&mut self, set_expr: &Arc<Set>) -> Result<ValueRef, Error> {

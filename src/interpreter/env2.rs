@@ -77,13 +77,14 @@ impl Environment {
 }
 
 pub trait Env {
-    fn define(&mut self, name: String, value: ValueRef) -> Option<ValueRef>;
+    fn define(&mut self, name: impl Into<String>, value: ValueRef) -> Option<ValueRef>;
     fn get_ref<'a>(&mut self, name: impl Into<&'a str>) -> Option<ValueRef>;
     fn get_val<'a>(&mut self, name: impl Into<&'a str>) -> Option<ValueRef>;
 }
 
 impl Env for EnvRef {
-    fn define(&mut self, name: String, value: ValueRef) -> Option<ValueRef> {
+    fn define(&mut self, name: impl Into<String>, value: ValueRef) -> Option<ValueRef> {
+        let name = name.into();
         let mut binding = self.borrow_mut();
         let env = binding.deref_mut();
         env.define(name, value)
