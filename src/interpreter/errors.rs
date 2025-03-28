@@ -53,13 +53,14 @@ pub struct RuntimeError {
     pub label: String,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Span {
     offset: usize,
     length: usize,
 }
 
 // todo: rename to LabeledSpan
+#[derive(Debug)]
 pub struct SpanLabel {
     span: Span,
     label: Option<String>,
@@ -67,6 +68,7 @@ pub struct SpanLabel {
     // see miette [LabeledSpan]
 }
 
+#[derive(Debug)]
 pub struct Error{
     message: String,
     file_name: String,

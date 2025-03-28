@@ -121,3 +121,8 @@ impl SmartClone for Data<Value> {
         }
     }
 }
+
+pub trait IterValue {
+    fn iter_value(&self) -> Option<Box<dyn Iterator<Item=&Data<Value>>>>;
+    
+}

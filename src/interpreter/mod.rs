@@ -4,7 +4,7 @@ mod interpreter;
 mod procedure;
 mod value;
 mod env2;
-mod i2;
+pub(crate) mod i2;
 mod v2;
 
 // used by ApLang

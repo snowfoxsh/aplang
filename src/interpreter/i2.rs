@@ -5,8 +5,10 @@ use std::sync::Arc;
 use cowvert::Data;
 use std::borrow::BorrowMut;
 use std::borrow::Borrow;
+use std::fmt::{Debug, Formatter};
+use std::{fmt, mem};
 use crate::parser::ast::BinaryOp::{EqualEqual, Greater, GreaterEqual, Less, LessEqual, Minus, Plus, Slash, Star};
-use crate::interpreter::env2::{Env, EnvRef, Layer};
+use crate::interpreter::env2::{Env, EnvRef, Environment, Layer};
 use crate::interpreter::env2::ValueRef;
 use crate::interpreter::errors::Error;
 use crate::interpreter::v2::{Object, SmartClone, Value};
@@ -14,11 +16,21 @@ use crate::parser::ast::{Destructor, Variable, Grouping, RepeatTimes, Access, As
 
 // #[derive(Debug)]
 enum Flow {
-    // Normal(ValueRef),
     Normal(ValueRef),
     Return(ValueRef),
     Break,    // broke out of loop
     Continue, // continued loop iteration
+}
+
+impl Debug for Flow {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Flow::Normal(v) => write!(f, "Normal({})", v.borrow().deref()),
+            Flow::Return(v) => write!(f, "Return({})", v.borrow().deref()),
+            Flow::Break => write!(f, "Break"),
+            Flow::Continue => write!(f, "Continue"),
+        }
+    }
 }
 
 impl Default for Flow {
@@ -34,6 +46,28 @@ pub struct Interpreter {
     ast: Ast,
     
     // modules: Modules
+}
+
+impl Interpreter {
+    pub fn new(ast: Ast, file_path: Option<PathBuf>) -> Self {
+        let env = Environment::new();
+
+        Self {
+            env,
+            file_path,
+            ast,
+        }
+    }
+
+    pub fn execute(&mut self) -> Result<(), Error> {
+        let program = mem::take(&mut self.ast.program);
+
+        for ref stmt in program {
+            eprintln!("{:?}", self.stmt(stmt)?);
+        };
+
+        Ok(())
+    }
 }
 
 /// Stmt
@@ -194,7 +228,41 @@ impl Interpreter {
     }
 
     // [ <binds> ] <- <expr>
-    fn destructure_stmt(&self, p0: &Arc<Destructor>) -> Result<Flow, Error> {
+    fn destructure_stmt(&mut self, destructor: &Arc<Destructor>) -> Result<Flow, Error> {
+        let list = self.expr(&destructor.right)?;
+
+        let list = list.borrow();
+        let temp_storage: Vec<Data<Value>>;
+        let iter: Box<dyn Iterator<Item = &Data<Value>>> = match list.deref() {
+            Value::List(list) => {
+                Box::new(list.iter())
+            },
+            Value::String(s) => {
+                let vec: Vec<Data<Value>> = s
+                    .chars()
+                    .map(|ch| Data::value(Value::String(ch.to_string())))
+                    .collect();
+                temp_storage = vec;
+                Box::new(temp_storage.iter())
+            },
+            Value::Object(obj) => {
+                if let Some(iter) = obj.iter() {
+                    iter
+                } else {
+                    return Err(Error::todo())
+                }
+            },
+            _ => return Err(Error::todo()),
+        };
+
+
+        // if iter.len()  {
+        // 
+        // }
+
+        for item in &destructor.items {
+
+        }
         todo!()
     }
 }
@@ -434,5 +502,28 @@ impl Interpreter {
         *elm = value;
         
         Ok(handle)
+    }
+}
+
+#[cfg(test)]
+mod interpreter_tests {
+    use crate::aplang::ApLang;
+
+    #[test]
+    fn run_new_interpreter() {
+        // A simple source code snippet for testing.
+        let source = include_str!("../../examples.ap/test.ap");
+
+        // Create a new ApLang instance from source.
+        let lang = ApLang::new_from_stdin(source);
+
+        // Run the lexing phase.
+        let lexed = lang.lex().expect("Lexing failed");
+
+        // Run the parsing phase.
+        let parsed = lexed.parse().expect("Parsing failed");
+
+        // Execute the code (using the new interpreter in the execution phase).
+        parsed.execute_dev().expect("Execution failed");
     }
 }

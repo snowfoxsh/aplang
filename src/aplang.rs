@@ -210,3 +210,21 @@ impl ApLang<ExecutedWithDebug> {
         Ok(())
     }
 }
+
+
+impl ApLang<Parsed> {
+    pub fn execute_dev(self) -> Result<ApLang<Executed>, ()> {
+        use crate::interpreter::i2::Interpreter;
+        Interpreter::new(unsafe { self.ast.unwrap_unchecked() }, self.file_path.clone())
+            .execute()
+            .unwrap();
+        Ok(ApLang {
+            source_code: self.source_code,
+            file_path: self.file_path,
+            tokens: None,
+            ast: None,
+            values: None,
+            _state: PhantomData,
+        })
+    }
+}
