@@ -7,6 +7,7 @@ use std::borrow::BorrowMut;
 use std::borrow::Borrow;
 use std::fmt::{Debug, Formatter};
 use std::{fmt, mem};
+use std::collections::HashMap;
 use crate::parser::ast::BinaryOp::{EqualEqual, Greater, GreaterEqual, Less, LessEqual, Minus, Plus, Slash, Star};
 use crate::interpreter::env2::{Env, EnvRef, Environment, Layer};
 use crate::interpreter::env2::ValueRef;
@@ -229,42 +230,43 @@ impl Interpreter {
 
     // [ <binds> ] <- <expr>
     fn destructure_stmt(&mut self, destructor: &Arc<Destructor>) -> Result<Flow, Error> {
-        let list = self.expr(&destructor.right)?;
-
-        let list = list.borrow();
-        let temp_storage: Vec<Data<Value>>;
-        let iter: Box<dyn Iterator<Item = &Data<Value>>> = match list.deref() {
+        let mut list = self.expr(&destructor.right)?;
+        let mut list = list.borrow_mut();
+        eprintln!("bindings: {:?}", destructor.bindings);
+        eprintln!("list: {}", list.borrow().deref());
+        
+        let mut temp_storage: Option<Vec<Data<Value>>> = None;
+        let mut_iter: Box<dyn ExactSizeIterator<Item = &mut Data<Value>>> = match list.deref_mut() {
             Value::List(list) => {
-                Box::new(list.iter())
+                Box::new(list.iter_mut())
             },
             Value::String(s) => {
+                // convert the string to a vector of Data<Value>
                 let vec: Vec<Data<Value>> = s
                     .chars()
                     .map(|ch| Data::value(Value::String(ch.to_string())))
                     .collect();
-                temp_storage = vec;
-                Box::new(temp_storage.iter())
-            },
-            Value::Object(obj) => {
-                if let Some(iter) = obj.iter() {
-                    iter
-                } else {
-                    return Err(Error::todo())
-                }
+                temp_storage = Some(vec);
+                // safe to unwrap since we just set it
+                Box::new(temp_storage.as_mut().unwrap().iter_mut())
             },
             _ => return Err(Error::todo()),
         };
-
-
-        // if iter.len()  {
-        // 
-        // }
-
-        for item in &destructor.items {
-
+        
+        if mut_iter.len() != destructor.bindings.len() {
+            return Err(Error::todo())
         }
-        todo!()
+        
+        // eprintln!()
+
+        for (binding, value) in destructor.bindings.iter().zip(mut_iter) {
+            let Some(binding) = binding else { continue };
+            self.env.define(&binding.ident, value.by_ref());
+        }
+        
+        Ok(Flow::default())
     }
+
 }
 
 /// Expr

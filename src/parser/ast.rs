@@ -224,7 +224,7 @@ pub struct Assignment {
 
 #[derive(Debug, Clone)]
 pub struct Destructor {
-    pub items: Vec<Option<Variable>>,
+    pub bindings: Vec<Option<Variable>>,
     pub brackets: (Token, Token),
     
     

@@ -1,0 +1,5 @@
+[ok, err] <- [TRUE, "error"]
+
+IF (err) {
+    DISPLAY("error")
+}

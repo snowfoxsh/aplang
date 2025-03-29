@@ -1,3 +1,4 @@
+use std::env::var;
 use crate::lexer::token::LiteralValue;
 use crate::lexer::token::TokenType::{Eof, LeftParen, RightParen};
 use crate::lexer::token::{Token, TokenType};
@@ -627,54 +628,62 @@ impl Parser {
 
     fn destructure(&mut self, lb_token: Token) -> miette::Result<Stmt> {
         self.confirm(&LeftBracket)?;
-        
-        // the pattern is empty, error
+
+        // Disallow completely empty patterns like "[]"
         if self.check(&RightBracket) {
-            // todo: improve error message
             let error = miette! {
-                "pattern cannot be empty"
-            };
-            
+            "destructuring pattern cannot be completely empty"
+        };
             return Err(error.with_source_code(self.source.clone()));
         }
-        
-        
-        let mut items = vec![];
+
+        let mut items = Vec::new();
+
+        // Parse elements until the closing bracket is reached.
         loop {
-            // no identifier
-            if self.match_token(&Comma) {
+            // An element is considered empty if the next token is a comma or the right bracket.
+            if self.check(&Comma) || self.check(&RightBracket) {
                 items.push(None);
-                continue;
+            } else {
+                // Otherwise, we expect an identifier.
+                let ident_token = self.consume(&Identifier, |token| {
+                    miette!("expected identifier in destructuring pattern, found {}", token.lexeme)
+                })?.clone();
+                
+                let variable = Variable {
+                    ident: ident_token.lexeme.clone(),
+                    token: ident_token,
+                };
+                
+                items.push(Some(variable));
             }
 
-            let ident_token = self.consume(&Identifier, |token| {
-                miette!("expected identifier in destructuring pattern, found {}", token.lexeme)
-            })?.clone();
-            
-            if !self.match_token(&Comma) {
-                break; 
-           }
+            // If there’s a comma, consume it and loop for the next element.
+            if self.match_token(&Comma) {
+                continue;
+            } else {
+                break;
+            }
         }
 
         let rb_token = self.consume(&RightBracket, |token| {
             miette!("expected ']' to close destructuring pattern, found {}", token.lexeme)
         })?.clone();
-        
-        
-        
+
         let arrow_token = self.consume(&Arrow, |token| {
             miette!("expected '<-' after destruct pattern, found {}", token.lexeme)
         })?.clone();
-        
+
         let right = self.expression()?;
-        
+
         Ok(Stmt::Destructure(Arc::new(Destructor {
-            items,
+            bindings: items,
             brackets: (lb_token, rb_token),
             arrow_token,
             right,
         })))
     }
+
 
     fn repeat_until(&mut self, repeat_token: Token) -> miette::Result<Stmt> {
         // confirm that the repeat token has been consumed

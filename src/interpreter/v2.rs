@@ -1,5 +1,5 @@
 use std::any::Any;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::ops::Deref;
 use cowvert::Data;
 
@@ -71,6 +71,12 @@ impl Display for Value {
     }
 }
 
+impl Debug for Value {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(&self, f)
+    }
+}
+
 impl PartialEq<Self> for Value {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -124,5 +130,5 @@ impl SmartClone for Data<Value> {
 
 pub trait IterValue {
     fn iter_value(&self) -> Option<Box<dyn Iterator<Item=&Data<Value>>>>;
-    
+
 }
