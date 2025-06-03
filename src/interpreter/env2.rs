@@ -2,7 +2,6 @@ use std::cell::{Ref, RefCell};
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
-use std::sync::Arc;
 use cowvert::Data;
 use crate::interpreter::v2::Value;
 
@@ -38,10 +37,24 @@ impl Environment {
 
     /// Defines a new variable in the current environment
     /// Returns the previous value if it existed
-    pub fn define(&mut self, name: String, value: ValueRef) -> Option<ValueRef> {
-        self.values.insert(name, value)
-    }
+    pub fn define(&mut self, name: String, mut value: ValueRef) -> Option<ValueRef> {
+        #[allow(clippy::map_entry)]
+        if self.values.contains_key(&name) {
+            self.values.insert(name, value)
+        } else if let Some(parent) = &self.parent {
+            
+            // Attempt to update the parent first
+            let result = parent.borrow_mut().define(name.clone(), value.clone());
 
+            // Cache a pointer locally (by_ref avoids copying for simple types)
+            self.values.insert(name, value.by_ref());
+
+            result
+        } else {
+            self.values.insert(name, value)
+        }
+    }
+    
     fn get_ref<'a>(&mut self, name: impl Into<&'a str>) -> Option<ValueRef> {
         let name = name.into();
 
@@ -64,9 +77,9 @@ impl Environment {
             };
 
             Some(if by_val {
-                value.by_ref()
+                value.by_val()
             } else {
-                value.by_cow()
+                value.by_ref()
             })
         } else if let Some(parent) = &self.parent {
             parent.get_val(name)
@@ -146,9 +159,9 @@ impl SearchEnv for EnvRef {
             };
 
             Some(if by_val {
-                value.by_ref()
+                value.by_val()
             } else {
-                value.by_cow()
+                value.by_ref()
             })
         } else if let Some(parent) = &self.borrow().parent {
             parent.get_val(name)

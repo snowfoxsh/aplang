@@ -2,7 +2,7 @@ use std::any::Any;
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::Deref;
 use cowvert::Data;
-
+use crate::parser::ast::BinaryOp::Plus;
 
 pub trait Object: Any + Display {
     fn as_any(&self) -> &dyn Any;
@@ -62,7 +62,9 @@ impl Display for Value {
                     if i > 0 {
                         write!(f, ", ")?;
                     }
-                    write!(f, "{}", *item.borrow())?;
+                    item.with(|x| {
+                        write!(f, "{}", x)
+                    })?;
                 }
                 write!(f, "]")
             },
@@ -84,8 +86,11 @@ impl PartialEq<Self> for Value {
             (Value::Number(a), Value::Number(b)) => a == b,
             (Value::Bool(a), Value::Bool(b)) => a == b,
             (Value::String(a), Value::String(b)) => a == b,
-            (Value::List(a), Value::List(b)) =>
-                a.iter().zip(b.iter()).all(|(a, b)| *a.borrow() == *b.borrow()),
+            (Value::List(a), Value::List(b)) => {
+                a.iter().zip(b.iter()).all(|(a, b)| {
+                    a.with(|a| b.with(|b| a == b))
+                })
+            }
             (Value::Object(a), Value::Object(b)) => a.eq(b.as_ref()),
             (Value::Callable(a), Value::Callable(b)) => todo!(),
             _ => false,
@@ -123,7 +128,8 @@ impl SmartClone for Data<Value> {
         if use_val {
             self.by_val()
         } else {
-            self.by_cow()
+            // self.by_cow() // todo: use val
+            self.by_val()
         }
     }
 }

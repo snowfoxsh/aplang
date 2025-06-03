@@ -3,8 +3,6 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
 use cowvert::Data;
-use std::borrow::BorrowMut;
-use std::borrow::Borrow;
 use std::fmt::{Debug, Formatter};
 use std::{fmt, mem};
 use std::collections::HashMap;
@@ -26,8 +24,16 @@ enum Flow {
 impl Debug for Flow {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Flow::Normal(v) => write!(f, "Normal({})", v.borrow().deref()),
-            Flow::Return(v) => write!(f, "Return({})", v.borrow().deref()),
+            Flow::Normal(d) => {
+                d.with(|v| {
+                    write!(f, "Normal({})", v)
+                })
+            },
+            Flow::Return(d) => {
+                d.with(|v| {
+                    write!(f, "Return({})", v)
+                })
+            },
             Flow::Break => write!(f, "Break"),
             Flow::Continue => write!(f, "Continue"),
         }
@@ -64,7 +70,10 @@ impl Interpreter {
         let program = mem::take(&mut self.ast.program);
 
         for ref stmt in program {
-            eprintln!("{:?}", self.stmt(stmt)?);
+            // eprintln!("{:?}", self.stmt(stmt)?);
+            // eprintln!("{}", self.stmt(stmt)?)
+            let s = self.stmt(stmt)?;
+            println!("{:?}", s);
         };
 
         Ok(())
@@ -121,7 +130,7 @@ impl Interpreter {
 
     /// REPEAT <expr> TIMES { }
     fn repeat_times_stmt(&mut self, repeat_times: &Arc<RepeatTimes>) -> Result<Flow, Error> {
-        let binding = self.expr(&repeat_times.count)?;
+        let mut binding = self.expr(&repeat_times.count)?;
         let binding = binding.borrow();
         let count = binding.deref();
         
@@ -165,7 +174,7 @@ impl Interpreter {
 
     // FOR EACH <item> IN <iter> { }
     fn for_each_stmt(&mut self, for_each_stmt: &Arc<ForEach>) -> Result<Flow, Error> {
-        let list = self.expr(&for_each_stmt.list)?;
+        let mut list = self.expr(&for_each_stmt.list)?;
 
         let binding = list.borrow();
 
@@ -233,7 +242,7 @@ impl Interpreter {
         let mut list = self.expr(&destructor.right)?;
         let mut list = list.borrow_mut();
         eprintln!("bindings: {:?}", destructor.bindings);
-        eprintln!("list: {}", list.borrow().deref());
+        eprintln!("list: {}", list.deref());
         
         let mut temp_storage: Option<Vec<Data<Value>>> = None;
         let mut_iter: Box<dyn ExactSizeIterator<Item = &mut Data<Value>>> = match list.deref_mut() {
@@ -303,61 +312,69 @@ impl Interpreter {
         use crate::interpreter::v2::Value::*;
         use crate::parser::ast::BinaryOp::*;
         let value = Data::value;
-
+    
         let mut lhs_binding = self.expr(&binary.left)?;
-        let mut lhs = lhs_binding.borrow_mut();
         let mut rhs_binding = self.expr(&binary.right)?;
-        let mut rhs = rhs_binding.borrow_mut();
+        
+        rhs_binding.try_with_other_mut(&mut lhs_binding, |lhs, rhs| {
+            Ok(match (lhs, rhs) {
+                // normal case
+                (mut a, Some(mut b)) => match (a.deref_mut(), &binary.operator, b.deref_mut()) {
+                    // comparison
+                    (a, EqualEqual, b) => value(Bool(todo!())),
+                    (a, NotEqual, b) => value(Bool(todo!())),
+                    (Number(a), Less, Number(b)) => value(Bool(a < b)),
+                    (Number(a), LessEqual, Number(b)) => value(Bool(a <= b)),
+                    (Number(a), Greater, Number(b)) => value(Bool(a > b)),
+                    (Number(a), GreaterEqual, Number(b)) => value(Bool(a >= b)),
 
-        Ok(match (lhs.deref_mut(), &binary.operator, rhs.deref_mut()) {
-            // comparison
-            (a, EqualEqual, b) => value(Bool(todo!())),
-            (a, NotEqual, b) => value(Bool(todo!())),
-            (Number(a), Less, Number(b)) => value(Bool(a < b)),
-            (Number(a), LessEqual, Number(b)) => value(Bool(a <= b)),
-            (Number(a), Greater, Number(b)) => value(Bool(a > b)),
-            (Number(a), GreaterEqual, Number(b)) => value(Bool(a >= b)),
-            
-            // arithmatic
-            (Number(a), Plus, Number(b)) => value(Number(*a + *b)),
-            (Number(a), Minus, Number(b)) => value(Number(*a - *b)),
-            (Number(a), Star, Number(b)) => value(Number(*a * *b)),
-            (&mut Number(a), Slash, &mut Number(b)) => {
-                if b != 0.0 {
-                    value(Number(a / b))
-                } else {
-                    return Err(Error::todo())
-                }
-            }
-            (&mut Number(a), Modulo, &mut Number(b)) => {
-                if b != 0.0 {
-                    value(Number(a % b))
-                } else {
-                    return Err(Error::todo())
-                }
-            }
-            
-            // string
-            (String(a), Plus, b) => value(String(format!("{a}{b}"))),
-            // list
-            (List(a), Plus, List(b)) => {
-                let new: Vec<_> = a.iter_mut()
-                    .map(|v| v.smart_clone())
-                    .chain(b.iter_mut().map(|v| v.smart_clone()))
-                    .collect();
+                    // arithmatic
+                    (Number(a), Plus, Number(b)) => value(Number(*a + *b)),
+                    (Number(a), Minus, Number(b)) => value(Number(*a - *b)),
+                    (Number(a), Star, Number(b)) => value(Number(*a * *b)),
+                    (&mut Number(a), Slash, &mut Number(b)) => {
+                        if b != 0.0 {
+                            value(Number(a / b))
+                        } else {
+                            return Err(Error::todo())
+                        }
+                    }
+                    (&mut Number(a), Modulo, &mut Number(b)) => {
+                        if b != 0.0 {
+                            value(Number(a % b))
+                        } else {
+                            return Err(Error::todo())
+                        }
+                    }
 
-                value(List(new))
-            }
-            
-            _ => return Err(Error::todo())
-        })
+                    // string
+                    (String(a), Plus, b) => value(String(format!("{a}{b}"))),
+                    // list
+                    (List(a), Plus, List(b)) => {
+                        let new: Vec<_> = a.iter_mut()
+                            .map(|v| v.smart_clone())
+                            .chain(b.iter_mut().map(|v| v.smart_clone()))
+                            .collect();
+
+                        value(List(new))
+                    }
+
+                    _ => return Err(Error::todo())
+                },
+                // a is b
+                (_, None) => {
+                    // BUG: always returns true. fix this
+                    value(Bool(true))
+                }
+            })
+        }).expect("lhs is already being borrowed, unrecoverable")
     }
 
     fn unary_expr(&mut self, unary: &Arc<Unary>) -> Result<ValueRef, Error> {
         use crate::interpreter::v2::Value::*;
         use crate::parser::ast::UnaryOp::*;
 
-        let operand_binding = self.expr(&unary.right)?;
+        let mut operand_binding = self.expr(&unary.right)?;
         let operand = operand_binding.borrow();
         Ok(match (&unary.operator, operand.deref()) {
             (Minus, Number(num)) => Data::value(Number(-num)),
@@ -373,7 +390,7 @@ impl Interpreter {
     }
 
     fn logical_expr(&mut self, logical_expr: &Arc<Logical>) -> Result<ValueRef, Error> {
-        let left = self.expr(&logical_expr.left)?;
+        let mut left = self.expr(&logical_expr.left)?;
         let short_circuit = match logical_expr.operator {
             LogicalOp::Or => left.borrow().deref().is_truthy(),
             LogicalOp::And => !left.borrow().deref().is_truthy(),
@@ -393,7 +410,6 @@ impl Interpreter {
             Err(Error::todo())
         }
     }
-
     fn call_expr(&mut self, call_expr: &Arc<ProcCall>) -> Result<ValueRef, Error> {
         todo!()
     }
@@ -401,7 +417,7 @@ impl Interpreter {
     fn access_expr(&mut self, access_expr: &Arc<Access>) -> Result<ValueRef, Error> {
         let mut list = self.expr(&access_expr.list)?;
         
-        let key = self.expr(&access_expr.key)?;
+        let mut key = self.expr(&access_expr.key)?;
         let key = key.borrow();
         let key = key.deref();
         let Value::Number(key) = key else {
@@ -472,7 +488,7 @@ impl Interpreter {
         };
 
         // get the key
-        let key = self.expr(&set_expr.key)?;
+        let mut key = self.expr(&set_expr.key)?;
         let key = key.borrow();
         let key = key.deref();
 
