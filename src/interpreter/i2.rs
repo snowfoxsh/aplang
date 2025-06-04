@@ -411,7 +411,19 @@ impl Interpreter {
         }
     }
     fn call_expr(&mut self, call_expr: &Arc<ProcCall>) -> IResult<ValueRef> {
-        todo!()
+        
+        let mut args = Vec::with_capacity(call_expr.arguments.len());
+        for arg in &call_expr.arguments {
+            let value = self.expr(arg)?;
+            value.with(|x| {
+                print!("{x}, ")
+            });
+            args.push(value)
+        }
+        println!();
+        
+        
+        Ok(Data::value(Value::Null))
     }
 
     fn access_expr(&mut self, access_expr: &Arc<Access>) -> IResult<ValueRef> {
@@ -463,7 +475,7 @@ impl Interpreter {
         for expr in list_expr.items.iter() {
             list.push(self.expr(expr)?);
         }
-        
+
         Ok(Data::value(Value::List(list)))
     }
     
