@@ -69,7 +69,7 @@ pub struct SpanLabel {
 }
 
 #[derive(Debug)]
-pub struct Error{
+pub struct Error {
     message: String,
     file_name: String,
     spans: Vec<SpanLabel>,
@@ -78,7 +78,7 @@ pub struct Error{
 }
 
 impl Error {
-    pub fn todo() -> Error {
+    pub fn todo() -> Box<Error> {
         todo!()
     }
 }

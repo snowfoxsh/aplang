@@ -13,6 +13,8 @@ use crate::interpreter::errors::Error;
 use crate::interpreter::v2::{Object, SmartClone, Value};
 use crate::parser::ast::{Destructor, Variable, Grouping, RepeatTimes, Access, Assignment, Ast, Binary, Block, Continue, Expr, ExprLiteral, ForEach, If, Import, List, Literal, Logical, ProcCall, ProcDeclaration, RepeatUntil, Return, Set, Stmt, Unary, Break, LogicalOp};
 
+type IResult<T> = Result<T, Box<Error>>;
+
 // #[derive(Debug)]
 enum Flow {
     Normal(ValueRef),
@@ -66,12 +68,10 @@ impl Interpreter {
         }
     }
 
-    pub fn execute(&mut self) -> Result<(), Error> {
+    pub fn execute(&mut self) -> IResult<()> {
         let program = mem::take(&mut self.ast.program);
 
         for ref stmt in program {
-            // eprintln!("{:?}", self.stmt(stmt)?);
-            // eprintln!("{}", self.stmt(stmt)?)
             let s = self.stmt(stmt)?;
             println!("{:?}", s);
         };
@@ -82,7 +82,7 @@ impl Interpreter {
 
 /// Stmt
 impl Interpreter {
-    fn stmt(&mut self, stmt: &Stmt) -> Result<Flow, Error> {
+    fn stmt(&mut self, stmt: &Stmt) -> IResult<Flow> {
         match stmt {
             Stmt::Expr(expr) => Ok(Flow::Normal(self.expr(expr)?)),
             Stmt::Block(block) => self.block_stmt(block),
@@ -100,7 +100,7 @@ impl Interpreter {
     }
 
     // { <stmts> }
-    fn block_stmt(&mut self, block_stmt: &Arc<Block>) -> Result<Flow, Error> {
+    fn block_stmt(&mut self, block_stmt: &Arc<Block>) -> IResult<Flow> {
         self.env = self.env.layer();
 
         for stmt in block_stmt.statements.iter() {
@@ -118,7 +118,7 @@ impl Interpreter {
     }
 
     // IF <cond> { ]
-    fn if_stmt(&mut self, if_stmt: &Arc<If>) -> Result<Flow, Error> {
+    fn if_stmt(&mut self, if_stmt: &Arc<If>) -> IResult<Flow> {
         if self.expr(&if_stmt.condition)?.borrow().deref().is_truthy() {
             self.stmt(&if_stmt.then_branch)
         } else if let Some(else_branch) = &if_stmt.else_branch {
@@ -129,7 +129,7 @@ impl Interpreter {
     }
 
     /// REPEAT <expr> TIMES { }
-    fn repeat_times_stmt(&mut self, repeat_times: &Arc<RepeatTimes>) -> Result<Flow, Error> {
+    fn repeat_times_stmt(&mut self, repeat_times: &Arc<RepeatTimes>) -> IResult<Flow> {
         let mut binding = self.expr(&repeat_times.count)?;
         let binding = binding.borrow();
         let count = binding.deref();
@@ -157,7 +157,7 @@ impl Interpreter {
     }
 
     // REPEAT UNTIL ( <cond> ) { }
-    fn repeat_until_stmt(&mut self, repeat_until: &Arc<RepeatUntil>) -> Result<Flow, Error> {
+    fn repeat_until_stmt(&mut self, repeat_until: &Arc<RepeatUntil>) -> IResult<Flow> {
         while self.expr(&repeat_until.condition)?.borrow().deref().is_truthy() {
             let flow = self.stmt(&repeat_until.body)?;
             
@@ -173,7 +173,7 @@ impl Interpreter {
     }
 
     // FOR EACH <item> IN <iter> { }
-    fn for_each_stmt(&mut self, for_each_stmt: &Arc<ForEach>) -> Result<Flow, Error> {
+    fn for_each_stmt(&mut self, for_each_stmt: &Arc<ForEach>) -> IResult<Flow> {
         let mut list = self.expr(&for_each_stmt.list)?;
 
         let binding = list.borrow();
@@ -209,12 +209,12 @@ impl Interpreter {
 
 
     // EXPORT? PROCEDURE <name>( <params> ) { }
-    fn proc_decl_stmt(&mut self, proc_decl_stmt: &Arc<ProcDeclaration>) -> Result<Flow, Error> {
+    fn proc_decl_stmt(&mut self, proc_decl_stmt: &Arc<ProcDeclaration>) -> IResult<Flow> {
         todo!()
     }
 
     // RETURN
-    fn ret_stmt(&mut self, ret_stmt: &Arc<Return>) -> Result<Flow, Error> {
+    fn ret_stmt(&mut self, ret_stmt: &Arc<Return>) -> IResult<Flow> {
         if let Some(return_value) = &ret_stmt.data {
             Ok(Flow::Return(self.expr(return_value)?))
         } else {
@@ -223,22 +223,22 @@ impl Interpreter {
     }
 
     // CONTINUE
-    fn cont_stmt(&mut self, cont_stmt: &Arc<Continue>) -> Result<Flow, Error> {
+    fn cont_stmt(&mut self, cont_stmt: &Arc<Continue>) -> IResult<Flow> {
         Ok(Flow::Continue)
     }
 
     // BREAK
-    fn break_stmt(&mut self, break_stmt: &Arc<Break>) -> Result<Flow, Error> {
+    fn break_stmt(&mut self, break_stmt: &Arc<Break>) -> IResult<Flow> {
         Ok(Flow::Break)
     }
 
     // IMPORT
-    fn import_stmt(&mut self, import_stmt: &Arc<Import>) -> Result<Flow, Error> {
+    fn import_stmt(&mut self, import_stmt: &Arc<Import>) -> IResult<Flow> {
         todo!()
     }
 
     // [ <binds> ] <- <expr>
-    fn destructure_stmt(&mut self, destructor: &Arc<Destructor>) -> Result<Flow, Error> {
+    fn destructure_stmt(&mut self, destructor: &Arc<Destructor>) -> IResult<Flow> {
         let mut list = self.expr(&destructor.right)?;
         let mut list = list.borrow_mut();
         eprintln!("bindings: {:?}", destructor.bindings);
@@ -280,7 +280,7 @@ impl Interpreter {
 
 /// Expr
 impl Interpreter {
-    fn expr(&mut self, expr: &Expr) -> Result<ValueRef, Error> {
+    fn expr(&mut self, expr: &Expr) -> IResult<ValueRef> {
         match expr {
             Expr::Literal(literal) => self.literal_expr(literal),
             Expr::Binary(binary) => self.binary_expr(binary),
@@ -296,7 +296,7 @@ impl Interpreter {
         }
     }
 
-    fn literal_expr(&mut self, literal_expr: &Arc<ExprLiteral>) -> Result<ValueRef, Error> {
+    fn literal_expr(&mut self, literal_expr: &Arc<ExprLiteral>) -> IResult<ValueRef> {
         let lit = match &literal_expr.value {
             Literal::Number(n) => Value::Number(*n),
             Literal::String(s) => Value::String(s.clone()), // value clone here
@@ -308,7 +308,7 @@ impl Interpreter {
         Ok(Data::value(lit))
     }
     
-    fn binary_expr(&mut self, binary: &Arc<Binary>) -> Result<ValueRef, Error> {
+    fn binary_expr(&mut self, binary: &Arc<Binary>) -> IResult<ValueRef> {
         use crate::interpreter::v2::Value::*;
         use crate::parser::ast::BinaryOp::*;
         let value = Data::value;
@@ -370,7 +370,7 @@ impl Interpreter {
         }).expect("lhs is already being borrowed, unrecoverable")
     }
 
-    fn unary_expr(&mut self, unary: &Arc<Unary>) -> Result<ValueRef, Error> {
+    fn unary_expr(&mut self, unary: &Arc<Unary>) -> IResult<ValueRef> {
         use crate::interpreter::v2::Value::*;
         use crate::parser::ast::UnaryOp::*;
 
@@ -385,11 +385,11 @@ impl Interpreter {
         })
     }
 
-    fn grouping_expr(&mut self, grouping_expr: &Arc<Grouping>) -> Result<ValueRef, Error> {
+    fn grouping_expr(&mut self, grouping_expr: &Arc<Grouping>) -> IResult<ValueRef> {
         self.expr(&grouping_expr.expr)
     }
 
-    fn logical_expr(&mut self, logical_expr: &Arc<Logical>) -> Result<ValueRef, Error> {
+    fn logical_expr(&mut self, logical_expr: &Arc<Logical>) -> IResult<ValueRef> {
         let mut left = self.expr(&logical_expr.left)?;
         let short_circuit = match logical_expr.operator {
             LogicalOp::Or => left.borrow().deref().is_truthy(),
@@ -403,18 +403,18 @@ impl Interpreter {
         }
     }
     
-    fn variable_expr(&mut self, variable_expr: &Arc<Variable>) -> Result<ValueRef, Error> {
+    fn variable_expr(&mut self, variable_expr: &Arc<Variable>) -> IResult<ValueRef> {
         if let Some(var) = self.env.get_ref(&*variable_expr.ident) {
             Ok(var)
         } else {
             Err(Error::todo())
         }
     }
-    fn call_expr(&mut self, call_expr: &Arc<ProcCall>) -> Result<ValueRef, Error> {
+    fn call_expr(&mut self, call_expr: &Arc<ProcCall>) -> IResult<ValueRef> {
         todo!()
     }
 
-    fn access_expr(&mut self, access_expr: &Arc<Access>) -> Result<ValueRef, Error> {
+    fn access_expr(&mut self, access_expr: &Arc<Access>) -> IResult<ValueRef> {
         let mut list = self.expr(&access_expr.list)?;
         
         let mut key = self.expr(&access_expr.key)?;
@@ -457,7 +457,7 @@ impl Interpreter {
         }
     }
 
-    fn list_expr(&mut self, list_expr: &Arc<List>) -> Result<ValueRef, Error> {
+    fn list_expr(&mut self, list_expr: &Arc<List>) -> IResult<ValueRef> {
         let mut list = Vec::with_capacity(list_expr.items.len());
         
         for expr in list_expr.items.iter() {
@@ -467,7 +467,7 @@ impl Interpreter {
         Ok(Data::value(Value::List(list)))
     }
     
-    fn assign_expr(&mut self, assign_expr: &Arc<Assignment>) -> Result<ValueRef, Error> {
+    fn assign_expr(&mut self, assign_expr: &Arc<Assignment>) -> IResult<ValueRef> {
         let mut result = self.expr(&assign_expr.value)?;
         let handle = result.by_ref();
         
@@ -478,7 +478,7 @@ impl Interpreter {
         Ok(handle)
     }
     
-    fn set_expr(&mut self, set_expr: &Arc<Set>) -> Result<ValueRef, Error> {
+    fn set_expr(&mut self, set_expr: &Arc<Set>) -> IResult<ValueRef> {
         // get the list
         let mut list = self.expr(&set_expr.list)?;
         
