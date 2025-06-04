@@ -411,18 +411,23 @@ impl Interpreter {
         }
     }
     fn call_expr(&mut self, call_expr: &Arc<ProcCall>) -> IResult<ValueRef> {
+        let args: Vec<ValueRef> = call_expr
+            .arguments
+            .iter()
+            .map(|arg| self.expr(arg))
+            .collect::<Result<_, _>>()?;
         
-        let mut args = Vec::with_capacity(call_expr.arguments.len());
-        for arg in &call_expr.arguments {
-            let value = self.expr(arg)?;
-            value.with(|x| {
-                print!("{x}, ")
-            });
-            args.push(value)
-        }
-        println!();
-        
-        
+        let arg_strings: Vec<String> = args
+            .iter()
+            .map(|val| {
+                let mut s = String::new();
+                val.with(|x| s = format!("{x}"));
+                s
+            })
+            .collect();
+
+        println!("{}", arg_strings.join(", "));
+
         Ok(Data::value(Value::Null))
     }
 
