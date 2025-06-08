@@ -6,6 +6,7 @@ use cowvert::Data;
 use std::fmt::{Debug, Formatter};
 use std::{fmt, mem};
 use std::collections::HashMap;
+use aplang_lib::parser::ast::BinaryOp;
 use crate::parser::ast::BinaryOp::{EqualEqual, Greater, GreaterEqual, Less, LessEqual, Minus, Plus, Slash, Star};
 use crate::interpreter::env2::{Env, EnvRef, Environment, Layer};
 use crate::interpreter::env2::ValueRef;
@@ -361,10 +362,30 @@ impl Interpreter {
 
                     _ => return Err(Error::todo())
                 },
+                
                 // a is b
-                (_, None) => {
-                    // BUG: always returns true. fix this
-                    value(Bool(true))
+                (mut v, None) => {
+                    match (v.deref(), &binary.operator) {
+                        // comparison
+                        (_, EqualEqual) => value(Bool(true)),
+                        (_, NotEqual) => value(Bool(false)),
+                        (Number(_), LessEqual) => value(Bool(true)),
+                        (Number(_), GreaterEqual) => value(Bool(true)),
+                        (Number(_), Less) => value(Bool(false)),
+                        (Number(_), Greater) => value(Bool(false)),
+
+                        // arithmatic
+                        (Number(a), Plus) => value(Number(*a + *a)),
+                        (Number(a), Minus) => value(Number(*a - *a)),
+                        (Number(a), Star) => value(Number(*a * *a)),
+                        (Number(a), Slash) => {
+                            if *a != 0.0 {
+                                value(Number(1.0))
+                            } else {
+                                return Err(Error::todo())
+                            }
+                        }
+                    }
                 }
             })
         }).expect("lhs is already being borrowed, unrecoverable")
